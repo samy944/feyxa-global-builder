@@ -1,137 +1,103 @@
 import { motion } from "framer-motion";
-import {
-  TrendingUp,
-  ShoppingCart,
-  Users,
-  DollarSign,
-  ArrowUpRight,
-  ArrowDownRight,
-  Package,
+import { Button } from "@/components/ui/button";
+import { 
+  Clock, Phone, MapPin, Package, AlertTriangle, 
+  TrendingUp, ChevronRight, Truck, MessageSquare
 } from "lucide-react";
 
-const stats = [
-  {
-    label: "Revenus",
-    value: "€24,580",
-    change: "+23.5%",
-    positive: true,
-    icon: DollarSign,
-  },
-  {
-    label: "Commandes",
-    value: "384",
-    change: "+12.2%",
-    positive: true,
-    icon: ShoppingCart,
-  },
-  {
-    label: "Clients",
-    value: "1,429",
-    change: "+8.1%",
-    positive: true,
-    icon: Users,
-  },
-  {
-    label: "Taux de conversion",
-    value: "3.24%",
-    change: "-0.4%",
-    positive: false,
-    icon: TrendingUp,
-  },
+// Mock data for the "to do today" dashboard
+const todayTasks = [
+  { id: 1, type: "order", label: "3 commandes à confirmer", icon: Package, urgent: true },
+  { id: 2, type: "delivery", label: "2 livraisons à préparer", icon: Truck, urgent: false },
+  { id: 3, type: "stock", label: "1 produit en stock faible", icon: AlertTriangle, urgent: true },
+  { id: 4, type: "message", label: "5 messages WhatsApp", icon: MessageSquare, urgent: false },
 ];
 
-const recentOrders = [
-  { id: "#FX-4821", customer: "Marie Dupont", total: "€129.00", status: "Livrée", date: "Il y a 2h" },
-  { id: "#FX-4820", customer: "Jean Kouassi", total: "€84.50", status: "En cours", date: "Il y a 3h" },
-  { id: "#FX-4819", customer: "Fatou Diallo", total: "€245.00", status: "Payée", date: "Il y a 5h" },
-  { id: "#FX-4818", customer: "Paul Mbeki", total: "€67.90", status: "Livrée", date: "Il y a 8h" },
-  { id: "#FX-4817", customer: "Sarah Chen", total: "€312.00", status: "En cours", date: "Il y a 12h" },
+const recentActivity = [
+  { time: "14:32", action: "Commande #FX-4821 confirmée", user: "Vous" },
+  { time: "13:15", action: "Produit 'T-shirt Premium' modifié", user: "Admin" },
+  { time: "12:45", action: "Nouveau client: Fatou Diallo", user: "Système" },
+  { time: "11:20", action: "Stock mis à jour: Casquette Brodée", user: "Vous" },
+  { time: "10:00", action: "Commande #FX-4820 payée", user: "Système" },
 ];
 
-const statusColor: Record<string, string> = {
-  "Livrée": "text-accent",
-  "En cours": "text-primary",
-  "Payée": "text-foreground",
-};
+const quickStats = [
+  { label: "Aujourd'hui", value: "€2,450", sub: "12 commandes" },
+  { label: "Cette semaine", value: "€14,820", sub: "67 commandes" },
+  { label: "Ce mois", value: "€24,580", sub: "384 commandes" },
+];
 
 export default function DashboardOverview() {
   return (
     <div className="p-6 lg:p-8 space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Vue d'ensemble</h1>
-        <p className="text-sm text-muted-foreground mt-1">Bienvenue, voici vos métriques du jour.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Bonjour 👋</h1>
+          <p className="text-sm text-muted-foreground mt-1">Voici ce qui se passe dans votre boutique aujourd'hui.</p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock size={14} />
+          <span>{new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</span>
+        </div>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
+      {/* Quick stats */}
+      <div className="grid sm:grid-cols-3 gap-4">
+        {quickStats.map((stat, i) => (
           <motion.div
             key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             className="rounded-xl border border-border bg-card p-5"
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">{stat.label}</span>
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                <stat.icon size={16} />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-            <div className="flex items-center gap-1 mt-1">
-              {stat.positive ? (
-                <ArrowUpRight size={12} className="text-accent" />
-              ) : (
-                <ArrowDownRight size={12} className="text-destructive" />
-              )}
-              <span className={`text-xs font-medium ${stat.positive ? "text-accent" : "text-destructive"}`}>
-                {stat.change}
-              </span>
-              <span className="text-xs text-muted-foreground">vs mois dernier</span>
-            </div>
+            <p className="text-sm text-muted-foreground">{stat.label}</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{stat.value}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{stat.sub}</p>
           </motion.div>
         ))}
       </div>
 
-      {/* Recent orders */}
+      {/* To do today */}
       <div className="rounded-xl border border-border bg-card">
-        <div className="p-5 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Package size={16} className="text-muted-foreground" />
-            <h2 className="font-semibold text-foreground">Commandes récentes</h2>
-          </div>
-          <a href="/dashboard/orders" className="text-xs text-primary hover:underline">
-            Voir tout
-          </a>
+        <div className="p-5 border-b border-border">
+          <h2 className="font-semibold text-foreground flex items-center gap-2">
+            <TrendingUp size={16} className="text-primary" />
+            À faire aujourd'hui
+          </h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-muted-foreground text-xs border-b border-border">
-                <th className="text-left font-medium p-4">Commande</th>
-                <th className="text-left font-medium p-4">Client</th>
-                <th className="text-left font-medium p-4">Total</th>
-                <th className="text-left font-medium p-4">Statut</th>
-                <th className="text-right font-medium p-4">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentOrders.map((order) => (
-                <tr key={order.id} className="border-b border-border last:border-0 hover:bg-secondary/50 transition-colors">
-                  <td className="p-4 font-mono text-foreground">{order.id}</td>
-                  <td className="p-4 text-foreground">{order.customer}</td>
-                  <td className="p-4 font-medium text-foreground">{order.total}</td>
-                  <td className="p-4">
-                    <span className={`text-xs font-medium ${statusColor[order.status] || "text-muted-foreground"}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right text-muted-foreground">{order.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="divide-y divide-border">
+          {todayTasks.map((task) => (
+            <button
+              key={task.id}
+              className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${task.urgent ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+                  <task.icon size={16} />
+                </div>
+                <span className="text-sm text-foreground">{task.label}</span>
+                {task.urgent && <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-full">Urgent</span>}
+              </div>
+              <ChevronRight size={16} className="text-muted-foreground" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Activity log */}
+      <div className="rounded-xl border border-border bg-card">
+        <div className="p-5 border-b border-border">
+          <h2 className="font-semibold text-foreground">Journal d'activité</h2>
+        </div>
+        <div className="divide-y divide-border">
+          {recentActivity.map((a, i) => (
+            <div key={i} className="flex items-center gap-4 p-4">
+              <span className="text-xs text-muted-foreground font-mono w-12">{a.time}</span>
+              <span className="text-sm text-foreground flex-1">{a.action}</span>
+              <span className="text-xs text-muted-foreground">{a.user}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
