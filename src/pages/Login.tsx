@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
@@ -18,10 +19,24 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     const { error } = await signIn(email, password);
-    setLoading(false);
     if (error) {
+      setLoading(false);
       toast.error(error.message);
+      return;
+    }
+    // Check if user has a store
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      const { data: store } = await supabase
+        .from("stores")
+        .select("id")
+        .eq("owner_id", authUser.id)
+        .limit(1)
+        .maybeSingle();
+      setLoading(false);
+      navigate(store ? "/dashboard" : "/onboarding");
     } else {
+      setLoading(false);
       navigate("/dashboard");
     }
   };

@@ -113,7 +113,7 @@ export default function Onboarding() {
       toast.error("Erreur: " + error.message);
     } else {
       toast.success("Boutique créée avec succès !");
-      navigate("/dashboard");
+      window.location.href = "/dashboard";
     }
   };
 
