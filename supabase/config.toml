@@ -1,1 +1,4 @@
 project_id = "ucjjapicfrhzlrpvgrlh"
+
+[functions.smart-ops]
+verify_jwt = false
