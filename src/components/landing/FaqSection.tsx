@@ -33,7 +33,7 @@ export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="relative py-28 overflow-hidden">
+    <section id="faq" className="relative py-28 overflow-hidden">
       <div className="absolute inset-0 grid-pattern opacity-15" />
       <div className="container relative z-10">
         <div className="text-center mb-16 space-y-4">

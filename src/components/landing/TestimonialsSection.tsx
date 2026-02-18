@@ -58,7 +58,7 @@ const cardVariants = {
 
 export function TestimonialsSection() {
   return (
-    <section className="relative overflow-hidden" style={{ padding: "120px 0" }}>
+    <section id="testimonials" className="relative overflow-hidden" style={{ padding: "120px 0" }}>
       {/* Background glow */}
       <div
         className="absolute inset-0 -z-10"

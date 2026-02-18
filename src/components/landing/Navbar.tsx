@@ -6,9 +6,18 @@ import { useState } from "react";
 
 const navLinks = [
   { label: "Fonctionnalités", href: "#features" },
+  { label: "Témoignages", href: "#testimonials" },
   { label: "Tarifs", href: "#pricing" },
+  { label: "FAQ", href: "#faq" },
   { label: "Market", href: "/market" },
 ];
+
+const scrollToHash = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+  if (!href.startsWith("#")) return;
+  e.preventDefault();
+  const el = document.querySelector(href);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+};
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
@@ -29,15 +38,26 @@ export function Navbar() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            link.href.startsWith("#") ? (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={(e) => scrollToHash(e, link.href)}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200"
+              >
+                {link.label}
+              </a>
+            ) : (
+              <Link
+                key={link.href}
+                to={link.href}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200"
+              >
+                {link.label}
+              </Link>
+            )
+          )}
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
@@ -61,16 +81,27 @@ export function Navbar() {
           className="md:hidden glass border-t border-border"
         >
           <div className="container py-4 flex flex-col gap-3">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-sm text-muted-foreground py-2"
-                onClick={() => setOpen(false)}
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              link.href.startsWith("#") ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm text-muted-foreground py-2"
+                  onClick={(e) => { scrollToHash(e, link.href); setOpen(false); }}
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className="text-sm text-muted-foreground py-2"
+                  onClick={() => setOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
             <Button variant="hero" size="sm" asChild>
               <Link to="/signup">Créer ma boutique</Link>
             </Button>
