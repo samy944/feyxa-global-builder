@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useCart } from "@/hooks/useCart";
+import { useCart, CartItem } from "@/hooks/useCart";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, MessageCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import { z } from "zod";
 
 const shippingSchema = z.object({
@@ -25,9 +25,17 @@ const shippingSchema = z.object({
 
 type ShippingForm = z.infer<typeof shippingSchema>;
 
+interface CompletedOrder {
+  orderNumber: string;
+  storeName: string;
+  storeSlug: string;
+  items: CartItem[];
+  subtotal: number;
+  currency: string;
+}
+
 export default function Checkout() {
   const { items, itemsByStore, totalPrice, clearStore } = useCart();
-  const navigate = useNavigate();
   const [form, setForm] = useState<ShippingForm>({
     firstName: "",
     lastName: "",
@@ -40,11 +48,13 @@ export default function Checkout() {
   const [errors, setErrors] = useState<Partial<Record<keyof ShippingForm, string>>>({});
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [submitting, setSubmitting] = useState(false);
-  const [completedOrders, setCompletedOrders] = useState<string[]>([]);
+  const [completedOrders, setCompletedOrders] = useState<CompletedOrder[]>([]);
 
   const mainCurrency = items[0]?.currency ?? "XOF";
-  const formatPrice = (p: number) =>
-    mainCurrency === "XOF" ? `${p.toLocaleString("fr-FR")} FCFA` : `€${p.toFixed(2)}`;
+  const formatPrice = (p: number, cur?: string) => {
+    const c = cur || mainCurrency;
+    return c === "XOF" ? `${p.toLocaleString("fr-FR")} FCFA` : `€${p.toFixed(2)}`;
+  };
 
   const updateField = (field: keyof ShippingForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -56,6 +66,34 @@ export default function Checkout() {
     const ts = Date.now().toString(36).toUpperCase();
     const rand = Math.random().toString(36).substring(2, 5).toUpperCase();
     return `${prefix}-${ts}-${rand}`;
+  };
+
+  const buildWhatsAppMessage = (order: CompletedOrder, data: ShippingForm) => {
+    const itemLines = order.items
+      .map((i) => `• ${i.name} × ${i.quantity} — ${formatPrice(i.price * i.quantity, order.currency)}`)
+      .join("\n");
+
+    return [
+      `🛒 Nouvelle commande Feyxa Market`,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `📦 Commande: ${order.orderNumber}`,
+      ``,
+      `👤 Client: ${data.firstName} ${data.lastName || ""}`.trim(),
+      `📞 Tél: ${data.phone}`,
+      `📍 ${data.city}${data.quarter ? `, ${data.quarter}` : ""}`,
+      data.address ? `🏠 ${data.address}` : "",
+      ``,
+      `📋 Articles:`,
+      itemLines,
+      ``,
+      `💰 Total: ${formatPrice(order.subtotal, order.currency)}`,
+      `💳 Paiement: ${paymentMethod === "cod" ? "À la livraison" : paymentMethod === "mobile_money" ? "Mobile Money" : "WhatsApp"}`,
+      data.notes ? `\n📝 Notes: ${data.notes}` : "",
+      ``,
+      `Merci de confirmer cette commande ! 🙏`,
+    ]
+      .filter(Boolean)
+      .join("\n");
   };
 
   const handleSubmit = async () => {
@@ -71,20 +109,50 @@ export default function Checkout() {
     }
 
     setSubmitting(true);
-    const newOrderNumbers: string[] = [];
+    const completed: CompletedOrder[] = [];
 
     try {
-      // Split orders by store
       for (const [storeId, storeItems] of Object.entries(itemsByStore)) {
+        // 1. Decrement stock atomically
+        for (const item of storeItems) {
+          const { data: stockOk, error: stockErr } = await supabase.rpc("decrement_stock", {
+            _product_id: item.productId,
+            _quantity: item.quantity,
+          });
+          if (stockErr) throw stockErr;
+          if (!stockOk) {
+            toast({
+              title: "Stock insuffisant",
+              description: `"${item.name}" n'a plus assez de stock disponible.`,
+              variant: "destructive",
+            });
+            setSubmitting(false);
+            return;
+          }
+        }
+
+        // 2. Upsert customer
+        const { data: customerId, error: custErr } = await supabase.rpc("upsert_checkout_customer", {
+          _store_id: storeId,
+          _first_name: result.data.firstName,
+          _last_name: result.data.lastName || null,
+          _phone: result.data.phone,
+          _city: result.data.city,
+          _quarter: result.data.quarter || null,
+          _address: result.data.address || null,
+        });
+        if (custErr) throw custErr;
+
+        // 3. Create order
         const orderNumber = generateOrderNumber();
         const subtotal = storeItems.reduce((s, i) => s + i.price * i.quantity, 0);
 
-        // Create order
         const { data: order, error: orderError } = await supabase
           .from("orders")
           .insert({
             store_id: storeId,
             order_number: orderNumber,
+            customer_id: customerId,
             subtotal,
             total: subtotal,
             currency: storeItems[0].currency,
@@ -102,18 +170,7 @@ export default function Checkout() {
 
         if (orderError) throw orderError;
 
-        // Create customer record
-        await supabase.from("customers").insert({
-          store_id: storeId,
-          first_name: result.data.firstName,
-          last_name: result.data.lastName || null,
-          phone: result.data.phone,
-          city: result.data.city,
-          quarter: result.data.quarter || null,
-          address: result.data.address || null,
-        });
-
-        // Create order items
+        // 4. Create order items
         const orderItems = storeItems.map((item) => ({
           order_id: order.id,
           product_id: item.productId,
@@ -126,23 +183,23 @@ export default function Checkout() {
         const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
         if (itemsError) throw itemsError;
 
-        newOrderNumbers.push(orderNumber);
+        completed.push({
+          orderNumber,
+          storeName: storeItems[0].storeName,
+          storeSlug: storeItems[0].storeSlug,
+          items: storeItems,
+          subtotal,
+          currency: storeItems[0].currency,
+        });
+
         clearStore(storeId);
       }
 
-      setCompletedOrders(newOrderNumbers);
-
-      // WhatsApp redirect if selected
-      if (paymentMethod === "whatsapp") {
-        const msg = encodeURIComponent(
-          `Bonjour ! Je viens de passer commande sur Feyxa Market.\n\nCommande(s): ${newOrderNumbers.join(", ")}\nNom: ${result.data.firstName} ${result.data.lastName || ""}\nTéléphone: ${result.data.phone}\nVille: ${result.data.city}\n\nMerci de confirmer ma commande.`
-        );
-        window.open(`https://wa.me/?text=${msg}`, "_blank");
-      }
+      setCompletedOrders(completed);
 
       toast({
         title: "Commande confirmée !",
-        description: `${newOrderNumbers.length} commande(s) créée(s) avec succès.`,
+        description: `${completed.length} commande(s) créée(s) avec succès.`,
       });
     } catch (err: any) {
       console.error("Checkout error:", err);
@@ -156,7 +213,7 @@ export default function Checkout() {
     }
   };
 
-  // Success state
+  // ── Success state ──
   if (completedOrders.length > 0) {
     return (
       <MarketLayout>
@@ -176,11 +233,45 @@ export default function Checkout() {
                   ? `Vos ${completedOrders.length} commandes ont été envoyées aux vendeurs.`
                   : "Votre commande a été envoyée au vendeur."}
               </p>
-              <div className="bg-secondary rounded-xl p-4 space-y-1">
-                {completedOrders.map((num) => (
-                  <p key={num} className="text-sm font-mono font-medium text-foreground">{num}</p>
+
+              {/* Order cards per vendor */}
+              <div className="space-y-4 text-left">
+                {completedOrders.map((order) => (
+                  <div key={order.orderNumber} className="bg-secondary rounded-xl p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                        <Store size={12} />
+                        {order.storeName}
+                      </div>
+                      <span className="text-xs font-mono font-medium text-foreground">{order.orderNumber}</span>
+                    </div>
+                    {order.items.map((item) => (
+                      <div key={item.productId} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{item.name} × {item.quantity}</span>
+                        <span className="font-medium text-foreground">{formatPrice(item.price * item.quantity, order.currency)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between text-sm font-semibold border-t border-border/50 pt-2">
+                      <span>Total</span>
+                      <span>{formatPrice(order.subtotal, order.currency)}</span>
+                    </div>
+                    {/* WhatsApp button per vendor */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-1"
+                      onClick={() => {
+                        const msg = encodeURIComponent(buildWhatsAppMessage(order, form));
+                        window.open(`https://wa.me/?text=${msg}`, "_blank");
+                      }}
+                    >
+                      <MessageCircle size={14} />
+                      Envoyer au vendeur via WhatsApp
+                    </Button>
+                  </div>
                 ))}
               </div>
+
               <p className="text-sm text-muted-foreground">
                 Vous recevrez une confirmation par téléphone.
               </p>
@@ -194,6 +285,7 @@ export default function Checkout() {
     );
   }
 
+  // ── Empty cart ──
   if (items.length === 0) {
     return (
       <MarketLayout>
@@ -211,6 +303,7 @@ export default function Checkout() {
     );
   }
 
+  // ── Checkout form ──
   return (
     <MarketLayout>
       <section className="py-12">
