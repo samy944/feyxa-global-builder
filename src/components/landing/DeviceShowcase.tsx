@@ -104,7 +104,7 @@ export function DeviceShowcase() {
       </div>
 
       {/* Devices cascade */}
-      <div className="relative flex items-end justify-center" style={{ minHeight: "420px" }}>
+      <div className="relative flex items-end justify-center min-h-[320px] sm:min-h-[420px]">
         {/* Glow behind */}
         <div className="absolute inset-0 -z-10 flex items-center justify-center">
           <div className="w-[80%] h-[60%] rounded-[3rem] blur-[80px] bg-primary/8" />
@@ -165,7 +165,7 @@ export function DeviceShowcase() {
 
         {/* Phone — back right */}
         <motion.div
-          className="absolute z-30 right-[2%] sm:right-[5%] bottom-[5%]"
+          className="absolute z-30 right-0 sm:right-[5%] -bottom-[10%] sm:bottom-[5%]"
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.9, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
