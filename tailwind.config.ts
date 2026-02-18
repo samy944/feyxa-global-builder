@@ -14,7 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        sans: ["Poppins", "system-ui", "-apple-system", "sans-serif"],
+        heading: ["DIN Condensed", "Arial Narrow", "Impact", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
       colors: {

@@ -7,7 +7,6 @@ import { useState } from "react";
 const navLinks = [
   { label: "Fonctionnalités", href: "#features" },
   { label: "Tarifs", href: "#pricing" },
-  { label: "Sécurité", href: "#security" },
 ];
 
 export function Navbar() {
@@ -21,11 +20,11 @@ export function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 glass"
     >
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2.5">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-sm">F</span>
           </div>
-          <span className="font-bold text-lg tracking-tight text-foreground">Feyxa</span>
+          <span className="font-heading text-xl tracking-wide text-foreground">FEYXA</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -33,7 +32,7 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200"
             >
               {link.label}
             </a>

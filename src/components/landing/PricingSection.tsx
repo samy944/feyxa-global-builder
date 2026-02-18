@@ -55,7 +55,7 @@ const plans = [
 export function PricingSection() {
   return (
     <section id="pricing" className="py-32 bg-hero relative">
-      <div className="absolute inset-0 grid-pattern opacity-30" />
+      <div className="absolute inset-0 grid-pattern opacity-20" />
       <div className="container relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -63,13 +63,13 @@ export function PricingSection() {
           viewport={{ once: true }}
           className="text-center mb-20"
         >
-          <p className="text-sm font-medium text-primary mb-3 tracking-wide uppercase">Tarifs</p>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-            Simple, transparent, sans surprise.
+          <p className="text-sm font-medium text-primary mb-4 tracking-widest uppercase">Tarifs</p>
+          <h2 className="font-heading text-4xl sm:text-5xl text-foreground">
+            SIMPLE & TRANSPARENT.
           </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {plans.map((plan, i) => (
             <motion.div
               key={plan.name}
@@ -79,8 +79,8 @@ export function PricingSection() {
               transition={{ delay: i * 0.1 }}
               className={`relative rounded-2xl border p-8 flex flex-col ${
                 plan.popular
-                  ? "border-primary/50 bg-card shadow-glow"
-                  : "border-border bg-card/50"
+                  ? "border-primary/40 bg-card shadow-glow"
+                  : "border-border bg-card/60"
               }`}
             >
               {plan.popular && (
@@ -89,17 +89,17 @@ export function PricingSection() {
                 </div>
               )}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-foreground">{plan.name}</h3>
+                <h3 className="font-heading text-2xl text-foreground">{plan.name.toUpperCase()}</h3>
                 <p className="text-sm text-muted-foreground mt-1">{plan.desc}</p>
               </div>
               <div className="mb-8">
-                <span className="text-4xl font-bold text-foreground">€{plan.price}</span>
+                <span className="text-5xl font-bold text-foreground">€{plan.price}</span>
                 <span className="text-muted-foreground text-sm">/mois</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check size={14} className="text-accent shrink-0" />
+                  <li key={f} className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                    <Check size={14} className="text-primary shrink-0" />
                     {f}
                   </li>
                 ))}
