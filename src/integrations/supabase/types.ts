@@ -282,6 +282,60 @@ export type Database = {
           },
         ]
       }
+      escrow_records: {
+        Row: {
+          amount: number
+          commission_amount: number
+          commission_rate: number
+          created_at: string
+          id: string
+          order_id: string
+          release_at: string
+          released_at: string | null
+          status: Database["public"]["Enums"]["escrow_status"]
+          store_id: string
+        }
+        Insert: {
+          amount: number
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          order_id: string
+          release_at?: string
+          released_at?: string | null
+          status?: Database["public"]["Enums"]["escrow_status"]
+          store_id: string
+        }
+        Update: {
+          amount?: number
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          release_at?: string
+          released_at?: string | null
+          status?: Database["public"]["Enums"]["escrow_status"]
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escrow_records_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_records_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_categories: {
         Row: {
           created_at: string
@@ -461,6 +515,53 @@ export type Database = {
           },
           {
             foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payout_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_details: Json | null
+          payment_method: string | null
+          processed_at: string | null
+          status: Database["public"]["Enums"]["payout_status"]
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_details?: Json | null
+          payment_method?: string | null
+          processed_at?: string | null
+          status?: Database["public"]["Enums"]["payout_status"]
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_details?: Json | null
+          payment_method?: string | null
+          processed_at?: string | null
+          status?: Database["public"]["Enums"]["payout_status"]
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_requests_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
@@ -739,15 +840,96 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          type: Database["public"]["Enums"]["wallet_tx_type"]
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          type: Database["public"]["Enums"]["wallet_tx_type"]
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          type?: Database["public"]["Enums"]["wallet_tx_type"]
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance_available: number
+          balance_pending: number
+          created_at: string
+          currency: string
+          id: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          balance_available?: number
+          balance_pending?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          balance_available?: number
+          balance_pending?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      create_escrow_for_order: {
+        Args: { _commission_rate?: number; _order_id: string }
+        Returns: string
+      }
       decrement_stock: {
         Args: { _product_id: string; _quantity: number }
         Returns: boolean
       }
+      ensure_wallet: { Args: { _store_id: string }; Returns: string }
       get_store_id_for_order: { Args: { _order_id: string }; Returns: string }
       get_store_id_for_product: {
         Args: { _product_id: string }
@@ -772,6 +954,16 @@ export type Database = {
         Args: { _store_id: string; _user_id: string }
         Returns: boolean
       }
+      release_escrow: { Args: { _escrow_id: string }; Returns: boolean }
+      request_payout: {
+        Args: {
+          _amount: number
+          _payment_details?: Json
+          _payment_method?: string
+          _store_id: string
+        }
+        Returns: string
+      }
       upsert_checkout_customer: {
         Args: {
           _address?: string
@@ -788,6 +980,7 @@ export type Database = {
     Enums: {
       app_role: "marketplace_admin" | "marketplace_moderator"
       discount_type: "percentage" | "fixed"
+      escrow_status: "held" | "released" | "refunded" | "disputed"
       order_status:
         | "new"
         | "confirmed"
@@ -797,7 +990,14 @@ export type Database = {
         | "cancelled"
         | "refunded"
       payment_status: "pending" | "paid" | "cod" | "failed" | "refunded"
+      payout_status: "pending" | "approved" | "paid" | "rejected"
       store_role: "owner" | "admin" | "staff"
+      wallet_tx_type:
+        | "escrow_hold"
+        | "escrow_release"
+        | "commission"
+        | "payout"
+        | "refund"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -927,6 +1127,7 @@ export const Constants = {
     Enums: {
       app_role: ["marketplace_admin", "marketplace_moderator"],
       discount_type: ["percentage", "fixed"],
+      escrow_status: ["held", "released", "refunded", "disputed"],
       order_status: [
         "new",
         "confirmed",
@@ -937,7 +1138,15 @@ export const Constants = {
         "refunded",
       ],
       payment_status: ["pending", "paid", "cod", "failed", "refunded"],
+      payout_status: ["pending", "approved", "paid", "rejected"],
       store_role: ["owner", "admin", "staff"],
+      wallet_tx_type: [
+        "escrow_hold",
+        "escrow_release",
+        "commission",
+        "payout",
+        "refund",
+      ],
     },
   },
 } as const

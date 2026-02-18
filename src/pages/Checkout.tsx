@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, MessageCircle } from "lucide-react";
+import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, MessageCircle, PackageCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 
@@ -27,6 +27,7 @@ type ShippingForm = z.infer<typeof shippingSchema>;
 
 interface CompletedOrder {
   orderNumber: string;
+  orderId: string;
   storeName: string;
   storeSlug: string;
   items: CartItem[];
@@ -49,6 +50,8 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [submitting, setSubmitting] = useState(false);
   const [completedOrders, setCompletedOrders] = useState<CompletedOrder[]>([]);
+  const [confirmedOrders, setConfirmedOrders] = useState<Set<string>>(new Set());
+  const [confirmingOrder, setConfirmingOrder] = useState<string | null>(null);
 
   const mainCurrency = items[0]?.currency ?? "XOF";
   const formatPrice = (p: number, cur?: string) => {
@@ -94,6 +97,22 @@ export default function Checkout() {
     ]
       .filter(Boolean)
       .join("\n");
+  };
+
+  const handleConfirmReceipt = async (order: CompletedOrder) => {
+    setConfirmingOrder(order.orderId);
+    try {
+      const { data, error } = await supabase.functions.invoke("confirm-receipt", {
+        body: { order_id: order.orderId },
+      });
+      if (error) throw error;
+      setConfirmedOrders((prev) => new Set([...prev, order.orderId]));
+      toast({ title: "Réception confirmée !", description: "Les fonds ont été libérés au vendeur." });
+    } catch (err: any) {
+      toast({ title: "Erreur", description: "Impossible de confirmer la réception.", variant: "destructive" });
+    } finally {
+      setConfirmingOrder(null);
+    }
   };
 
   const handleSubmit = async () => {
@@ -183,8 +202,14 @@ export default function Checkout() {
         const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
         if (itemsError) throw itemsError;
 
+        // 5. Create escrow record (holds funds until delivery confirmed)
+        if (paymentMethod !== "cod") {
+          await supabase.rpc("create_escrow_for_order", { _order_id: orderId });
+        }
+
         completed.push({
           orderNumber,
+          orderId,
           storeName: storeItems[0].storeName,
           storeSlug: storeItems[0].storeSlug,
           items: storeItems,
@@ -268,6 +293,27 @@ export default function Checkout() {
                       <MessageCircle size={14} />
                       Envoyer au vendeur via WhatsApp
                     </Button>
+                    {/* Confirm receipt button */}
+                    {confirmedOrders.has(order.orderId) ? (
+                      <div className="flex items-center gap-2 text-xs text-primary mt-1 justify-center">
+                        <CheckCircle2 size={14} /> Réception confirmée
+                      </div>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="w-full mt-1"
+                        disabled={confirmingOrder === order.orderId}
+                        onClick={() => handleConfirmReceipt(order)}
+                      >
+                        {confirmingOrder === order.orderId ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <PackageCheck size={14} />
+                        )}
+                        Confirmer la réception
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
