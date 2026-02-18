@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSeoHead } from "@/hooks/useSeoHead";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
@@ -35,6 +36,13 @@ export default function MarketVendor() {
   const [products, setProducts] = useState<MarketProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
+  useSeoHead({
+    title: store ? `${store.name} — Vendeur Feyxa Market` : "Feyxa Market",
+    description: store?.description?.slice(0, 155) || `Découvrez la boutique ${store?.name || ""} sur Feyxa Market.`,
+    image: store?.logo_url || undefined,
+    url: typeof window !== "undefined" ? window.location.href : "",
+  });
+
   useEffect(() => {
     if (!slug) return;
     fetchVendor();
@@ -52,7 +60,6 @@ export default function MarketVendor() {
 
     if (storeData) {
       setStore(storeData as VendorStore);
-      document.title = `${storeData.name} — Vendeur Feyxa Market`;
 
       const { data: productsData } = await supabase
         .from("products")
