@@ -744,6 +744,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      decrement_stock: {
+        Args: { _product_id: string; _quantity: number }
+        Returns: boolean
+      }
       get_store_id_for_order: { Args: { _order_id: string }; Returns: string }
       get_store_id_for_product: {
         Args: { _product_id: string }
@@ -767,6 +771,18 @@ export type Database = {
       is_store_member: {
         Args: { _store_id: string; _user_id: string }
         Returns: boolean
+      }
+      upsert_checkout_customer: {
+        Args: {
+          _address?: string
+          _city?: string
+          _first_name: string
+          _last_name?: string
+          _phone?: string
+          _quarter?: string
+          _store_id: string
+        }
+        Returns: string
       }
     }
     Enums: {
