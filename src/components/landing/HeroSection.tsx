@@ -1,109 +1,76 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Zap } from "lucide-react";
-import heroVisual from "@/assets/hero-visual.jpg";
+import { ArrowRight } from "lucide-react";
 
 export function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center bg-hero overflow-hidden">
-      {/* Grid pattern overlay */}
-      <div className="absolute inset-0 grid-pattern opacity-50" />
-      
-      {/* Glow effects */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 rounded-full blur-[120px] animate-pulse_glow" />
+      <div className="absolute inset-0 grid-pattern opacity-40" />
 
-      <div className="container relative z-10 pt-32 pb-20">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary"
-            >
-              <Zap size={14} />
-              <span>Lancez votre boutique en 5 minutes</span>
-            </motion.div>
+      {/* Subtle green glow */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full blur-[150px] bg-primary/8 animate-pulse_glow" />
 
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] text-foreground"
-            >
-              Votre empire
-              <br />
-              <span className="text-gradient">e-commerce</span>
-              <br />
-              commence ici.
-            </motion.h1>
+      <div className="container relative z-10 pt-32 pb-24">
+        <div className="max-w-3xl mx-auto text-center space-y-8">
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-sm font-medium tracking-widest uppercase text-primary"
+          >
+            E-commerce nouvelle génération
+          </motion.p>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="text-lg text-muted-foreground max-w-md leading-relaxed"
-            >
-              Feyxa est la plateforme tout-en-un pour créer, gérer et scaler votre boutique en ligne. 
-              Paiements Afrique, IA intégrée, logistique mondiale.
-            </motion.p>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="font-heading text-5xl sm:text-6xl lg:text-8xl leading-[0.95] text-foreground"
+          >
+            VENDEZ
+            <br />
+            <span className="text-gradient">PARTOUT.</span>
+          </motion.h1>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="flex flex-wrap gap-4"
-            >
-              <Button variant="hero" size="lg" asChild>
-                <Link to="/signup">
-                  Commencer gratuitement
-                  <ArrowRight size={16} />
-                </Link>
-              </Button>
-              <Button variant="hero-outline" size="lg" asChild>
-                <Link to="#features">Voir la démo</Link>
-              </Button>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="flex items-center gap-6 pt-4"
-            >
-              {["Stripe", "Paystack", "Mobile Money"].map((name) => (
-                <span key={name} className="text-xs text-muted-foreground font-medium tracking-wide uppercase">
-                  {name}
-                </span>
-              ))}
-            </motion.div>
-          </div>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed"
+          >
+            Créez votre boutique en ligne en 5 minutes. Paiements Afrique & monde, 
+            IA intégrée, logistique mondiale. Tout-en-un.
+          </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="relative hidden lg:block"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="flex flex-wrap justify-center gap-4"
           >
-            <div className="relative rounded-2xl overflow-hidden shadow-elevated border border-border/50">
-              <img
-                src={heroVisual}
-                alt="Feyxa dashboard preview"
-                className="w-full h-auto"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
-            </div>
-            {/* Floating stat card */}
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -bottom-6 -left-6 glass rounded-xl p-4 shadow-elevated"
-            >
-              <p className="text-xs text-muted-foreground">Revenus ce mois</p>
-              <p className="text-2xl font-bold text-foreground">€24,580</p>
-              <p className="text-xs text-accent">↑ 23% vs dernier mois</p>
-            </motion.div>
+            <Button variant="hero" size="lg" asChild>
+              <Link to="/signup">
+                Commencer gratuitement
+                <ArrowRight size={16} />
+              </Link>
+            </Button>
+            <Button variant="hero-outline" size="lg" asChild>
+              <Link to="#features">Découvrir</Link>
+            </Button>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="flex items-center justify-center gap-8 pt-8"
+          >
+            {["Stripe", "Paystack", "Mobile Money", "Wave"].map((name) => (
+              <span key={name} className="text-xs text-muted-foreground/60 font-medium tracking-widest uppercase">
+                {name}
+              </span>
+            ))}
           </motion.div>
         </div>
       </div>

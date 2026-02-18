@@ -25,11 +25,11 @@ export function Footer() {
       <div className="container">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
           <div className="col-span-2 md:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4">
+            <Link to="/" className="flex items-center gap-2.5 mb-4">
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm">F</span>
               </div>
-              <span className="font-bold text-lg tracking-tight text-foreground">Feyxa</span>
+              <span className="font-heading text-xl tracking-wide text-foreground">FEYXA</span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               La plateforme e-commerce nouvelle génération pour l'Afrique et le monde.
@@ -42,7 +42,7 @@ export function Footer() {
               <ul className="space-y-2">
                 {section.links.map((link) => (
                   <li key={link}>
-                    <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
                       {link}
                     </a>
                   </li>
@@ -56,9 +56,7 @@ export function Footer() {
           <p className="text-xs text-muted-foreground">
             © 2026 Feyxa. Tous droits réservés.
           </p>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-muted-foreground">Construit avec ❤️ pour les entrepreneurs du monde entier.</span>
-          </div>
+          <span className="text-xs text-muted-foreground">Construit avec ❤️ pour les entrepreneurs du monde entier.</span>
         </div>
       </div>
     </footer>
