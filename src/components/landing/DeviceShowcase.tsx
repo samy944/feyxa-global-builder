@@ -1,64 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
-interface DeviceSlide {
+interface PhoneScreen {
   label: string;
-  laptop: string;
-  tablet: string;
-  phone: string;
+  src: string;
 }
 
-const slides: DeviceSlide[] = [
-  {
-    label: "Dashboard Vendeur",
-    laptop: "/mockups/laptop-dashboard.webp",
-    tablet: "/mockups/tablet-dashboard.webp",
-    phone: "/mockups/screen-dashboard.webp",
-  },
-  {
-    label: "Marketplace Publique",
-    laptop: "/mockups/laptop-marketplace.webp",
-    tablet: "/mockups/tablet-marketplace.webp",
-    phone: "/mockups/screen-marketplace.webp",
-  },
-  {
-    label: "Checkout Rapide",
-    laptop: "/mockups/laptop-checkout.webp",
-    tablet: "/mockups/tablet-checkout.webp",
-    phone: "/mockups/screen-checkout.webp",
-  },
+const screens: PhoneScreen[] = [
+  { label: "Dashboard", src: "/mockups/phone-dashboard.webp" },
+  { label: "Marketplace", src: "/mockups/phone-marketplace.webp" },
+  { label: "Checkout", src: "/mockups/phone-checkout.webp" },
 ];
 
-const LAPTOP_INTERVAL = 3500;
-const TABLET_INTERVAL = 4200;
-const PHONE_INTERVAL = 5000;
-
-function useDeviceSlide(interval: number, paused: boolean, reducedMotion: boolean) {
-  const [active, setActive] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const advance = useCallback(() => {
-    setActive((prev) => (prev + 1) % slides.length);
-  }, []);
-
-  useEffect(() => {
-    if (reducedMotion || paused) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = null;
-      return;
-    }
-    timerRef.current = setInterval(advance, interval);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [reducedMotion, paused, advance, interval]);
-
-  return { active, setActive };
-}
+const INTERVAL = 4000;
 
 export function DeviceShowcase() {
+  const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -74,278 +34,119 @@ export function DeviceShowcase() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
-  const laptop = useDeviceSlide(LAPTOP_INTERVAL, paused, reducedMotion);
-  const tablet = useDeviceSlide(TABLET_INTERVAL, paused, reducedMotion);
-  const phone = useDeviceSlide(PHONE_INTERVAL, paused, reducedMotion);
+  const advance = useCallback(() => {
+    setActive((prev) => (prev + 1) % screens.length);
+  }, []);
 
-  if (reducedMotion) {
-    return (
-      <div className="flex items-end justify-center gap-4">
-        <LaptopFrame>
-          <img src={slides[0].laptop} alt="Dashboard" className="w-full h-full object-cover" loading="lazy" />
-        </LaptopFrame>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (reducedMotion || paused) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+      return;
+    }
+    timerRef.current = setInterval(advance, INTERVAL);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [reducedMotion, paused, advance]);
 
   return (
     <div
-      className="relative w-full"
+      className="relative flex flex-col items-center gap-6"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      aria-label="Aperçu multi-écrans du produit FEYXA"
+      aria-label="Aperçu de l'application Feyxa"
       role="region"
     >
-      {/* Label */}
-      <div className="text-center mb-6">
-        <p className="text-xs font-medium tracking-widest uppercase text-muted-foreground/70">
-          Aperçu du produit
-        </p>
-      </div>
+      {/* iPhone Frame */}
+      <div className="relative">
+        {/* Glow behind phone */}
+        <div
+          className="absolute -inset-8 -z-10 rounded-[3rem] blur-[80px]"
+          style={{ background: "hsla(106, 75%, 47%, 0.1)" }}
+        />
 
-      {/* Devices cascade — perspective container */}
-      <ParallaxDevices
-        slides={slides}
-        laptop={laptop}
-        tablet={tablet}
-        phone={phone}
-        reducedMotion={reducedMotion}
-      />
-
-      {/* Dots — laptop controls */}
-      <div className="flex justify-center gap-2 mt-6">
-        {slides.map((slide, i) => (
-          <button
-            key={i}
-            onClick={() => {
-              laptop.setActive(i);
-              tablet.setActive(i);
-              phone.setActive(i);
-            }}
-            aria-label={`Voir ${slide.label}`}
-            className={`h-2 rounded-full transition-all duration-500 ${
-              i === laptop.active
-                ? "w-6 bg-primary"
-                : "w-2 bg-muted-foreground/25 hover:bg-muted-foreground/40"
-            }`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-/* ── Parallax wrapper ── */
-
-interface ParallaxDevicesProps {
-  slides: DeviceSlide[];
-  laptop: { active: number };
-  tablet: { active: number };
-  phone: { active: number };
-  reducedMotion: boolean;
-}
-
-function ParallaxDevices({ slides, laptop, tablet, phone, reducedMotion }: ParallaxDevicesProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"],
-  });
-
-  // Each device moves at a different rate — creates depth on scroll
-  // Laptop (front): moves least. Tablet (back-left): moves most. Phone (mid-right): medium.
-  const laptopY = useTransform(scrollYProgress, [0, 1], reducedMotion ? [0, 0] : [40, -20]);
-  const tabletY = useTransform(scrollYProgress, [0, 1], reducedMotion ? [0, 0] : [80, -50]);
-  const phoneY = useTransform(scrollYProgress, [0, 1], reducedMotion ? [0, 0] : [60, -35]);
-
-  return (
-    <div
-      ref={containerRef}
-      className="relative flex items-end justify-center min-h-[360px] sm:min-h-[480px] lg:min-h-[520px]"
-      style={{ perspective: "1200px" }}
-    >
-      {/* Glow behind laptop */}
-      <div className="absolute inset-0 -z-10 flex items-center justify-center">
-        <div className="w-[70%] h-[50%] rounded-[3rem] blur-[100px] bg-primary/10" />
-      </div>
-
-      {/* Tablet — back left, tilted */}
-      <motion.div
-        className="absolute z-10 hidden sm:block"
-        style={{
-          left: "-5%",
-          bottom: "18%",
-          y: tabletY,
-          rotateY: 12,
-          scale: 0.88,
-          transformStyle: "preserve-3d",
-        }}
-        initial={{ opacity: 0, x: -60 }}
-        animate={{ opacity: 0.85, x: 0 }}
-        transition={{ delay: 0.7, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="relative">
-          <DeviceLabel label={slides[tablet.active].label} device="Tablette" />
-          <TabletFrame>
-            <AnimatePresence mode="wait">
-              <motion.img
-                key={`tablet-${tablet.active}`}
-                src={slides[tablet.active].tablet}
-                alt={slides[tablet.active].label}
-                className="w-full h-full object-cover object-center"
-                loading="lazy"
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              />
-            </AnimatePresence>
-          </TabletFrame>
-        </div>
-      </motion.div>
-
-      {/* Laptop — center front, dominant */}
-      <motion.div
-        className="relative z-20"
-        style={{ y: laptopY }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <DeviceLabel label={slides[laptop.active].label} device="Desktop" />
-        <LaptopFrame>
-          <AnimatePresence mode="wait">
-            <motion.img
-              key={`laptop-${laptop.active}`}
-              src={slides[laptop.active].laptop}
-              alt={slides[laptop.active].label}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              initial={{ opacity: 0, x: 20, scale: 0.98 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: -15, scale: 0.98 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            />
-          </AnimatePresence>
-        </LaptopFrame>
-      </motion.div>
-
-      {/* Phone — front right, floating */}
-      <motion.div
-        className="absolute z-30"
-        style={{
-          right: "0%",
-          bottom: "25%",
-          y: phoneY,
-          rotateY: -8,
-          transformStyle: "preserve-3d",
-        }}
-        initial={{ opacity: 0, x: 50 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.9, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="relative">
-          <DeviceLabel label={slides[phone.active].label} device="Mobile" />
-          <PhoneFrame>
-            <AnimatePresence mode="wait">
-              <motion.img
-                key={`phone-${phone.active}`}
-                src={slides[phone.active].phone}
-                alt={slides[phone.active].label}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              />
-            </AnimatePresence>
-          </PhoneFrame>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-function DeviceLabel({ label, device }: { label: string; device: string }) {
-  return (
-    <div className="text-center mb-2">
-      <AnimatePresence mode="wait">
-        <motion.span
-          key={label}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
-          transition={{ duration: 0.25 }}
-          className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground/60"
+        <div
+          className="relative w-[260px] sm:w-[280px] lg:w-[300px] aspect-[9/19.5] rounded-[2.5rem] overflow-hidden"
+          style={{
+            border: "5px solid hsl(0, 0%, 18%)",
+            boxShadow:
+              "0 0 0 1px hsl(0, 0%, 25%), 0 20px 60px -10px hsla(0, 0%, 0%, 0.5), 0 0 40px -10px hsla(106, 75%, 47%, 0.15)",
+            background: "hsl(0, 0%, 8%)",
+          }}
         >
-          {device} — {label}
-        </motion.span>
-      </AnimatePresence>
-    </div>
-  );
-}
+          {/* Notch / Dynamic Island */}
+          <div
+            className="absolute top-2 left-1/2 -translate-x-1/2 w-[90px] h-[26px] rounded-full z-20"
+            style={{ background: "hsl(0, 0%, 6%)" }}
+          />
 
-/* ── Device Frames ── */
+          {/* Screen content */}
+          <div className="w-full h-full overflow-hidden">
+            {reducedMotion ? (
+              <img
+                src={screens[0].src}
+                alt={screens[0].label}
+                className="w-full h-full object-cover object-center"
+                loading="eager"
+              />
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={`screen-${active}`}
+                  src={screens[active].src}
+                  alt={screens[active].label}
+                  className="w-full h-full object-cover object-center"
+                  loading="eager"
+                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </AnimatePresence>
+            )}
+          </div>
 
-function LaptopFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative">
-      {/* Screen */}
-      <div
-        className="w-[320px] sm:w-[400px] lg:w-[480px] aspect-[16/10] rounded-t-xl overflow-hidden shadow-elevated"
-        style={{
-          border: "4px solid hsl(var(--foreground) / 0.15)",
-          borderBottom: "none",
-          background: "hsl(var(--foreground) / 0.05)",
-        }}
-      >
-        {children}
+          {/* Bottom bar indicator */}
+          <div
+            className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[100px] h-[4px] rounded-full z-20"
+            style={{ background: "hsl(0, 0%, 30%)" }}
+          />
+        </div>
       </div>
-      {/* Base / keyboard hint */}
-      <div
-        className="w-[110%] h-3 sm:h-4 -ml-[5%] rounded-b-xl"
-        style={{
-          background: "linear-gradient(to bottom, hsl(var(--foreground) / 0.12), hsl(var(--foreground) / 0.08))",
-        }}
-      />
-      <div
-        className="w-[30%] h-1 mx-auto rounded-b-lg"
-        style={{ background: "hsl(var(--foreground) / 0.08)" }}
-      />
-    </div>
-  );
-}
 
-function TabletFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="w-[160px] sm:w-[210px] lg:w-[240px] aspect-[3/4] rounded-2xl overflow-hidden"
-      style={{
-        border: "3px solid hsl(var(--foreground) / 0.12)",
-        background: "hsl(var(--foreground) / 0.05)",
-      }}
-    >
-      <div className="w-full h-full overflow-hidden">
-        {children}
-      </div>
-    </div>
-  );
-}
+      {/* Label + Dots */}
+      <div className="flex flex-col items-center gap-3">
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={screens[active].label}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2 }}
+            className="text-xs font-medium tracking-widest uppercase"
+            style={{ color: "hsl(0, 0%, 55%)" }}
+          >
+            {screens[active].label}
+          </motion.span>
+        </AnimatePresence>
 
-function PhoneFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative">
-      <div
-        className="w-[110px] sm:w-[130px] lg:w-[150px] aspect-[9/19] rounded-[1.5rem] overflow-hidden shadow-elevated"
-        style={{
-          border: "4px solid hsl(var(--foreground) / 0.12)",
-          background: "hsl(var(--foreground) / 0.05)",
-        }}
-      >
-        {/* Notch */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[50px] h-[14px] bg-foreground/10 rounded-b-xl z-10" />
-        <div className="w-full h-full overflow-hidden">
-          {children}
+        <div className="flex gap-2">
+          {screens.map((screen, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              aria-label={`Voir ${screen.label}`}
+              className="h-1.5 rounded-full transition-all duration-500"
+              style={{
+                width: i === active ? "24px" : "8px",
+                background:
+                  i === active
+                    ? "hsl(106, 75%, 47%)"
+                    : "hsl(0, 0%, 30%)",
+              }}
+            />
+          ))}
         </div>
       </div>
     </div>
