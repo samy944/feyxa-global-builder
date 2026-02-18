@@ -1,8 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, ShoppingBag, Menu, X } from "lucide-react";
+import { ShoppingBag, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/hooks/useCart";
 
 const navLinks = [
   { label: "Accueil", href: "/market" },
@@ -12,6 +13,7 @@ const navLinks = [
 export function MarketNavbar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { totalItems, setIsOpen } = useCart();
 
   return (
     <motion.header
@@ -47,6 +49,17 @@ export function MarketNavbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
+          <button
+            onClick={() => setIsOpen(true)}
+            className="relative text-foreground hover:text-primary transition-colors p-1"
+          >
+            <ShoppingBag size={20} />
+            {totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                {totalItems}
+              </span>
+            )}
+          </button>
           <Button variant="ghost" size="sm" asChild>
             <Link to="/login">Connexion</Link>
           </Button>
@@ -55,9 +68,22 @@ export function MarketNavbar() {
           </Button>
         </div>
 
-        <button className="md:hidden text-foreground" onClick={() => setOpen(!open)}>
-          {open ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        <div className="flex items-center gap-3 md:hidden">
+          <button
+            onClick={() => setIsOpen(true)}
+            className="relative text-foreground p-1"
+          >
+            <ShoppingBag size={20} />
+            {totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                {totalItems}
+              </span>
+            )}
+          </button>
+          <button className="text-foreground" onClick={() => setOpen(!open)}>
+            {open ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
       </div>
 
       {open && (

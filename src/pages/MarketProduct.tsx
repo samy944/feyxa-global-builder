@@ -3,8 +3,9 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
 import { motion } from "framer-motion";
-import { Loader2, ChevronRight, Store, MapPin, Truck, RotateCcw, Shield } from "lucide-react";
+import { Loader2, ChevronRight, Store, MapPin, Truck, RotateCcw, Shield, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/hooks/useCart";
 
 interface ProductDetail {
   id: string;
@@ -16,6 +17,7 @@ interface ProductDetail {
   images: any;
   stock_quantity: number;
   tags: string[] | null;
+  store_id: string;
   stores: {
     name: string;
     slug: string;
@@ -32,7 +34,7 @@ export default function MarketProduct() {
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
-
+  const { addItem } = useCart();
   useEffect(() => {
     if (!slug) return;
     fetchProduct();
@@ -42,7 +44,7 @@ export default function MarketProduct() {
     setLoading(true);
     const { data } = await supabase
       .from("products")
-      .select("id, name, slug, description, price, compare_at_price, images, stock_quantity, tags, stores!inner(name, slug, city, currency, delivery_delay, return_policy, logo_url)")
+      .select("id, name, slug, description, price, compare_at_price, images, stock_quantity, tags, store_id, stores!inner(name, slug, city, currency, delivery_delay, return_policy, logo_url)")
       .eq("slug", slug!)
       .eq("is_published", true)
       .eq("is_marketplace_published", true)
@@ -194,10 +196,29 @@ export default function MarketProduct() {
 
               {/* CTA - placeholder for checkout Phase 2 */}
               <div className="pt-4 space-y-3">
-                <Button variant="hero" size="lg" className="w-full font-heading text-lg tracking-wide" disabled>
-                  BIENTÔT — AJOUTER AU PANIER
+                <Button
+                  variant="hero"
+                  size="lg"
+                  className="w-full font-heading text-lg tracking-wide"
+                  disabled={product.stock_quantity <= 0}
+                  onClick={() =>
+                    addItem({
+                      productId: product.id,
+                      name: product.name,
+                      price: product.price,
+                      currency: product.stores.currency,
+                      image: images[0] ?? null,
+                      storeId: (product as any).store_id ?? "",
+                      storeName: product.stores.name,
+                      storeSlug: product.stores.slug,
+                      slug: product.slug,
+                      maxStock: product.stock_quantity,
+                    })
+                  }
+                >
+                  <ShoppingBag size={18} />
+                  AJOUTER AU PANIER
                 </Button>
-                <p className="text-xs text-muted-foreground text-center">Le checkout marketplace arrive bientôt.</p>
               </div>
 
               {/* Vendor policies */}
