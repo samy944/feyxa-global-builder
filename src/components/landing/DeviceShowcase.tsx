@@ -191,7 +191,7 @@ function ParallaxDevices({ slides, laptop, tablet, phone, reducedMotion }: Paral
                 key={`tablet-${tablet.active}`}
                 src={slides[tablet.active].tablet}
                 alt={slides[tablet.active].label}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-center"
                 loading="lazy"
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -321,11 +321,13 @@ function TabletFrame({ children }: { children: React.ReactNode }) {
     <div
       className="w-[160px] sm:w-[210px] lg:w-[240px] aspect-[3/4] rounded-2xl overflow-hidden"
       style={{
-        border: "5px solid hsl(var(--foreground) / 0.12)",
+        border: "3px solid hsl(var(--foreground) / 0.12)",
         background: "hsl(var(--foreground) / 0.05)",
       }}
     >
-      {children}
+      <div className="w-full h-full overflow-hidden">
+        {children}
+      </div>
     </div>
   );
 }
