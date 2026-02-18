@@ -143,13 +143,15 @@ export default function Checkout() {
         });
         if (custErr) throw custErr;
 
-        // 3. Create order
+        // 3. Create order with client-generated UUID
         const orderNumber = generateOrderNumber();
+        const orderId = crypto.randomUUID();
         const subtotal = storeItems.reduce((s, i) => s + i.price * i.quantity, 0);
 
-        const { data: order, error: orderError } = await supabase
+        const { error: orderError } = await supabase
           .from("orders")
           .insert({
+            id: orderId,
             store_id: storeId,
             order_number: orderNumber,
             customer_id: customerId,
@@ -164,15 +166,13 @@ export default function Checkout() {
             payment_method: paymentMethod,
             payment_status: paymentMethod === "cod" ? "cod" : "pending",
             status: "new",
-          })
-          .select("id")
-          .single();
+          });
 
         if (orderError) throw orderError;
 
         // 4. Create order items
         const orderItems = storeItems.map((item) => ({
-          order_id: order.id,
+          order_id: orderId,
           product_id: item.productId,
           product_name: item.name,
           quantity: item.quantity,
