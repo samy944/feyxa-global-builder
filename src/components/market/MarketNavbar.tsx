@@ -8,6 +8,7 @@ import { useCart } from "@/hooks/useCart";
 const navLinks = [
   { label: "Accueil", href: "/market" },
   { label: "Catégories", href: "/market#categories" },
+  { label: "Suivre ma commande", href: "/track" },
 ];
 
 export function MarketNavbar() {
