@@ -2,18 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { DeviceShowcase } from "./DeviceShowcase";
+import heroLifestyle from "@/assets/hero-lifestyle.jpg";
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center bg-hero overflow-hidden">
-      <div className="absolute inset-0 grid-pattern opacity-40" />
-
-      {/* Subtle green glow */}
-      <div className="absolute top-1/3 left-1/4 w-[600px] h-[300px] rounded-full blur-[150px] bg-primary/8 animate-pulse_glow" />
-
-      <div className="container relative z-10 pt-32 pb-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+    <section className="relative min-h-[90vh] flex items-center bg-background overflow-hidden">
+      <div className="container relative z-10 py-24 lg:py-32">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           {/* Left — Text */}
           <div className="space-y-8 text-center lg:text-left">
             <motion.p
@@ -29,7 +24,7 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="font-heading text-5xl sm:text-6xl lg:text-8xl leading-[0.95] text-foreground"
+              className="font-heading text-5xl sm:text-6xl lg:text-7xl leading-[0.95] text-foreground"
             >
               VENDEZ
               <br />
@@ -77,14 +72,23 @@ export function HeroSection() {
             </motion.div>
           </div>
 
-          {/* Right — Phone Mockup */}
+          {/* Right — Lifestyle Image */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             className="flex justify-center lg:justify-end"
           >
-            <DeviceShowcase />
+            <div className="relative w-full max-w-md lg:max-w-lg">
+              <img
+                src={heroLifestyle}
+                alt="Entrepreneure moderne utilisant Feyxa sur son laptop"
+                className="w-full h-auto rounded-2xl shadow-elevated object-cover"
+                loading="eager"
+              />
+              {/* Subtle green accent glow behind image */}
+              <div className="absolute -inset-4 -z-10 rounded-3xl bg-primary/5 blur-2xl" />
+            </div>
           </motion.div>
         </div>
       </div>
