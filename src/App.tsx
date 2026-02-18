@@ -33,7 +33,6 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <CartDrawer />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -59,6 +58,7 @@ const App = () => (
             <Route path="/checkout" element={<Checkout />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CartDrawer />
         </BrowserRouter>
       </TooltipProvider>
       </CartProvider>
