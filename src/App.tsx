@@ -24,6 +24,7 @@ import MarketProduct from "./pages/MarketProduct";
 import MarketVendor from "./pages/MarketVendor";
 import Checkout from "./pages/Checkout";
 import DashboardWallet from "./pages/DashboardWallet";
+import TrackOrder from "./pages/TrackOrder";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,8 @@ const App = () => (
             <Route path="/market/product/:slug" element={<MarketProduct />} />
             <Route path="/market/vendor/:slug" element={<MarketVendor />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/track" element={<TrackOrder />} />
+            <Route path="/track/:orderNumber" element={<TrackOrder />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <CartDrawer />
