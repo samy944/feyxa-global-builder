@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { PhoneShowcase } from "./PhoneShowcase";
+import { DeviceShowcase } from "./DeviceShowcase";
 
 export function HeroSection() {
   return (
@@ -84,7 +84,7 @@ export function HeroSection() {
             transition={{ delay: 0.5, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="flex justify-center lg:justify-end"
           >
-            <PhoneShowcase />
+            <DeviceShowcase />
           </motion.div>
         </div>
       </div>
