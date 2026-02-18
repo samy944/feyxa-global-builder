@@ -25,6 +25,7 @@ import MarketVendor from "./pages/MarketVendor";
 import Checkout from "./pages/Checkout";
 import DashboardWallet from "./pages/DashboardWallet";
 import TrackOrder from "./pages/TrackOrder";
+import AdminPayouts from "./pages/AdminPayouts";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,9 @@ const App = () => (
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/track" element={<TrackOrder />} />
             <Route path="/track/:orderNumber" element={<TrackOrder />} />
+            <Route path="/admin/payouts" element={
+              <ProtectedRoute><AdminPayouts /></ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <CartDrawer />
