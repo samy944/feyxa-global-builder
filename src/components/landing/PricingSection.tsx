@@ -1,12 +1,14 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Check, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const plans = [
   {
     name: "Starter",
-    price: "0",
+    monthly: 0,
+    yearly: 0,
     desc: "Pour tester et lancer votre première boutique.",
     features: [
       "1 boutique",
@@ -20,7 +22,8 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "29",
+    monthly: 29,
+    yearly: 24,
     desc: "Pour les vendeurs qui veulent scaler.",
     features: [
       "3 boutiques",
@@ -36,7 +39,8 @@ const plans = [
   },
   {
     name: "Enterprise",
-    price: "99",
+    monthly: 99,
+    yearly: 79,
     desc: "Pour les entreprises avec des besoins avancés.",
     features: [
       "Boutiques illimitées",
@@ -62,6 +66,8 @@ const cardVariants = {
 };
 
 export function PricingSection() {
+  const [annual, setAnnual] = useState(false);
+
   return (
     <section id="pricing" className="relative overflow-hidden" style={{ padding: "120px 0" }}>
       {/* Background */}
@@ -97,6 +103,56 @@ export function PricingSection() {
           <p className="text-lg leading-relaxed" style={{ color: "hsl(0, 0%, 55%)" }}>
             Pas de frais cachés. Commencez gratuitement, évoluez quand vous êtes prêt.
           </p>
+        </motion.div>
+
+        {/* Toggle */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="flex items-center justify-center gap-4 mb-16"
+        >
+          <span
+            className="text-sm font-medium transition-colors duration-200"
+            style={{ color: annual ? "hsl(0, 0%, 40%)" : "hsl(0, 0%, 90%)" }}
+          >
+            Mensuel
+          </span>
+          <button
+            onClick={() => setAnnual(!annual)}
+            className="relative h-8 w-14 rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            style={{
+              background: annual ? "hsl(106, 75%, 47%)" : "hsl(0, 0%, 22%)",
+            }}
+            aria-label="Basculer entre mensuel et annuel"
+          >
+            <motion.div
+              className="absolute top-1 left-1 h-6 w-6 rounded-full"
+              style={{ background: "hsl(0, 0%, 100%)" }}
+              animate={{ x: annual ? 24 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          </button>
+          <span
+            className="text-sm font-medium transition-colors duration-200"
+            style={{ color: annual ? "hsl(0, 0%, 90%)" : "hsl(0, 0%, 40%)" }}
+          >
+            Annuel
+          </span>
+          {annual && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0.8, x: -8 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              className="text-xs font-semibold rounded-full px-3 py-1"
+              style={{
+                background: "hsla(106, 75%, 47%, 0.15)",
+                color: "hsl(106, 75%, 47%)",
+              }}
+            >
+              -20%
+            </motion.span>
+          )}
         </motion.div>
 
         {/* Cards */}
@@ -162,10 +218,32 @@ export function PricingSection() {
 
               {/* Price */}
               <div className="relative z-10 mb-8">
-                <span className="text-5xl font-bold text-foreground">€{plan.price}</span>
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={annual ? "yearly" : "monthly"}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-5xl font-bold text-foreground inline-block"
+                  >
+                    €{annual ? plan.yearly : plan.monthly}
+                  </motion.span>
+                </AnimatePresence>
                 <span className="text-sm ml-1" style={{ color: "hsl(0, 0%, 45%)" }}>
                   /mois
                 </span>
+                {annual && plan.monthly > 0 && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="block text-xs mt-1"
+                    style={{ color: "hsl(0, 0%, 40%)" }}
+                  >
+                    <span style={{ textDecoration: "line-through" }}>€{plan.monthly}</span>
+                    {" "}facturé annuellement
+                  </motion.span>
+                )}
               </div>
 
               {/* Features */}
