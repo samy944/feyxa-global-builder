@@ -103,20 +103,28 @@ export function DeviceShowcase() {
         </p>
       </div>
 
-      {/* Devices cascade */}
-      <div className="relative flex items-end justify-center min-h-[320px] sm:min-h-[420px]">
-        {/* Glow behind */}
+      {/* Devices cascade — perspective container */}
+      <div
+        className="relative flex items-end justify-center min-h-[360px] sm:min-h-[480px] lg:min-h-[520px]"
+        style={{ perspective: "1200px" }}
+      >
+        {/* Glow behind laptop */}
         <div className="absolute inset-0 -z-10 flex items-center justify-center">
-          <div className="w-[80%] h-[60%] rounded-[3rem] blur-[80px] bg-primary/8" />
+          <div className="w-[70%] h-[50%] rounded-[3rem] blur-[100px] bg-primary/10" />
         </div>
 
-        {/* Tablet — back left */}
+        {/* Tablet — back left, tilted */}
         <motion.div
           className="absolute z-10 hidden sm:block"
-          style={{ left: "0%", bottom: "10%" }}
-          initial={{ opacity: 0, x: -40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.7, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            left: "-5%",
+            bottom: "18%",
+            transform: "rotateY(12deg) scale(0.88)",
+            transformStyle: "preserve-3d",
+          }}
+          initial={{ opacity: 0, x: -60, rotateY: 20 }}
+          animate={{ opacity: 0.85, x: 0, rotateY: 12 }}
+          transition={{ delay: 0.7, duration: 1, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="relative">
             <DeviceLabel label={slides[tablet.active].label} device="Tablette" />
@@ -138,12 +146,12 @@ export function DeviceShowcase() {
           </div>
         </motion.div>
 
-        {/* Laptop — center front */}
+        {/* Laptop — center front, dominant */}
         <motion.div
           className="relative z-20"
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ delay: 0.4, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
           <DeviceLabel label={slides[laptop.active].label} device="Desktop" />
           <LaptopFrame>
@@ -163,12 +171,18 @@ export function DeviceShowcase() {
           </LaptopFrame>
         </motion.div>
 
-        {/* Phone — back right */}
+        {/* Phone — front right, floating above */}
         <motion.div
-          className="absolute z-30 right-0 sm:right-[5%] -bottom-[10%] sm:bottom-[5%]"
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.9, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute z-30"
+          style={{
+            right: "0%",
+            bottom: "25%",
+            transform: "rotateY(-8deg)",
+            transformStyle: "preserve-3d",
+          }}
+          initial={{ opacity: 0, x: 50, y: 20 }}
+          animate={{ opacity: 1, x: 0, y: 0 }}
+          transition={{ delay: 0.9, duration: 1, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="relative">
             <DeviceLabel label={slides[phone.active].label} device="Mobile" />
@@ -267,7 +281,7 @@ function LaptopFrame({ children }: { children: React.ReactNode }) {
 function TabletFrame({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="w-[160px] sm:w-[200px] lg:w-[220px] aspect-[3/4] rounded-2xl overflow-hidden shadow-elevated"
+      className="w-[160px] sm:w-[210px] lg:w-[240px] aspect-[3/4] rounded-2xl overflow-hidden"
       style={{
         border: "5px solid hsl(var(--foreground) / 0.12)",
         background: "hsl(var(--foreground) / 0.05)",
