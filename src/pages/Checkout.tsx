@@ -321,6 +321,17 @@ export default function Checkout() {
               <p className="text-sm text-muted-foreground">
                 Vous recevrez une confirmation par téléphone.
               </p>
+              <p className="text-xs text-muted-foreground">
+                Suivez vos commandes à tout moment sur la page{" "}
+                <Link to="/track" className="text-primary underline underline-offset-2">Suivi de commande</Link>.
+              </p>
+              <div className="flex gap-3 justify-center flex-wrap">
+                {completedOrders.map((order) => (
+                  <Button key={order.orderId} variant="outline" size="sm" asChild>
+                    <Link to={`/track/${order.orderNumber}`}>Suivre {order.orderNumber}</Link>
+                  </Button>
+                ))}
+              </div>
               <Button variant="hero" asChild>
                 <Link to="/market">CONTINUER MES ACHATS</Link>
               </Button>
