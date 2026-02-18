@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSeoHead } from "@/hooks/useSeoHead";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
@@ -31,6 +32,13 @@ export default function StorefrontHome() {
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  useSeoHead({
+    title: store ? `${store.name} — Boutique Feyxa` : "Boutique Feyxa",
+    description: store?.description?.slice(0, 155) || `Visitez la boutique ${store?.name || ""} sur Feyxa.`,
+    image: store?.logo_url || undefined,
+    url: typeof window !== "undefined" ? window.location.href : "",
+  });
 
   useEffect(() => {
     if (!slug) return;

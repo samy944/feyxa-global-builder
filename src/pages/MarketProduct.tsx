@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSeoHead } from "@/hooks/useSeoHead";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
@@ -35,6 +36,21 @@ export default function MarketProduct() {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const { addItem } = useCart();
+  const images: string[] = Array.isArray(product?.images) ? product.images : [];
+  const pageUrl = typeof window !== "undefined" ? window.location.href : "";
+
+  useSeoHead({
+    title: product ? `${product.name} — Feyxa Market` : "Feyxa Market",
+    description: product?.description?.slice(0, 155) || `Achetez ${product?.name || "ce produit"} sur Feyxa Market.`,
+    image: images[0] || undefined,
+    url: pageUrl,
+    type: "product",
+    price: product?.price,
+    currency: product?.stores?.currency || "XOF",
+    availability: product && product.stock_quantity > 0 ? "InStock" : "OutOfStock",
+    brand: product?.stores?.name,
+  });
+
   useEffect(() => {
     if (!slug) return;
     fetchProduct();
@@ -54,7 +70,6 @@ export default function MarketProduct() {
 
     if (data) {
       setProduct(data as unknown as ProductDetail);
-      document.title = `${data.name} — Feyxa Market`;
     }
     setLoading(false);
   };
@@ -65,7 +80,7 @@ export default function MarketProduct() {
     return `€${p.toFixed(2)}`;
   };
 
-  const images: string[] = Array.isArray(product?.images) ? product.images : [];
+
 
   if (loading) {
     return (
