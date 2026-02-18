@@ -1,107 +1,148 @@
 import { motion } from "framer-motion";
 import {
   ShoppingCart,
-  Globe,
   CreditCard,
+  Globe,
   Truck,
   Brain,
   Shield,
-  BarChart3,
-  Palette,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const features = [
+interface Feature {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+}
+
+const features: Feature[] = [
   {
     icon: ShoppingCart,
-    title: "Catalogue puissant",
-    desc: "Produits, variantes, collections, gestion des stocks et import/export CSV.",
+    title: "Catalogue intelligent",
+    desc: "Produits, variantes et stocks centralisés.",
+  },
+  {
+    icon: CreditCard,
+    title: "Paiements intégrés",
+    desc: "Mobile Money, Stripe, Paystack. Encaissez partout.",
   },
   {
     icon: Globe,
     title: "Multi-langues & devises",
-    desc: "FR/EN, multi-devises, taxes automatiques par pays.",
-  },
-  {
-    icon: CreditCard,
-    title: "Paiements Afrique & monde",
-    desc: "Stripe, Paystack, MTN Mobile Money, Orange Money, Wave.",
+    desc: "Vendez en FR, EN et multi-devises.",
   },
   {
     icon: Truck,
-    title: "Logistique mondiale",
-    desc: "Calcul frais par poids, local + international, Chine↔Afrique.",
+    title: "Logistique intégrée",
+    desc: "Livraison locale et internationale simplifiée.",
   },
   {
     icon: Brain,
     title: "IA intégrée",
-    desc: "Fiches produit auto, assistant vendeur, détection de fraude.",
+    desc: "Descriptions auto, analyse ventes, détection fraude.",
   },
   {
     icon: Shield,
     title: "Sécurité & conformité",
-    desc: "RLS, audit logs, GDPR-ready, PCI compliant, 2FA.",
-  },
-  {
-    icon: BarChart3,
-    title: "Analytics avancés",
-    desc: "Dashboard temps réel, métriques clés, rapports personnalisés.",
-  },
-  {
-    icon: Palette,
-    title: "Personnalisation",
-    desc: "Thèmes premium, domaine personnalisé, branding complet.",
+    desc: "RLS, audit logs, PCI-ready, 2FA.",
   },
 ];
 
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" as const } },
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.08, duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  }),
 };
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="py-32 bg-background relative">
+    <section id="features" className="relative overflow-hidden" style={{ padding: "120px 0" }}>
+      {/* Background: subtle radial green glow */}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 50% at 50% 40%, hsla(106, 75%, 47%, 0.04), transparent 70%)",
+        }}
+      />
+
       <div className="container">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-20"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="text-center mb-20 max-w-2xl mx-auto"
         >
-          <p className="text-sm font-medium text-primary mb-4 tracking-widest uppercase">
-            Fonctionnalités
-          </p>
-          <h2 className="font-heading text-4xl sm:text-5xl text-foreground">
-            TOUT CE QU'IL VOUS FAUT.
+          <h2
+            className="font-heading text-4xl sm:text-5xl lg:text-6xl leading-[1] mb-6 text-foreground"
+          >
+            TOUT POUR VENDRE.
+            <br />
+            <span className="text-gradient">RIEN À CONFIGURER.</span>
           </h2>
+          <p className="text-lg text-muted-foreground leading-relaxed">
+            Paiement, logistique, IA et conformité. Tout est intégré, prêt à l'emploi.
+          </p>
         </motion.div>
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5"
-        >
-          {features.map((f) => (
+        {/* Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          {features.map((f, i) => (
             <motion.div
               key={f.title}
-              variants={item}
-              className="group relative rounded-xl border border-border bg-card p-6 hover:border-primary/30 transition-all duration-300 hover:shadow-glow"
+              custom={i}
+              variants={cardVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-40px" }}
+              className="group relative rounded-2xl p-7 sm:p-8 transition-all duration-300"
+              style={{
+                background: "hsl(0, 0%, 10%)",
+                border: "1px solid hsla(0, 0%, 100%, 0.08)",
+              }}
+              whileHover={{ y: -6 }}
             >
-              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <f.icon size={20} />
+              {/* Hover glow overlay */}
+              <div
+                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-0 pointer-events-none"
+                style={{
+                  boxShadow: "0 0 40px -10px hsla(106, 75%, 47%, 0.15), 0 20px 50px -15px hsla(0, 0%, 0%, 0.3)",
+                }}
+              />
+
+              {/* Icon */}
+              <div
+                className="relative z-10 mb-5 inline-flex h-12 w-12 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-105"
+                style={{
+                  background: "hsla(106, 75%, 47%, 0.1)",
+                  boxShadow: "0 0 20px -4px hsla(106, 75%, 47%, 0.15)",
+                }}
+              >
+                <f.icon size={22} style={{ color: "hsl(106, 75%, 47%)" }} />
               </div>
-              <h3 className="font-semibold text-foreground mb-2 text-sm">{f.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+
+              {/* Title */}
+              <h3
+                className="relative z-10 font-semibold text-lg mb-2 text-foreground"
+              >
+                {f.title}
+              </h3>
+
+              {/* Description */}
+              <p
+                className="relative z-10 text-sm leading-relaxed"
+                style={{ color: "hsl(0, 0%, 55%)", lineHeight: 1.7 }}
+              >
+                {f.desc}
+              </p>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );
