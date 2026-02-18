@@ -16,6 +16,10 @@ import DashboardProducts from "./pages/DashboardProducts";
 import DashboardOrders from "./pages/DashboardOrders";
 import DashboardSettings from "./pages/DashboardSettings";
 import StorefrontHome from "./pages/StorefrontHome";
+import MarketHome from "./pages/MarketHome";
+import MarketCategory from "./pages/MarketCategory";
+import MarketProduct from "./pages/MarketProduct";
+import MarketVendor from "./pages/MarketVendor";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +46,11 @@ const App = () => (
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route path="/store/:slug" element={<StorefrontHome />} />
+            {/* Marketplace */}
+            <Route path="/market" element={<MarketHome />} />
+            <Route path="/market/category/:slug" element={<MarketCategory />} />
+            <Route path="/market/product/:slug" element={<MarketProduct />} />
+            <Route path="/market/vendor/:slug" element={<MarketVendor />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

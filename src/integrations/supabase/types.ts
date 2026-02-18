@@ -282,6 +282,47 @@ export type Database = {
           },
         ]
       }
+      marketplace_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          parent_id: string | null
+          slug: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          parent_id?: string | null
+          slug: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -477,8 +518,10 @@ export type Database = {
           description: string | null
           id: string
           images: Json | null
+          is_marketplace_published: boolean
           is_published: boolean
           low_stock_threshold: number | null
+          marketplace_category_id: string | null
           name: string
           price: number
           sku: string | null
@@ -497,8 +540,10 @@ export type Database = {
           description?: string | null
           id?: string
           images?: Json | null
+          is_marketplace_published?: boolean
           is_published?: boolean
           low_stock_threshold?: number | null
+          marketplace_category_id?: string | null
           name: string
           price?: number
           sku?: string | null
@@ -517,8 +562,10 @@ export type Database = {
           description?: string | null
           id?: string
           images?: Json | null
+          is_marketplace_published?: boolean
           is_published?: boolean
           low_stock_threshold?: number | null
+          marketplace_category_id?: string | null
           name?: string
           price?: number
           sku?: string | null
@@ -530,6 +577,13 @@ export type Database = {
           weight_grams?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "products_marketplace_category_id_fkey"
+            columns: ["marketplace_category_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_store_id_fkey"
             columns: ["store_id"]
@@ -600,52 +654,88 @@ export type Database = {
       }
       stores: {
         Row: {
+          ban_reason: string | null
+          city: string | null
           created_at: string
           currency: string
+          delivery_delay: string | null
           description: string | null
           id: string
           is_active: boolean
+          is_banned: boolean
           locale: string
           logo_url: string | null
           name: string
           owner_id: string
           plan: string
+          return_policy: string | null
           settings: Json | null
           slug: string
           theme: Json | null
           updated_at: string
         }
         Insert: {
+          ban_reason?: string | null
+          city?: string | null
           created_at?: string
           currency?: string
+          delivery_delay?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
+          is_banned?: boolean
           locale?: string
           logo_url?: string | null
           name: string
           owner_id: string
           plan?: string
+          return_policy?: string | null
           settings?: Json | null
           slug: string
           theme?: Json | null
           updated_at?: string
         }
         Update: {
+          ban_reason?: string | null
+          city?: string | null
           created_at?: string
           currency?: string
+          delivery_delay?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
+          is_banned?: boolean
           locale?: string
           logo_url?: string | null
           name?: string
           owner_id?: string
           plan?: string
+          return_policy?: string | null
           settings?: Json | null
           slug?: string
           theme?: Json | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -663,6 +753,13 @@ export type Database = {
         Args: { _store_id: string; _user_id: string }
         Returns: string
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_store_admin_or_owner: {
         Args: { _store_id: string; _user_id: string }
         Returns: boolean
@@ -673,6 +770,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "marketplace_admin" | "marketplace_moderator"
       discount_type: "percentage" | "fixed"
       order_status:
         | "new"
@@ -811,6 +909,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["marketplace_admin", "marketplace_moderator"],
       discount_type: ["percentage", "fixed"],
       order_status: [
         "new",

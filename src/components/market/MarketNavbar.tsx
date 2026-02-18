@@ -1,42 +1,48 @@
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Search, ShoppingBag, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 const navLinks = [
-  { label: "Fonctionnalités", href: "#features" },
-  { label: "Tarifs", href: "#pricing" },
-  { label: "Market", href: "/market" },
+  { label: "Accueil", href: "/market" },
+  { label: "Catégories", href: "/market#categories" },
 ];
 
-export function Navbar() {
+export function MarketNavbar() {
   const [open, setOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.4 }}
       className="fixed top-0 left-0 right-0 z-50 glass"
     >
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">F</span>
+      <div className="container flex h-14 items-center justify-between">
+        <Link to="/market" className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-xs">F</span>
           </div>
-          <span className="font-heading text-xl tracking-wide text-foreground">FEYXA</span>
+          <span className="font-heading text-lg tracking-wide text-foreground">
+            FEYXA MARKET
+          </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200"
+              to={link.href}
+              className={`text-sm font-medium transition-colors duration-200 ${
+                location.pathname === link.href
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -45,7 +51,7 @@ export function Navbar() {
             <Link to="/login">Connexion</Link>
           </Button>
           <Button variant="hero" size="sm" asChild>
-            <Link to="/signup">Créer ma boutique</Link>
+            <Link to="/signup">Vendre sur Feyxa</Link>
           </Button>
         </div>
 
@@ -62,17 +68,17 @@ export function Navbar() {
         >
           <div className="container py-4 flex flex-col gap-3">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.href}
-                href={link.href}
+                to={link.href}
                 className="text-sm text-muted-foreground py-2"
                 onClick={() => setOpen(false)}
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
             <Button variant="hero" size="sm" asChild>
-              <Link to="/signup">Créer ma boutique</Link>
+              <Link to="/signup">Vendre sur Feyxa</Link>
             </Button>
           </div>
         </motion.div>
