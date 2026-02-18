@@ -14,9 +14,13 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Poppins", "system-ui", "-apple-system", "sans-serif"],
-        heading: ["DIN Condensed", "Arial Narrow", "Impact", "sans-serif"],
+        sans: ["Manrope", "system-ui", "-apple-system", "sans-serif"],
+        heading: ["Clash Display", "Inter", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
+      },
+      fontSize: {
+        "hero": ["clamp(3rem, 8vw, 6rem)", { lineHeight: "1.05", letterSpacing: "0.04em", fontWeight: "700" }],
+        "hero-sub": ["clamp(1.125rem, 2vw, 1.5rem)", { lineHeight: "1.5", fontWeight: "400" }],
       },
       colors: {
         border: "hsl(var(--border))",
