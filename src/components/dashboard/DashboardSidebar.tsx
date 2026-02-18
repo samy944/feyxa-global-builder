@@ -10,6 +10,7 @@ import {
   Truck,
   Brain,
   ChevronLeft,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -23,6 +24,7 @@ const navItems = [
   { icon: Truck, label: "Logistique", path: "/dashboard/shipping" },
   { icon: BarChart3, label: "Analytics", path: "/dashboard/analytics" },
   { icon: Brain, label: "IA Assistant", path: "/dashboard/ai" },
+  { icon: Wallet, label: "Portefeuille", path: "/dashboard/wallet" },
   { icon: Settings, label: "Paramètres", path: "/dashboard/settings" },
 ];
 

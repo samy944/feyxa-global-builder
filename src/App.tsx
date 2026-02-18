@@ -23,6 +23,7 @@ import MarketCategory from "./pages/MarketCategory";
 import MarketProduct from "./pages/MarketProduct";
 import MarketVendor from "./pages/MarketVendor";
 import Checkout from "./pages/Checkout";
+import DashboardWallet from "./pages/DashboardWallet";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
               <Route index element={<DashboardOverview />} />
               <Route path="products" element={<DashboardProducts />} />
               <Route path="orders" element={<DashboardOrders />} />
+              <Route path="wallet" element={<DashboardWallet />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route path="/store/:slug" element={<StorefrontHome />} />
