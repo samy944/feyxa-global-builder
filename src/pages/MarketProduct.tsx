@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
 import { ProductReviews } from "@/components/market/ProductReviews";
 import { VariantSelector } from "@/components/market/VariantSelector";
+import { SimilarProducts } from "@/components/market/SimilarProducts";
 import { motion } from "framer-motion";
 import { Loader2, ChevronRight, Store, MapPin, Truck, RotateCcw, Shield, ShoppingBag, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ interface ProductDetail {
   review_count: number;
   tags: string[] | null;
   store_id: string;
+  marketplace_category_id: string | null;
   stores: {
     name: string;
     slug: string;
@@ -75,7 +77,7 @@ export default function MarketProduct() {
     setLoading(true);
     const { data } = await supabase
       .from("products")
-      .select("id, name, slug, description, price, compare_at_price, images, stock_quantity, avg_rating, review_count, tags, store_id, stores!inner(name, slug, city, currency, delivery_delay, return_policy, logo_url)")
+      .select("id, name, slug, description, price, compare_at_price, images, stock_quantity, avg_rating, review_count, tags, store_id, marketplace_category_id, stores!inner(name, slug, city, currency, delivery_delay, return_policy, logo_url)")
       .eq("slug", slug!)
       .eq("is_published", true)
       .eq("is_marketplace_published", true)
@@ -324,6 +326,14 @@ export default function MarketProduct() {
         productId={product.id}
         avgRating={product.avg_rating || 0}
         reviewCount={product.review_count || 0}
+      />
+
+      {/* Similar products */}
+      <SimilarProducts
+        productId={product.id}
+        storeId={product.store_id}
+        categoryId={product.marketplace_category_id}
+        tags={product.tags}
       />
     </MarketLayout>
   );
