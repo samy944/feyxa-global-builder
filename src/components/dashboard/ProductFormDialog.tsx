@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,15 +29,30 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+export interface ProductToEdit {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  stock_quantity: number;
+  description: string | null;
+  sku: string | null;
+  is_published: boolean;
+  images: any;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  product?: ProductToEdit | null; // null = create mode
 }
 
-interface ImagePreview {
-  file: File;
-  preview: string;
+// Represents either a new file or an existing URL
+interface ImageItem {
+  type: "file" | "url";
+  file?: File;
+  preview: string; // blob URL for file, remote URL for existing
 }
 
 function slugify(text: string) {
@@ -51,16 +66,17 @@ function slugify(text: string) {
 }
 
 const MAX_IMAGES = 6;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-export default function AddProductDialog({ open, onOpenChange, onSuccess }: Props) {
+export default function ProductFormDialog({ open, onOpenChange, onSuccess, product }: Props) {
   const { store } = useStore();
   const [loading, setLoading] = useState(false);
-  const [images, setImages] = useState<ImagePreview[]>([]);
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isEdit = !!product;
 
   const {
     register,
@@ -76,10 +92,31 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
 
   const isPublished = watch("is_published");
 
+  // Populate form when editing
+  useEffect(() => {
+    if (open && product) {
+      setValue("name", product.name);
+      setValue("price", product.price);
+      setValue("stock_quantity", product.stock_quantity);
+      setValue("description", product.description || "");
+      setValue("sku", product.sku || "");
+      setValue("is_published", product.is_published);
+
+      // Load existing images as URL items
+      const existingImages: ImageItem[] = (
+        Array.isArray(product.images) ? product.images : []
+      ).map((url: string) => ({ type: "url" as const, preview: url }));
+      setImages(existingImages);
+    } else if (open && !product) {
+      reset({ name: "", price: 0, stock_quantity: 0, description: "", sku: "", is_published: false });
+      setImages([]);
+    }
+  }, [open, product, setValue, reset]);
+
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const remaining = MAX_IMAGES - images.length;
-    
+
     if (remaining <= 0) {
       toast.error(`Maximum ${MAX_IMAGES} images autorisées`);
       return;
@@ -97,33 +134,29 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
       return true;
     });
 
-    const newPreviews = validFiles.map((file) => ({
+    const newItems: ImageItem[] = validFiles.map((file) => ({
+      type: "file",
       file,
       preview: URL.createObjectURL(file),
     }));
 
-    setImages((prev) => [...prev, ...newPreviews]);
-
-    // Reset input so same file can be re-selected
+    setImages((prev) => [...prev, ...newItems]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, [images.length]);
 
   const removeImage = useCallback((index: number) => {
     setImages((prev) => {
-      URL.revokeObjectURL(prev[index].preview);
+      const item = prev[index];
+      if (item.type === "file") URL.revokeObjectURL(item.preview);
       return prev.filter((_, i) => i !== index);
     });
   }, []);
 
-  const handleDragStart = useCallback((index: number) => {
-    setDragIndex(index);
-  }, []);
-
+  const handleDragStart = useCallback((index: number) => setDragIndex(index), []);
   const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault();
     setDragOverIndex(index);
   }, []);
-
   const handleDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
     if (dragIndex === null || dragIndex === dropIndex) {
@@ -140,31 +173,33 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
     setDragIndex(null);
     setDragOverIndex(null);
   }, [dragIndex]);
-
   const handleDragEnd = useCallback(() => {
     setDragIndex(null);
     setDragOverIndex(null);
   }, []);
 
-  const uploadImages = async (storeId: string, productSlug: string): Promise<string[]> => {
+  const uploadNewImages = async (storeId: string, productSlug: string): Promise<string[]> => {
     const urls: string[] = [];
 
-    for (let i = 0; i < images.length; i++) {
-      const img = images[i];
-      const ext = img.file.name.split(".").pop() || "jpg";
-      const path = `${storeId}/products/${productSlug}/${i}-${Date.now()}.${ext}`;
+    for (const item of images) {
+      if (item.type === "url") {
+        urls.push(item.preview); // keep existing
+      } else if (item.file) {
+        const ext = item.file.name.split(".").pop() || "jpg";
+        const path = `${storeId}/products/${productSlug}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
 
-      const { error } = await supabase.storage
-        .from("store-assets")
-        .upload(path, img.file, { contentType: img.file.type, upsert: false });
+        const { error } = await supabase.storage
+          .from("store-assets")
+          .upload(path, item.file, { contentType: item.file.type, upsert: false });
 
-      if (error) {
-        console.error("Upload error:", error);
-        throw new Error(`Échec upload image ${i + 1}`);
+        if (error) {
+          console.error("Upload error:", error);
+          throw new Error("Échec upload image");
+        }
+
+        const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(path);
+        urls.push(urlData.publicUrl);
       }
-
-      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(path);
-      urls.push(urlData.publicUrl);
     }
 
     return urls;
@@ -177,15 +212,15 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
     }
 
     setLoading(true);
-    const slug = slugify(data.name) + "-" + Date.now().toString(36);
+    const slug = isEdit ? product!.slug : slugify(data.name) + "-" + Date.now().toString(36);
 
     let imageUrls: string[] = [];
+    const hasNewFiles = images.some((i) => i.type === "file");
 
-    // Upload images first
     if (images.length > 0) {
       setUploadingImages(true);
       try {
-        imageUrls = await uploadImages(store.id, slug);
+        imageUrls = await uploadNewImages(store.id, slug);
       } catch (err: any) {
         toast.error(err.message || "Erreur lors de l'upload des images");
         setLoading(false);
@@ -195,29 +230,51 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
       setUploadingImages(false);
     }
 
-    const { error } = await supabase.from("products").insert({
-      store_id: store.id,
-      name: data.name,
-      slug,
-      price: data.price,
-      stock_quantity: data.stock_quantity,
-      description: data.description || null,
-      sku: data.sku || null,
-      is_published: data.is_published,
-      images: imageUrls,
-    });
+    if (isEdit) {
+      const { error } = await supabase
+        .from("products")
+        .update({
+          name: data.name,
+          price: data.price,
+          stock_quantity: data.stock_quantity,
+          description: data.description || null,
+          sku: data.sku || null,
+          is_published: data.is_published,
+          images: imageUrls,
+        })
+        .eq("id", product!.id);
 
-    setLoading(false);
+      setLoading(false);
+      if (error) {
+        console.error(error);
+        toast.error("Erreur lors de la mise à jour");
+        return;
+      }
+      toast.success("Produit mis à jour");
+    } else {
+      const { error } = await supabase.from("products").insert({
+        store_id: store.id,
+        name: data.name,
+        slug,
+        price: data.price,
+        stock_quantity: data.stock_quantity,
+        description: data.description || null,
+        sku: data.sku || null,
+        is_published: data.is_published,
+        images: imageUrls,
+      });
 
-    if (error) {
-      console.error(error);
-      toast.error("Erreur lors de la création du produit");
-      return;
+      setLoading(false);
+      if (error) {
+        console.error(error);
+        toast.error("Erreur lors de la création du produit");
+        return;
+      }
+      toast.success("Produit créé avec succès");
     }
 
-    toast.success("Produit créé avec succès");
-    // Cleanup previews
-    images.forEach((img) => URL.revokeObjectURL(img.preview));
+    // Cleanup blob URLs
+    images.forEach((img) => { if (img.type === "file") URL.revokeObjectURL(img.preview); });
     setImages([]);
     reset();
     onOpenChange(false);
@@ -226,7 +283,7 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
-      images.forEach((img) => URL.revokeObjectURL(img.preview));
+      images.forEach((img) => { if (img.type === "file") URL.revokeObjectURL(img.preview); });
       setImages([]);
       reset();
     }
@@ -237,7 +294,7 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Ajouter un produit</DialogTitle>
+          <DialogTitle>{isEdit ? "Modifier le produit" : "Ajouter un produit"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Image upload */}
@@ -303,32 +360,32 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="name">Nom du produit *</Label>
-            <Input id="name" placeholder="Ex: T-shirt Premium" {...register("name")} />
+            <Label htmlFor="pf-name">Nom du produit *</Label>
+            <Input id="pf-name" placeholder="Ex: T-shirt Premium" {...register("name")} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="price">Prix (XOF) *</Label>
-              <Input id="price" type="number" step="1" {...register("price")} />
+              <Label htmlFor="pf-price">Prix (XOF) *</Label>
+              <Input id="pf-price" type="number" step="1" {...register("price")} />
               {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="stock_quantity">Stock *</Label>
-              <Input id="stock_quantity" type="number" {...register("stock_quantity")} />
+              <Label htmlFor="pf-stock">Stock *</Label>
+              <Input id="pf-stock" type="number" {...register("stock_quantity")} />
               {errors.stock_quantity && <p className="text-xs text-destructive">{errors.stock_quantity.message}</p>}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="sku">SKU (optionnel)</Label>
-            <Input id="sku" placeholder="REF-001" {...register("sku")} />
+            <Label htmlFor="pf-sku">SKU (optionnel)</Label>
+            <Input id="pf-sku" placeholder="REF-001" {...register("sku")} />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" placeholder="Décrivez votre produit..." rows={3} {...register("description")} />
+            <Label htmlFor="pf-desc">Description</Label>
+            <Textarea id="pf-desc" placeholder="Décrivez votre produit..." rows={3} {...register("description")} />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-border p-3">
@@ -348,7 +405,7 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
             </Button>
             <Button type="submit" variant="hero" size="sm" disabled={loading}>
               {loading && <Loader2 size={14} className="animate-spin" />}
-              {uploadingImages ? "Upload des images..." : "Créer le produit"}
+              {uploadingImages ? "Upload des images..." : isEdit ? "Enregistrer" : "Créer le produit"}
             </Button>
           </div>
         </form>
