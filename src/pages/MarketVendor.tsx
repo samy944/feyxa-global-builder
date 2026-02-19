@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
 import { MarketProductCard } from "@/components/market/MarketProductCard";
 import { motion } from "framer-motion";
-import { Loader2, ChevronRight, MapPin, Truck, RotateCcw, Calendar } from "lucide-react";
+import { Loader2, ChevronRight, MapPin, Truck, RotateCcw, Calendar, Star, Award } from "lucide-react";
 
 interface VendorStore {
   id: string;
@@ -30,10 +30,16 @@ interface MarketProduct {
   stock_quantity: number;
 }
 
+interface VendorStats {
+  avgRating: number;
+  totalReviews: number;
+}
+
 export default function MarketVendor() {
   const { slug } = useParams<{ slug: string }>();
   const [store, setStore] = useState<VendorStore | null>(null);
   const [products, setProducts] = useState<MarketProduct[]>([]);
+  const [stats, setStats] = useState<VendorStats>({ avgRating: 0, totalReviews: 0 });
   const [loading, setLoading] = useState(true);
 
   useSeoHead({
@@ -72,6 +78,18 @@ export default function MarketVendor() {
         .limit(48);
 
       if (productsData) setProducts(productsData);
+
+      // Fetch store review stats
+      const { data: reviewData } = await supabase
+        .from("reviews")
+        .select("rating")
+        .eq("store_id", storeData.id)
+        .eq("is_approved", true);
+
+      if (reviewData && reviewData.length > 0) {
+        const avg = reviewData.reduce((sum, r) => sum + r.rating, 0) / reviewData.length;
+        setStats({ avgRating: Math.round(avg * 100) / 100, totalReviews: reviewData.length });
+      }
     }
     setLoading(false);
   };
@@ -130,7 +148,33 @@ export default function MarketVendor() {
               </div>
 
               <div className="flex-1 space-y-3">
-                <h1 className="font-heading text-3xl text-foreground">{store.name.toUpperCase()}</h1>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="font-heading text-3xl text-foreground">{store.name.toUpperCase()}</h1>
+                  {stats.avgRating >= 4.5 && stats.totalReviews >= 50 && (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                      <Award size={12} /> Top vendeur
+                    </span>
+                  )}
+                </div>
+
+                {/* Rating */}
+                {stats.totalReviews > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star
+                          key={i}
+                          size={14}
+                          className={i < Math.round(stats.avgRating) ? "fill-primary text-primary" : "text-muted-foreground/30"}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {stats.avgRating.toFixed(1)} ({stats.totalReviews} avis)
+                    </span>
+                  </div>
+                )}
+
                 {store.description && (
                   <p className="text-sm text-muted-foreground max-w-lg">{store.description}</p>
                 )}
