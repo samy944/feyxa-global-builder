@@ -38,6 +38,9 @@ export default function MarketHome() {
   const [products, setProducts] = useState<MarketProduct[]>([]);
   const [categories, setCategories] = useState<MarketCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 12;
 
   useEffect(() => {
     document.title = query
@@ -47,7 +50,9 @@ export default function MarketHome() {
 
   useEffect(() => {
     fetchCategories();
-    fetchProducts();
+    setProducts([]);
+    setHasMore(true);
+    fetchProducts(0);
   }, [query]);
 
   const fetchCategories = async () => {
@@ -75,8 +80,10 @@ export default function MarketHome() {
     setCategories(data.map((cat) => ({ ...cat, productCount: counts[cat.id] || 0 })));
   };
 
-  const fetchProducts = async () => {
-    setLoading(true);
+  const fetchProducts = async (offset = 0) => {
+    if (offset === 0) setLoading(true);
+    else setLoadingMore(true);
+
     let q = supabase
       .from("products")
       .select("id, name, slug, price, compare_at_price, images, stock_quantity, stores!inner(name, slug, city, currency)")
@@ -86,15 +93,24 @@ export default function MarketHome() {
       .eq("stores.is_active", true)
       .eq("stores.is_banned", false)
       .order("created_at", { ascending: false })
-      .limit(24);
+      .range(offset, offset + PAGE_SIZE - 1);
 
     if (query) {
       q = q.ilike("name", `%${query}%`);
     }
 
-    const { data, error } = await q;
-    if (data) setProducts(data as unknown as MarketProduct[]);
+    const { data } = await q;
+    const newProducts = (data || []) as unknown as MarketProduct[];
+
+    if (offset === 0) {
+      setProducts(newProducts);
+    } else {
+      setProducts((prev) => [...prev, ...newProducts]);
+    }
+
+    setHasMore(newProducts.length === PAGE_SIZE);
     setLoading(false);
+    setLoadingMore(false);
   };
 
   return (
@@ -164,24 +180,40 @@ export default function MarketHome() {
               <p className="text-muted-foreground">Aucun produit trouvé.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
-              {products.map((p, i) => (
-                <MarketProductCard
-                  key={p.id}
-                  id={p.id}
-                  name={p.name}
-                  slug={p.slug}
-                  price={p.price}
-                  compare_at_price={p.compare_at_price}
-                  images={p.images}
-                  store_name={p.stores.name}
-                  store_slug={p.stores.slug}
-                  store_city={p.stores.city}
-                  currency={p.stores.currency}
-                  index={i}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+                {products.map((p, i) => (
+                  <MarketProductCard
+                    key={p.id}
+                    id={p.id}
+                    name={p.name}
+                    slug={p.slug}
+                    price={p.price}
+                    compare_at_price={p.compare_at_price}
+                    images={p.images}
+                    store_name={p.stores.name}
+                    store_slug={p.stores.slug}
+                    store_city={p.stores.city}
+                    currency={p.stores.currency}
+                    index={i}
+                  />
+                ))}
+              </div>
+              {hasMore && (
+                <div className="flex justify-center mt-10">
+                  <button
+                    onClick={() => fetchProducts(products.length)}
+                    disabled={loadingMore}
+                    className="inline-flex items-center gap-2 px-8 py-3 rounded-xl border border-border bg-card text-foreground font-semibold hover:border-primary/30 hover:shadow-glow transition-all duration-300 disabled:opacity-50"
+                  >
+                    {loadingMore ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : null}
+                    {loadingMore ? "Chargement…" : "Voir plus de produits"}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
