@@ -4,6 +4,7 @@ import { ShoppingBag, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
 
 const navLinks = [
   { label: "Accueil", href: "/market" },
@@ -15,6 +16,7 @@ export function MarketNavbar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const { totalItems, setIsOpen } = useCart();
+  const { user } = useAuth();
 
   return (
     <motion.header
@@ -61,12 +63,25 @@ export function MarketNavbar() {
               </span>
             )}
           </button>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/login">Connexion</Link>
-          </Button>
-          <Button variant="hero" size="sm" asChild>
-            <Link to="/signup">Vendre sur Feyxa</Link>
-          </Button>
+          {user ? (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/my-orders">Mes commandes</Link>
+              </Button>
+              <Button variant="hero" size="sm" asChild>
+                <Link to="/dashboard">Dashboard</Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/login">Connexion</Link>
+              </Button>
+              <Button variant="hero" size="sm" asChild>
+                <Link to="/signup">Vendre sur Feyxa</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-3 md:hidden">

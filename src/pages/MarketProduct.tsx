@@ -3,8 +3,9 @@ import { useSeoHead } from "@/hooks/useSeoHead";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
+import { ProductReviews } from "@/components/market/ProductReviews";
 import { motion } from "framer-motion";
-import { Loader2, ChevronRight, Store, MapPin, Truck, RotateCcw, Shield, ShoppingBag } from "lucide-react";
+import { Loader2, ChevronRight, Store, MapPin, Truck, RotateCcw, Shield, ShoppingBag, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
 
@@ -17,6 +18,8 @@ interface ProductDetail {
   compare_at_price: number | null;
   images: any;
   stock_quantity: number;
+  avg_rating: number;
+  review_count: number;
   tags: string[] | null;
   store_id: string;
   stores: {
@@ -60,7 +63,7 @@ export default function MarketProduct() {
     setLoading(true);
     const { data } = await supabase
       .from("products")
-      .select("id, name, slug, description, price, compare_at_price, images, stock_quantity, tags, store_id, stores!inner(name, slug, city, currency, delivery_delay, return_policy, logo_url)")
+      .select("id, name, slug, description, price, compare_at_price, images, stock_quantity, avg_rating, review_count, tags, store_id, stores!inner(name, slug, city, currency, delivery_delay, return_policy, logo_url)")
       .eq("slug", slug!)
       .eq("is_published", true)
       .eq("is_marketplace_published", true)
@@ -168,6 +171,24 @@ export default function MarketProduct() {
                     </>
                   )}
                 </Link>
+
+                {/* Rating summary */}
+                {product.review_count > 0 && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star
+                          key={i}
+                          size={14}
+                          className={i < Math.round(product.avg_rating) ? "fill-primary text-primary" : "text-muted-foreground/30"}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {product.avg_rating.toFixed(1)} ({product.review_count} {product.review_count <= 1 ? "avis" : "avis"})
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Price */}
@@ -264,6 +285,13 @@ export default function MarketProduct() {
           </div>
         </div>
       </section>
+
+      {/* Reviews */}
+      <ProductReviews
+        productId={product.id}
+        avgRating={product.avg_rating || 0}
+        reviewCount={product.review_count || 0}
+      />
     </MarketLayout>
   );
 }

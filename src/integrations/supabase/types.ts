@@ -612,6 +612,7 @@ export type Database = {
       }
       products: {
         Row: {
+          avg_rating: number | null
           barcode: string | null
           compare_at_price: number | null
           cost_price: number | null
@@ -625,6 +626,7 @@ export type Database = {
           marketplace_category_id: string | null
           name: string
           price: number
+          review_count: number | null
           sku: string | null
           slug: string
           stock_quantity: number
@@ -634,6 +636,7 @@ export type Database = {
           weight_grams: number | null
         }
         Insert: {
+          avg_rating?: number | null
           barcode?: string | null
           compare_at_price?: number | null
           cost_price?: number | null
@@ -647,6 +650,7 @@ export type Database = {
           marketplace_category_id?: string | null
           name: string
           price?: number
+          review_count?: number | null
           sku?: string | null
           slug: string
           stock_quantity?: number
@@ -656,6 +660,7 @@ export type Database = {
           weight_grams?: number | null
         }
         Update: {
+          avg_rating?: number | null
           barcode?: string | null
           compare_at_price?: number | null
           cost_price?: number | null
@@ -669,6 +674,7 @@ export type Database = {
           marketplace_category_id?: string | null
           name?: string
           price?: number
+          review_count?: number | null
           sku?: string | null
           slug?: string
           stock_quantity?: number
@@ -720,6 +726,73 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      reviews: {
+        Row: {
+          buyer_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          images: Json | null
+          is_approved: boolean
+          is_verified: boolean
+          order_id: string
+          product_id: string
+          rating: number
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          images?: Json | null
+          is_approved?: boolean
+          is_verified?: boolean
+          order_id: string
+          product_id: string
+          rating: number
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          images?: Json | null
+          is_approved?: boolean
+          is_verified?: boolean
+          order_id?: string
+          product_id?: string
+          rating?: number
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       store_members: {
         Row: {
@@ -921,6 +994,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_review_order: {
+        Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
       create_escrow_for_order: {
         Args: { _commission_rate?: number; _order_id: string }
         Returns: string
