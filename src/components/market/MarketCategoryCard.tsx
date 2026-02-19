@@ -51,7 +51,7 @@ export function MarketCategoryCard({ name, slug, image_url, productCount, index 
         </div>
         <h3 className="font-semibold text-foreground text-sm">{name}</h3>
         {productCount !== undefined && (
-          <p className="text-xs text-muted-foreground mt-1">{productCount} produits</p>
+          <p className="text-xs text-muted-foreground mt-1">{productCount} {productCount <= 1 ? "produit" : "produits"}</p>
         )}
       </Link>
     </motion.div>
