@@ -29,6 +29,7 @@ interface MarketCategory {
   name: string;
   slug: string;
   image_url: string | null;
+  productCount?: number;
 }
 
 export default function MarketHome() {
@@ -54,7 +55,24 @@ export default function MarketHome() {
       .from("marketplace_categories")
       .select("id, name, slug, image_url")
       .order("sort_order");
-    if (data) setCategories(data);
+    if (!data) return;
+
+    // Fetch product counts per category
+    const { data: countData } = await supabase
+      .from("products")
+      .select("marketplace_category_id")
+      .eq("is_published", true)
+      .eq("is_marketplace_published", true)
+      .gt("stock_quantity", 0);
+
+    const counts: Record<string, number> = {};
+    countData?.forEach((p) => {
+      if (p.marketplace_category_id) {
+        counts[p.marketplace_category_id] = (counts[p.marketplace_category_id] || 0) + 1;
+      }
+    });
+
+    setCategories(data.map((cat) => ({ ...cat, productCount: counts[cat.id] || 0 })));
   };
 
   const fetchProducts = async () => {
@@ -118,7 +136,7 @@ export default function MarketHome() {
             <h2 className="font-heading text-2xl text-foreground mb-8">CATÉGORIES</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
               {categories.map((cat, i) => (
-                <MarketCategoryCard key={cat.id} {...cat} index={i} />
+                <MarketCategoryCard key={cat.id} {...cat} productCount={cat.productCount} index={i} />
               ))}
             </div>
           </div>
