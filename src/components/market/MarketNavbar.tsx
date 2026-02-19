@@ -1,10 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShoppingBag, Menu, X } from "lucide-react";
+import { ShoppingBag, Menu, X, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
+import { GlobalSearch } from "@/components/market/GlobalSearch";
 
 const navLinks = [
   { label: "Accueil", href: "/market" },
@@ -50,6 +51,10 @@ export function MarketNavbar() {
             </Link>
           ))}
         </nav>
+
+        <div className="hidden md:block flex-1 max-w-md mx-4">
+          <GlobalSearch />
+        </div>
 
         <div className="hidden md:flex items-center gap-3">
           <button
@@ -109,6 +114,7 @@ export function MarketNavbar() {
           className="md:hidden glass border-t border-border"
         >
           <div className="container py-4 flex flex-col gap-3">
+            <GlobalSearch />
             {navLinks.map((link) => (
               <Link
                 key={link.href}
