@@ -1,13 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSeoHead } from "@/hooks/useSeoHead";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
 import { ProductReviews } from "@/components/market/ProductReviews";
+import { VariantSelector } from "@/components/market/VariantSelector";
 import { motion } from "framer-motion";
 import { Loader2, ChevronRight, Store, MapPin, Truck, RotateCcw, Shield, ShoppingBag, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
+
+interface VariantData {
+  id: string;
+  name: string;
+  price: number;
+  stock_quantity: number;
+  sku: string | null;
+  options: Record<string, string>;
+}
 
 interface ProductDetail {
   id: string;
@@ -36,6 +46,8 @@ interface ProductDetail {
 export default function MarketProduct() {
   const { slug } = useParams<{ slug: string }>();
   const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [variants, setVariants] = useState<VariantData[]>([]);
+  const [selectedVariant, setSelectedVariant] = useState<VariantData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const { addItem } = useCart();
@@ -72,10 +84,24 @@ export default function MarketProduct() {
       .single();
 
     if (data) {
-      setProduct(data as unknown as ProductDetail);
+      const p = data as unknown as ProductDetail;
+      setProduct(p);
+      const { data: vData } = await supabase
+        .from("product_variants")
+        .select("id, name, price, stock_quantity, sku, options")
+        .eq("product_id", p.id);
+      setVariants(vData?.length ? vData.map((v: any) => ({ ...v, options: v.options || {} })) : []);
     }
     setLoading(false);
   };
+
+  const handleVariantChange = useCallback((v: VariantData | null) => {
+    setSelectedVariant(v);
+  }, []);
+
+  const activePrice = selectedVariant ? selectedVariant.price : product?.price ?? 0;
+  const activeStock = selectedVariant ? selectedVariant.stock_quantity : product?.stock_quantity ?? 0;
+  const hasVariants = variants.length > 0;
 
   const formatPrice = (p: number) => {
     if (!product) return "";
@@ -193,22 +219,29 @@ export default function MarketProduct() {
 
               {/* Price */}
               <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-bold text-foreground">{formatPrice(product.price)}</span>
-                {product.compare_at_price && product.compare_at_price > product.price && (
+                <span className="text-3xl font-bold text-foreground">{formatPrice(activePrice)}</span>
+                {!selectedVariant && product.compare_at_price && product.compare_at_price > product.price && (
                   <span className="text-lg text-muted-foreground line-through">
                     {formatPrice(product.compare_at_price)}
                   </span>
                 )}
               </div>
 
+              {/* Variant selector */}
+              {hasVariants && (
+                <VariantSelector variants={variants} onVariantChange={handleVariantChange} />
+              )}
+
               {/* Stock */}
               <div className="text-sm">
-                {product.stock_quantity > 10 ? (
+                {activeStock > 10 ? (
                   <span className="text-primary font-medium">En stock</span>
-                ) : (
+                ) : activeStock > 0 ? (
                   <span className="text-destructive font-medium">
-                    Plus que {product.stock_quantity} en stock
+                    Plus que {activeStock} en stock
                   </span>
+                ) : (
+                  <span className="text-destructive font-medium">Rupture de stock</span>
                 )}
               </div>
 
@@ -236,19 +269,19 @@ export default function MarketProduct() {
                   variant="hero"
                   size="lg"
                   className="w-full font-heading text-lg tracking-wide"
-                  disabled={product.stock_quantity <= 0}
+                  disabled={activeStock <= 0 || (hasVariants && !selectedVariant)}
                   onClick={() =>
                     addItem({
                       productId: product.id,
-                      name: product.name,
-                      price: product.price,
+                      name: selectedVariant ? `${product.name} — ${selectedVariant.name}` : product.name,
+                      price: activePrice,
                       currency: product.stores.currency,
                       image: images[0] ?? null,
                       storeId: (product as any).store_id ?? "",
                       storeName: product.stores.name,
                       storeSlug: product.stores.slug,
                       slug: product.slug,
-                      maxStock: product.stock_quantity,
+                      maxStock: activeStock,
                     })
                   }
                 >
