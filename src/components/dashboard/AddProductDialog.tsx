@@ -58,6 +58,8 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<ImagePreview[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -111,6 +113,37 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
       URL.revokeObjectURL(prev[index].preview);
       return prev.filter((_, i) => i !== index);
     });
+  }, []);
+
+  const handleDragStart = useCallback((index: number) => {
+    setDragIndex(index);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    setImages((prev) => {
+      const updated = [...prev];
+      const [moved] = updated.splice(dragIndex, 1);
+      updated.splice(dropIndex, 0, moved);
+      return updated;
+    });
+    setDragIndex(null);
+    setDragOverIndex(null);
+  }, [dragIndex]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   }, []);
 
   const uploadImages = async (storeId: string, productSlug: string): Promise<string[]> => {
@@ -212,8 +245,25 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
             <Label>Images du produit</Label>
             <div className="grid grid-cols-3 gap-2">
               {images.map((img, i) => (
-                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-border bg-secondary group">
-                  <img src={img.preview} alt="" className="h-full w-full object-cover" />
+                <div
+                  key={img.preview}
+                  draggable
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={(e) => handleDragOver(e, i)}
+                  onDrop={(e) => handleDrop(e, i)}
+                  onDragEnd={handleDragEnd}
+                  className={`relative aspect-square rounded-lg overflow-hidden border bg-secondary group cursor-grab active:cursor-grabbing transition-all ${
+                    dragOverIndex === i && dragIndex !== i
+                      ? "border-primary ring-2 ring-primary/30 scale-[1.02]"
+                      : dragIndex === i
+                      ? "opacity-50 border-border"
+                      : "border-border"
+                  }`}
+                >
+                  <img src={img.preview} alt="" className="h-full w-full object-cover pointer-events-none" />
+                  <div className="absolute top-1 left-1 h-6 w-6 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground">
+                    <GripVertical size={12} />
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeImage(i)}
@@ -240,7 +290,7 @@ export default function AddProductDialog({ open, onOpenChange, onSuccess }: Prop
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {images.length}/{MAX_IMAGES} images · Max 5 Mo chacune · La première sera l'image principale
+              {images.length}/{MAX_IMAGES} images · Max 5 Mo · Glissez pour réorganiser · La 1ère = image principale
             </p>
             <input
               ref={fileInputRef}
