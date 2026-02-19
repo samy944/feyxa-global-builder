@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Store, MapPin } from "lucide-react";
+import { Store, MapPin, Star } from "lucide-react";
 
 interface MarketProductCardProps {
   id: string;
@@ -13,6 +13,8 @@ interface MarketProductCardProps {
   store_slug: string;
   store_city?: string | null;
   currency: string;
+  avg_rating?: number | null;
+  review_count?: number | null;
   index?: number;
 }
 
@@ -26,6 +28,8 @@ export function MarketProductCard({
   store_slug,
   store_city,
   currency,
+  avg_rating,
+  review_count,
   index = 0,
 }: MarketProductCardProps) {
   const imageUrl =
@@ -92,6 +96,16 @@ export function MarketProductCard({
               </>
             )}
           </div>
+
+          {avg_rating != null && avg_rating > 0 && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Star size={11} className="fill-primary text-primary" />
+              <span>{avg_rating.toFixed(1)}</span>
+              {review_count != null && review_count > 0 && (
+                <span>({review_count})</span>
+              )}
+            </div>
+          )}
 
           <div className="flex items-baseline gap-2">
             <span className="font-bold text-foreground">{formatPrice(price)}</span>
