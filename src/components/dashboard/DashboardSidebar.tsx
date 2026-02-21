@@ -13,6 +13,7 @@ import {
   Wallet,
   FileText,
   Zap,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -28,6 +29,7 @@ const navItems = [
   { icon: Brain, label: "IA Assistant", path: "/dashboard/ai" },
   { icon: Wallet, label: "Portefeuille", path: "/dashboard/wallet" },
   { icon: Zap, label: "Insights", path: "/dashboard/insights" },
+  { icon: TrendingUp, label: "Trends", path: "/dashboard/trends" },
   { icon: FileText, label: "Landing Page", path: "/dashboard/landing" },
   { icon: Settings, label: "Paramètres", path: "/dashboard/settings" },
 ];
