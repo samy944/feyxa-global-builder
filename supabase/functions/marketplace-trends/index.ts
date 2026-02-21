@@ -174,8 +174,51 @@ serve(async (req) => {
       }))
       .sort((a, b) => b.growth - a.growth);
 
+    // Daily time-series for last 30 days
+    const dailySales: Record<string, { date: string; sales: number; revenue: number; orders: number }> = {};
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      dailySales[key] = { date: key, sales: 0, revenue: 0, orders: 0 };
+    }
+    orders.forEach((o) => {
+      if (o.created_at < d30) return;
+      const key = o.created_at.slice(0, 10);
+      if (dailySales[key]) {
+        dailySales[key].orders += 1;
+        dailySales[key].revenue += Number(o.total);
+      }
+    });
+    items.forEach((item) => {
+      const orderDate = orderDateMap[item.order_id];
+      if (!orderDate || orderDate < d30) return;
+      const key = orderDate.slice(0, 10);
+      if (dailySales[key]) {
+        dailySales[key].sales += item.quantity;
+      }
+    });
+    const dailyTimeSeries = Object.values(dailySales);
+
+    // Weekly aggregation
+    const weeklyData: { week: string; sales: number; revenue: number; orders: number }[] = [];
+    for (let w = 0; w < 4; w++) {
+      const weekStart = new Date(now.getTime() - (w + 1) * 7 * 86400000);
+      const weekEnd = new Date(now.getTime() - w * 7 * 86400000);
+      const label = `S-${w === 0 ? "actuelle" : w}`;
+      let sales = 0, revenue = 0, ordersCount = 0;
+      dailyTimeSeries.forEach((d) => {
+        const dt = new Date(d.date);
+        if (dt >= weekStart && dt < weekEnd) {
+          sales += d.sales;
+          revenue += d.revenue;
+          ordersCount += d.orders;
+        }
+      });
+      weeklyData.unshift({ week: label, sales, revenue, orders: ordersCount });
+    }
+
     return new Response(
-      JSON.stringify({ top7d, top30d, emerging, trending, categoryTrends }),
+      JSON.stringify({ top7d, top30d, emerging, trending, categoryTrends, dailyTimeSeries, weeklyData }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {

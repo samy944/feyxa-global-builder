@@ -16,10 +16,23 @@ import {
   Layers,
   Zap,
   ShoppingCart,
+  BarChart3,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useStore } from "@/hooks/useStore";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 interface TrendProduct {
   id: string;
@@ -47,12 +60,28 @@ interface CategoryTrend {
   growth: number;
 }
 
+interface DailyPoint {
+  date: string;
+  sales: number;
+  revenue: number;
+  orders: number;
+}
+
+interface WeeklyPoint {
+  week: string;
+  sales: number;
+  revenue: number;
+  orders: number;
+}
+
 interface TrendsData {
   top7d: TrendProduct[];
   top30d: TrendProduct[];
   emerging: TrendProduct[];
   trending: TrendProduct[];
   categoryTrends: CategoryTrend[];
+  dailyTimeSeries: DailyPoint[];
+  weeklyData: WeeklyPoint[];
 }
 
 function TrendBadge({ score, growth }: { score?: number; growth?: number }) {
@@ -283,6 +312,121 @@ export default function DashboardTrends() {
             </Card>
           </motion.div>
         ))}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Daily Sales Area Chart */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp size={16} className="text-primary" />
+                Ventes quotidiennes — 30 jours
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.dailyTimeSeries && data.dailyTimeSeries.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={data.dailyTimeSeries}>
+                    <defs>
+                      <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="ordersGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(142 76% 36%)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(142 76% 36%)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                      tickFormatter={(v) => {
+                        const d = new Date(v);
+                        return `${d.getDate()}/${d.getMonth() + 1}`;
+                      }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                      labelFormatter={(v) => new Date(v).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Area
+                      type="monotone"
+                      dataKey="sales"
+                      name="Ventes (unités)"
+                      stroke="hsl(var(--primary))"
+                      fill="url(#salesGrad)"
+                      strokeWidth={2}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="orders"
+                      name="Commandes"
+                      stroke="hsl(142 76% 36%)"
+                      fill="url(#ordersGrad)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-12">Aucune donnée disponible</p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Weekly Bar Chart */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 size={16} className="text-emerald-500" />
+                Évolution hebdomadaire
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.weeklyData && data.weeklyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={data.weeklyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="week"
+                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    />
+                    <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                      formatter={(value: number, name: string) => [
+                        name === "Revenu" ? `${new Intl.NumberFormat("fr-FR").format(value)} XOF` : value,
+                        name,
+                      ]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="sales" name="Ventes" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="orders" name="Commandes" fill="hsl(142 76% 36%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-12">Aucune donnée disponible</p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Tabs */}
