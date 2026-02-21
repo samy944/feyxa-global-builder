@@ -18,6 +18,8 @@ import {
   ShoppingCart,
   BarChart3,
   Calendar,
+  Download,
+  FileText,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +36,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { exportTrendsCSV, exportTrendsPDF } from "@/lib/exportTrends";
 
 // --- Types ---
 
@@ -339,7 +342,29 @@ export default function DashboardTrends() {
             </p>
           </div>
         </div>
-        <PeriodSelector value={periodDays} onChange={setPeriodDays} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <PeriodSelector value={periodDays} onChange={setPeriodDays} />
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => data && exportTrendsCSV(data)}
+            >
+              <Download size={14} />
+              CSV
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => data && exportTrendsPDF(data)}
+            >
+              <FileText size={14} />
+              PDF
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}
