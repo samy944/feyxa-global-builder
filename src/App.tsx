@@ -18,6 +18,7 @@ import DashboardProducts from "./pages/DashboardProducts";
 import DashboardOrders from "./pages/DashboardOrders";
 import DashboardSettings from "./pages/DashboardSettings";
 import StorefrontHome from "./pages/StorefrontHome";
+import OneProductLanding from "./pages/OneProductLanding";
 import MarketHome from "./pages/MarketHome";
 import MarketCategory from "./pages/MarketCategory";
 import MarketProduct from "./pages/MarketProduct";
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route path="/store/:slug" element={<StorefrontHome />} />
+            <Route path="/store/:slug/lp" element={<OneProductLanding />} />
             {/* Marketplace */}
             <Route path="/market" element={<MarketHome />} />
             <Route path="/market/category/:slug" element={<MarketCategory />} />
