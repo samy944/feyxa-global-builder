@@ -18,5 +18,8 @@ verify_jwt = false
 [functions.insights-reco]
 verify_jwt = false
 
+[functions.marketplace-trends]
+verify_jwt = false
+
 [functions.smart-start]
 verify_jwt = false
