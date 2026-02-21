@@ -26,6 +26,7 @@ import MarketProduct from "./pages/MarketProduct";
 import MarketVendor from "./pages/MarketVendor";
 import Checkout from "./pages/Checkout";
 import DashboardWallet from "./pages/DashboardWallet";
+import DashboardInsights from "./pages/DashboardInsights";
 import TrackOrder from "./pages/TrackOrder";
 import AdminPayouts from "./pages/AdminPayouts";
 import AdminReviews from "./pages/AdminReviews";
@@ -55,6 +56,7 @@ const App = () => (
               <Route path="products" element={<DashboardProducts />} />
               <Route path="orders" element={<DashboardOrders />} />
               <Route path="wallet" element={<DashboardWallet />} />
+              <Route path="insights" element={<DashboardInsights />} />
               <Route path="landing" element={<DashboardLanding />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
