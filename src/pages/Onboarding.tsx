@@ -191,7 +191,12 @@ export default function Onboarding() {
 
     setLoading(false);
     toast.success("Boutique créée avec succès !");
-    window.location.href = "/dashboard";
+    
+    if (data.smartTemplate === "one_product") {
+      window.location.href = `/store/${slug}/lp`;
+    } else {
+      window.location.href = "/dashboard";
+    }
   };
 
   const canNext = () => {
