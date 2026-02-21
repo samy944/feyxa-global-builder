@@ -11,6 +11,7 @@ import {
   Brain,
   ChevronLeft,
   Wallet,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -25,6 +26,7 @@ const navItems = [
   { icon: BarChart3, label: "Analytics", path: "/dashboard/analytics" },
   { icon: Brain, label: "IA Assistant", path: "/dashboard/ai" },
   { icon: Wallet, label: "Portefeuille", path: "/dashboard/wallet" },
+  { icon: FileText, label: "Landing Page", path: "/dashboard/landing" },
   { icon: Settings, label: "Paramètres", path: "/dashboard/settings" },
 ];
 
