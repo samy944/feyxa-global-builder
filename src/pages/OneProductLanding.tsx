@@ -21,6 +21,7 @@ interface StoreData {
   logo_url: string | null;
   currency: string;
   theme: any;
+  settings: any;
 }
 
 interface ProductData {
@@ -145,28 +146,48 @@ export default function OneProductLanding() {
 
   const primaryColor = store.theme?.primary || "hsl(106, 75%, 47%)";
 
-  const benefits = [
-    { icon: Zap, title: "Résultats rapides", desc: "Voyez la différence dès les premiers jours d'utilisation." },
-    { icon: Award, title: "Qualité premium", desc: "Matériaux et fabrication aux standards internationaux." },
-    { icon: Truck, title: "Livraison rapide", desc: "Recevez votre commande en 48-72h partout au pays." },
-    { icon: Shield, title: "Paiement sécurisé", desc: "Vos données sont protégées à chaque étape." },
-    { icon: RotateCcw, title: "Satisfait ou remboursé", desc: "Retour gratuit sous 14 jours, sans condition." },
-    { icon: Clock, title: "Support 24/7", desc: "Notre équipe répond à toutes vos questions rapidement." },
-  ];
+  // Read custom config from store settings, fallback to defaults
+  const lc = store.settings?.landing_config || {};
 
-  const faqs = [
-    { q: "Comment passer commande ?", a: "Cliquez sur le bouton \"Commander maintenant\", remplissez vos informations de livraison et confirmez. C'est simple et rapide !" },
-    { q: "Quels sont les délais de livraison ?", a: "La livraison prend généralement 48 à 72 heures selon votre localisation. Vous recevrez un numéro de suivi." },
-    { q: "Puis-je retourner le produit ?", a: "Oui ! Vous avez 14 jours pour retourner le produit s'il ne vous convient pas. Le retour est gratuit." },
-    { q: "Quels moyens de paiement acceptez-vous ?", a: "Nous acceptons le paiement à la livraison (COD), Mobile Money et les virements bancaires." },
-    { q: "Le produit est-il garanti ?", a: "Oui, tous nos produits sont couverts par une garantie satisfaction. Contactez-nous en cas de problème." },
-  ];
+  const benefitsTitle = lc.benefits_title || "Pourquoi choisir ce produit ?";
+  const benefitsSubtitle = lc.benefits_subtitle || "Des avantages qui font la différence au quotidien.";
 
-  const socialProofs = [
+  const defaultBenefits = [
+    { title: "Résultats rapides", desc: "Voyez la différence dès les premiers jours d'utilisation." },
+    { title: "Qualité premium", desc: "Matériaux et fabrication aux standards internationaux." },
+    { title: "Livraison rapide", desc: "Recevez votre commande en 48-72h partout au pays." },
+    { title: "Paiement sécurisé", desc: "Vos données sont protégées à chaque étape." },
+    { title: "Satisfait ou remboursé", desc: "Retour gratuit sous 14 jours, sans condition." },
+    { title: "Support 24/7", desc: "Notre équipe répond à toutes vos questions rapidement." },
+  ];
+  const benefits: { title: string; desc: string }[] = lc.benefits?.length > 0 ? lc.benefits : defaultBenefits;
+
+  const benefitIcons = [Zap, Award, Truck, Shield, RotateCcw, Clock, Star, CheckCircle2];
+
+  const testimonialsTitle = lc.testimonials_title || "Ils l'ont adopté";
+  const socialProofCount = lc.social_proof_count || "500+";
+
+  const defaultTestimonials = [
     { name: "Aminata D.", rating: 5, text: "Excellente qualité ! Je recommande à 100%." },
     { name: "Moussa K.", rating: 5, text: "Livraison rapide et produit conforme. Très satisfait." },
     { name: "Fatou S.", rating: 4, text: "Bon rapport qualité-prix, je suis contente de mon achat." },
   ];
+  const socialProofs: { name: string; rating: number; text: string }[] = lc.testimonials?.length > 0 ? lc.testimonials : defaultTestimonials;
+
+  const guaranteeTitle = lc.guarantee_title || "Garantie satisfaction 100%";
+  const guaranteeText = lc.guarantee_text || "Si pour une raison quelconque vous n'êtes pas entièrement satisfait de votre achat, retournez-le dans les 14 jours et nous vous remboursons intégralement. Sans question, sans complication.";
+
+  const faqTitle = lc.faq_title || "Questions fréquentes";
+  const faqSubtitle = lc.faq_subtitle || "Tout ce que vous devez savoir avant d'acheter.";
+
+  const defaultFaqs = [
+    { q: "Comment passer commande ?", a: "Cliquez sur le bouton \"Commander maintenant\", remplissez vos informations de livraison et confirmez." },
+    { q: "Quels sont les délais de livraison ?", a: "La livraison prend généralement 48 à 72 heures selon votre localisation." },
+    { q: "Puis-je retourner le produit ?", a: "Oui ! Vous avez 14 jours pour retourner le produit. Le retour est gratuit." },
+    { q: "Quels moyens de paiement acceptez-vous ?", a: "Paiement à la livraison (COD), Mobile Money et virements bancaires." },
+    { q: "Le produit est-il garanti ?", a: "Oui, tous nos produits sont couverts par une garantie satisfaction." },
+  ];
+  const faqs: { q: string; a: string }[] = lc.faqs?.length > 0 ? lc.faqs : defaultFaqs;
 
   return (
     <div className="min-h-screen bg-background">
@@ -281,14 +302,16 @@ export default function OneProductLanding() {
             viewport={{ once: true }} transition={{ duration: 0.5 }}
           >
             <h2 className="font-heading text-2xl md:text-4xl text-foreground mb-3">
-              Pourquoi choisir ce produit ?
+              {benefitsTitle}
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Des avantages qui font la différence au quotidien.
+              {benefitsSubtitle}
             </p>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {benefits.map((b, i) => (
+            {benefits.map((b, i) => {
+              const Icon = benefitIcons[i % benefitIcons.length];
+              return (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -298,12 +321,13 @@ export default function OneProductLanding() {
                 className="rounded-xl border border-border bg-card p-6 shadow-card hover:shadow-elevated transition-shadow"
               >
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <b.icon size={20} className="text-primary" />
+                  <Icon size={20} className="text-primary" />
                 </div>
                 <h3 className="font-semibold text-foreground mb-1">{b.title}</h3>
                 <p className="text-sm text-muted-foreground">{b.desc}</p>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -317,7 +341,7 @@ export default function OneProductLanding() {
             viewport={{ once: true }} transition={{ duration: 0.5 }}
           >
             <h2 className="font-heading text-2xl md:text-4xl text-foreground mb-3">
-              Ils l'ont adopté
+              {testimonialsTitle}
             </h2>
             <div className="flex items-center justify-center gap-2">
               <div className="flex">
@@ -369,7 +393,7 @@ export default function OneProductLanding() {
           >
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users size={16} className="text-primary" />
-              <span><strong className="text-foreground">500+</strong> clients satisfaits</span>
+              <span><strong className="text-foreground">{socialProofCount}</strong> clients satisfaits</span>
             </div>
           </motion.div>
         </div>
@@ -389,12 +413,10 @@ export default function OneProductLanding() {
               <Shield size={32} className="text-primary" />
             </div>
             <h2 className="font-heading text-2xl md:text-3xl text-foreground mb-4">
-              Garantie satisfaction 100%
+              {guaranteeTitle}
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto mb-6 leading-relaxed">
-              Si pour une raison quelconque vous n'êtes pas entièrement satisfait de votre achat,
-              retournez-le dans les <strong className="text-foreground">14 jours</strong> et nous vous
-              remboursons intégralement. Sans question, sans complication.
+              {guaranteeText}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5"><RotateCcw size={14} className="text-primary" /> Retour gratuit</span>
@@ -414,10 +436,10 @@ export default function OneProductLanding() {
             viewport={{ once: true }} transition={{ duration: 0.5 }}
           >
             <h2 className="font-heading text-2xl md:text-4xl text-foreground mb-3">
-              Questions fréquentes
+              {faqTitle}
             </h2>
             <p className="text-muted-foreground">
-              Tout ce que vous devez savoir avant d'acheter.
+              {faqSubtitle}
             </p>
           </motion.div>
 

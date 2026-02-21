@@ -17,6 +17,7 @@ import DashboardOverview from "./pages/DashboardOverview";
 import DashboardProducts from "./pages/DashboardProducts";
 import DashboardOrders from "./pages/DashboardOrders";
 import DashboardSettings from "./pages/DashboardSettings";
+import DashboardLanding from "./pages/DashboardLanding";
 import StorefrontHome from "./pages/StorefrontHome";
 import OneProductLanding from "./pages/OneProductLanding";
 import MarketHome from "./pages/MarketHome";
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="products" element={<DashboardProducts />} />
               <Route path="orders" element={<DashboardOrders />} />
               <Route path="wallet" element={<DashboardWallet />} />
+              <Route path="landing" element={<DashboardLanding />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route path="/store/:slug" element={<StorefrontHome />} />
