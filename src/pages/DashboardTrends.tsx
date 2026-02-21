@@ -17,6 +17,7 @@ import {
   Zap,
   ShoppingCart,
   BarChart3,
+  Calendar,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +35,8 @@ import {
   Legend,
 } from "recharts";
 
+// --- Types ---
+
 interface TrendProduct {
   id: string;
   name: string;
@@ -46,15 +49,15 @@ interface TrendProduct {
   category: string | null;
   sales_7d: number;
   revenue_7d: number;
-  sales_30d: number;
-  revenue_30d: number;
+  sales_period: number;
+  revenue_period: number;
   growth_rate: number;
   trend_score: number;
 }
 
 interface CategoryTrend {
   name: string;
-  sales_30d: number;
+  sales_period: number;
   sales_prev: number;
   products: number;
   growth: number;
@@ -75,13 +78,50 @@ interface WeeklyPoint {
 }
 
 interface TrendsData {
+  periodDays: number;
   top7d: TrendProduct[];
-  top30d: TrendProduct[];
+  topPeriod: TrendProduct[];
   emerging: TrendProduct[];
   trending: TrendProduct[];
   categoryTrends: CategoryTrend[];
   dailyTimeSeries: DailyPoint[];
   weeklyData: WeeklyPoint[];
+}
+
+const PERIOD_OPTIONS = [
+  { value: 7, label: "7j" },
+  { value: 14, label: "14j" },
+  { value: 30, label: "30j" },
+  { value: 90, label: "90j" },
+] as const;
+
+// --- Sub-components ---
+
+function PeriodSelector({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+      <Calendar size={14} className="text-muted-foreground ml-2 mr-1" />
+      {PERIOD_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            value === opt.value
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function TrendBadge({ score, growth }: { score?: number; growth?: number }) {
@@ -111,11 +151,13 @@ function ProductRow({
   rank,
   showGrowth,
   isOwn,
+  periodLabel,
 }: {
   product: TrendProduct;
   rank: number;
   showGrowth?: boolean;
   isOwn: boolean;
+  periodLabel: string;
 }) {
   const { toast } = useToast();
 
@@ -154,7 +196,7 @@ function ProductRow({
       </div>
 
       <div className="text-right shrink-0 space-y-0.5">
-        <p className="text-sm font-bold text-foreground">{product.sales_30d} ventes</p>
+        <p className="text-sm font-bold text-foreground">{product.sales_period} ventes</p>
         {showGrowth && (
           <div className="flex items-center justify-end gap-0.5">
             {product.growth_rate >= 0 ? (
@@ -195,22 +237,27 @@ function ProductRow({
   );
 }
 
+// --- Main Component ---
+
 export default function DashboardTrends() {
   const { store, loading: storeLoading } = useStore();
   const [data, setData] = useState<TrendsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [periodDays, setPeriodDays] = useState(30);
 
   useEffect(() => {
     if (!store) return;
     fetchTrends();
-  }, [store]);
+  }, [store, periodDays]);
 
   async function fetchTrends() {
     setLoading(true);
     setError(null);
     try {
-      const { data: fnData, error: fnError } = await supabase.functions.invoke("marketplace-trends");
+      const { data: fnData, error: fnError } = await supabase.functions.invoke(
+        `marketplace-trends?days=${periodDays}`
+      );
       if (fnError) throw fnError;
       setData(fnData);
     } catch (e: any) {
@@ -219,6 +266,8 @@ export default function DashboardTrends() {
       setLoading(false);
     }
   }
+
+  const periodLabel = PERIOD_OPTIONS.find((o) => o.value === periodDays)?.label || `${periodDays}j`;
 
   if (storeLoading || loading) {
     return (
@@ -268,7 +317,7 @@ export default function DashboardTrends() {
     },
     {
       label: "Catégories actives",
-      value: data.categoryTrends.filter((c) => c.sales_30d > 0).length,
+      value: data.categoryTrends.filter((c) => c.sales_period > 0).length,
       icon: Layers,
       color: "text-emerald-500",
       bg: "bg-emerald-500/10",
@@ -278,16 +327,19 @@ export default function DashboardTrends() {
   return (
     <div className="p-6 lg:p-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-          <TrendingUp size={20} className="text-white" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+            <TrendingUp size={20} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Feyxa Trends</h1>
+            <p className="text-sm text-muted-foreground">
+              Tendances du marketplace — {periodLabel}
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Feyxa Trends</h1>
-          <p className="text-sm text-muted-foreground">
-            Tendances du marketplace — données en temps réel
-          </p>
-        </div>
+        <PeriodSelector value={periodDays} onChange={setPeriodDays} />
       </div>
 
       {/* Summary Cards */}
@@ -316,13 +368,12 @@ export default function DashboardTrends() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Daily Sales Area Chart */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <TrendingUp size={16} className="text-primary" />
-                Ventes quotidiennes — 30 jours
+                Ventes quotidiennes — {periodLabel}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -385,7 +436,6 @@ export default function DashboardTrends() {
           </Card>
         </motion.div>
 
-        {/* Weekly Bar Chart */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <Card className="border-border/50">
             <CardHeader className="pb-2">
@@ -399,10 +449,7 @@ export default function DashboardTrends() {
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={data.weeklyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="week"
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    />
+                    <XAxis dataKey="week" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <Tooltip
                       contentStyle={{
@@ -438,8 +485,8 @@ export default function DashboardTrends() {
           <TabsTrigger value="top7d" className="gap-1.5">
             <Zap size={14} /> Top 7j
           </TabsTrigger>
-          <TabsTrigger value="top30d" className="gap-1.5">
-            <TrendingUp size={14} /> Top 30j
+          <TabsTrigger value="topPeriod" className="gap-1.5">
+            <TrendingUp size={14} /> Top {periodLabel}
           </TabsTrigger>
           <TabsTrigger value="emerging" className="gap-1.5">
             <Rocket size={14} /> Émergents
@@ -454,7 +501,7 @@ export default function DashboardTrends() {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Flame size={16} className="text-amber-500" />
-                Produits en tendance
+                Produits en tendance — {periodLabel}
                 <span className="text-xs font-normal text-muted-foreground ml-1">
                   score = ventes×0.5 + croissance×0.3 + conversion×0.2
                 </span>
@@ -463,13 +510,7 @@ export default function DashboardTrends() {
             <CardContent className="space-y-2">
               {data.trending.length > 0 ? (
                 data.trending.map((p, i) => (
-                  <ProductRow
-                    key={p.id}
-                    product={p}
-                    rank={i + 1}
-                    showGrowth
-                    isOwn={p.store_id === store?.id}
-                  />
+                  <ProductRow key={p.id} product={p} rank={i + 1} showGrowth isOwn={p.store_id === store?.id} periodLabel={periodLabel} />
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">
@@ -490,7 +531,7 @@ export default function DashboardTrends() {
             <CardContent className="space-y-2">
               {data.top7d.length > 0 ? (
                 data.top7d.map((p, i) => (
-                  <ProductRow key={p.id} product={p} rank={i + 1} isOwn={p.store_id === store?.id} />
+                  <ProductRow key={p.id} product={p} rank={i + 1} isOwn={p.store_id === store?.id} periodLabel="7j" />
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">Aucune vente cette semaine.</p>
@@ -499,20 +540,20 @@ export default function DashboardTrends() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="top30d">
+        <TabsContent value="topPeriod">
           <Card className="border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp size={16} className="text-emerald-500" /> Top produits — 30 derniers jours
+                <TrendingUp size={16} className="text-emerald-500" /> Top produits — {periodLabel}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {data.top30d.length > 0 ? (
-                data.top30d.map((p, i) => (
-                  <ProductRow key={p.id} product={p} rank={i + 1} isOwn={p.store_id === store?.id} />
+              {data.topPeriod.length > 0 ? (
+                data.topPeriod.map((p, i) => (
+                  <ProductRow key={p.id} product={p} rank={i + 1} isOwn={p.store_id === store?.id} periodLabel={periodLabel} />
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">Aucune vente ce mois-ci.</p>
+                <p className="text-sm text-muted-foreground text-center py-8">Aucune vente sur cette période.</p>
               )}
             </CardContent>
           </Card>
@@ -523,19 +564,13 @@ export default function DashboardTrends() {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Rocket size={16} className="text-primary" /> Produits émergents
-                <span className="text-xs font-normal text-muted-foreground ml-1">croissance rapide</span>
+                <span className="text-xs font-normal text-muted-foreground ml-1">croissance rapide — {periodLabel}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {data.emerging.length > 0 ? (
                 data.emerging.map((p, i) => (
-                  <ProductRow
-                    key={p.id}
-                    product={p}
-                    rank={i + 1}
-                    showGrowth
-                    isOwn={p.store_id === store?.id}
-                  />
+                  <ProductRow key={p.id} product={p} rank={i + 1} showGrowth isOwn={p.store_id === store?.id} periodLabel={periodLabel} />
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">
@@ -550,7 +585,7 @@ export default function DashboardTrends() {
           <Card className="border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <Layers size={16} className="text-emerald-500" /> Catégories en croissance
+                <Layers size={16} className="text-emerald-500" /> Catégories en croissance — {periodLabel}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -564,28 +599,21 @@ export default function DashboardTrends() {
                       transition={{ delay: i * 0.05 }}
                       className="flex items-center gap-3 p-3 rounded-lg border border-border/50"
                     >
-                      <span className="text-xs font-bold text-muted-foreground w-6 text-center">
-                        #{i + 1}
-                      </span>
+                      <span className="text-xs font-bold text-muted-foreground w-6 text-center">#{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground">{cat.name}</p>
                         <p className="text-[10px] text-muted-foreground">{cat.products} produits</p>
                       </div>
                       <div className="text-right space-y-0.5">
-                        <p className="text-sm font-bold text-foreground">{cat.sales_30d} ventes</p>
+                        <p className="text-sm font-bold text-foreground">{cat.sales_period} ventes</p>
                         <div className="flex items-center justify-end gap-0.5">
                           {cat.growth >= 0 ? (
                             <ArrowUpRight size={12} className="text-emerald-500" />
                           ) : (
                             <ArrowDownRight size={12} className="text-destructive" />
                           )}
-                          <span
-                            className={`text-xs font-medium ${
-                              cat.growth >= 0 ? "text-emerald-500" : "text-destructive"
-                            }`}
-                          >
-                            {cat.growth > 0 ? "+" : ""}
-                            {cat.growth}%
+                          <span className={`text-xs font-medium ${cat.growth >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+                            {cat.growth > 0 ? "+" : ""}{cat.growth}%
                           </span>
                         </div>
                       </div>
