@@ -3,6 +3,7 @@ import SmartOpsWidget from "@/components/dashboard/SmartOpsWidget";
 import ConversionAlertWidget from "@/components/dashboard/ConversionAlertWidget";
 import RecentOrdersWidget from "@/components/dashboard/RecentOrdersWidget";
 import TopProductsWidget from "@/components/dashboard/TopProductsWidget";
+import LowStockWidget from "@/components/dashboard/LowStockWidget";
 
 export default function DashboardOverview() {
   return (
@@ -29,6 +30,9 @@ export default function DashboardOverview() {
         <TopProductsWidget />
         <RecentOrdersWidget />
       </div>
+
+      {/* Low Stock Alert */}
+      <LowStockWidget />
     </div>
   );
 }
