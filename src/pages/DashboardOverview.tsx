@@ -24,11 +24,11 @@ export default function DashboardOverview() {
       {/* Smart Ops - AI-powered morning summary */}
       <SmartOpsWidget />
 
-      {/* Top Products */}
-      <TopProductsWidget />
-
-      {/* Recent Orders */}
-      <RecentOrdersWidget />
+      {/* Top Products & Recent Orders side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TopProductsWidget />
+        <RecentOrdersWidget />
+      </div>
     </div>
   );
 }
