@@ -14,6 +14,7 @@ import {
   FileText,
   Zap,
   TrendingUp,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -83,6 +84,19 @@ export function DashboardSidebar() {
           );
         })}
       </nav>
+
+      <div className="p-2 border-t border-border">
+        <Link
+          to="/market"
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary"
+          )}
+          title={collapsed ? "Marketplace" : undefined}
+        >
+          <Store size={18} />
+          {!collapsed && <span>Marketplace</span>}
+        </Link>
+      </div>
 
       <div className="p-3 border-t border-border">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
