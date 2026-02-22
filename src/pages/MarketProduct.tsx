@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { Loader2, ChevronRight, Store, MapPin, Truck, RotateCcw, Shield, ShoppingBag, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
+import { initStoreTracking, trackViewContent, trackAddToCart } from "@/lib/tracking";
 
 interface VariantData {
   id: string;
@@ -88,6 +89,15 @@ export default function MarketProduct() {
     if (data) {
       const p = data as unknown as ProductDetail;
       setProduct(p);
+      // Init tracking & fire ViewContent
+      initStoreTracking(p.store_id).then(() => {
+        trackViewContent({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          currency: p.stores.currency,
+        });
+      });
       const { data: vData } = await supabase
         .from("product_variants")
         .select("id, name, price, stock_quantity, sku, options")
@@ -272,10 +282,11 @@ export default function MarketProduct() {
                   size="lg"
                   className="w-full font-heading text-lg tracking-wide"
                   disabled={activeStock <= 0 || (hasVariants && !selectedVariant)}
-                  onClick={() =>
+                  onClick={() => {
+                    const itemName = selectedVariant ? `${product.name} — ${selectedVariant.name}` : product.name;
                     addItem({
                       productId: product.id,
-                      name: selectedVariant ? `${product.name} — ${selectedVariant.name}` : product.name,
+                      name: itemName,
                       price: activePrice,
                       currency: product.stores.currency,
                       image: images[0] ?? null,
@@ -284,8 +295,15 @@ export default function MarketProduct() {
                       storeSlug: product.stores.slug,
                       slug: product.slug,
                       maxStock: activeStock,
-                    })
-                  }
+                    });
+                    trackAddToCart({
+                      id: product.id,
+                      name: itemName,
+                      price: activePrice,
+                      currency: product.stores.currency,
+                      quantity: 1,
+                    });
+                  }}
                 >
                   <ShoppingBag size={18} />
                   AJOUTER AU PANIER

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { ShoppingBag, Search, MapPin, Phone, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { initStoreTracking, trackPageView } from "@/lib/tracking";
 
 interface StoreData {
   id: string;
@@ -55,6 +56,8 @@ export default function StorefrontHome() {
 
     if (storeData) {
       setStore(storeData as StoreData);
+      // Init tracking pixels for this store
+      initStoreTracking(storeData.id).then(() => trackPageView());
       const { data: prods } = await supabase
         .from("products")
         .select("*")

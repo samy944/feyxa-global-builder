@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSeoHead } from "@/hooks/useSeoHead";
 import { motion } from "framer-motion";
 import { useCart } from "@/hooks/useCart";
+import { initStoreTracking, trackPageView, trackViewContent, trackAddToCart } from "@/lib/tracking";
 import {
   ShoppingBag, Star, Shield, Truck, RotateCcw, ChevronDown,
   CheckCircle2, Zap, Users, Award, Clock, ArrowRight,
@@ -85,7 +86,20 @@ export default function OneProductLanding() {
         .order("created_at", { ascending: true })
         .limit(1);
 
-      if (prods && prods.length > 0) setProduct(prods[0] as ProductData);
+      if (prods && prods.length > 0) {
+        const p = prods[0] as ProductData;
+        setProduct(p);
+        // Init tracking & fire events
+        initStoreTracking(storeData.id).then(() => {
+          trackPageView();
+          trackViewContent({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            currency: storeData.currency,
+          });
+        });
+      }
       setLoading(false);
     })();
   }, [slug]);
@@ -118,6 +132,13 @@ export default function OneProductLanding() {
       slug: product.slug,
       maxStock: product.stock_quantity,
       currency: store.currency,
+    });
+    trackAddToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      currency: store.currency,
+      quantity: 1,
     });
   };
 

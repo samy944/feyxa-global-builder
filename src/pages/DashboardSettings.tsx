@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { useStore } from "@/hooks/useStore";
+import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
+import { toast } from "@/hooks/use-toast";
 import {
-  Store, Globe, Palette, Truck, CreditCard, Bell, Shield, Users, Save
+  Store, Globe, Palette, Truck, CreditCard, Bell, Shield, Users, Save, Activity, Loader2
 } from "lucide-react";
 
 const sections = [
@@ -11,6 +15,7 @@ const sections = [
   { id: "team", label: "Équipe", icon: Users },
   { id: "delivery", label: "Livraison", icon: Truck },
   { id: "payments", label: "Paiements", icon: CreditCard },
+  { id: "tracking", label: "Tracking & Pixels", icon: Activity },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "domain", label: "Domaine", icon: Globe },
   { id: "theme", label: "Apparence", icon: Palette },
@@ -186,6 +191,10 @@ export default function DashboardSettings() {
               </>
             )}
 
+            {activeSection === "tracking" && (
+              <TrackingPixelsSection />
+            )}
+
             {["notifications", "theme", "security"].includes(activeSection) && (
               <div className="text-center py-8">
                 <p className="text-muted-foreground text-sm">Configuration {sections.find(s => s.id === activeSection)?.label} — bientôt disponible</p>
@@ -195,5 +204,132 @@ export default function DashboardSettings() {
         </div>
       </div>
     </div>
+  );
+}
+
+// --- Tracking Pixels Sub-component ---
+
+function TrackingPixelsSection() {
+  const { store } = useStore();
+  const [metaPixelId, setMetaPixelId] = useState("");
+  const [tiktokPixelId, setTiktokPixelId] = useState("");
+  const [googleTagId, setGoogleTagId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!store) return;
+    loadSettings();
+  }, [store]);
+
+  async function loadSettings() {
+    setLoading(true);
+    const { data } = await supabase
+      .from("store_tracking_settings")
+      .select("meta_pixel_id, tiktok_pixel_id, google_tag_id")
+      .eq("store_id", store!.id)
+      .maybeSingle();
+
+    if (data) {
+      setMetaPixelId(data.meta_pixel_id || "");
+      setTiktokPixelId(data.tiktok_pixel_id || "");
+      setGoogleTagId(data.google_tag_id || "");
+    }
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    if (!store) return;
+    setSaving(true);
+
+    const payload = {
+      store_id: store.id,
+      meta_pixel_id: metaPixelId.trim() || null,
+      tiktok_pixel_id: tiktokPixelId.trim() || null,
+      google_tag_id: googleTagId.trim() || null,
+    };
+
+    const { error } = await supabase
+      .from("store_tracking_settings")
+      .upsert(payload, { onConflict: "store_id" });
+
+    setSaving(false);
+
+    if (error) {
+      toast({ title: "Erreur", description: "Impossible de sauvegarder les pixels.", variant: "destructive" });
+    } else {
+      toast({ title: "Pixels sauvegardés", description: "Vos pixels marketing sont actifs sur votre storefront." });
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin text-muted-foreground" size={20} />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <h2 className="text-lg font-semibold text-foreground">Tracking & Pixels</h2>
+      <p className="text-sm text-muted-foreground -mt-4">
+        Ajoutez vos pixels marketing pour suivre les conversions sur votre boutique.
+      </p>
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">Meta Pixel ID (Facebook/Instagram)</label>
+          <Input
+            value={metaPixelId}
+            onChange={(e) => setMetaPixelId(e.target.value)}
+            placeholder="Ex: 123456789012345"
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Trouvez-le dans Meta Events Manager → Paramètres → ID du pixel
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">TikTok Pixel ID</label>
+          <Input
+            value={tiktokPixelId}
+            onChange={(e) => setTiktokPixelId(e.target.value)}
+            placeholder="Ex: C1234567890ABCDEF"
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Trouvez-le dans TikTok Ads Manager → Ressources → Événements
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">Google Tag ID (GA4 / GTM)</label>
+          <Input
+            value={googleTagId}
+            onChange={(e) => setGoogleTagId(e.target.value)}
+            placeholder="Ex: G-XXXXXXXXXX ou GTM-XXXXXXX"
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Trouvez-le dans Google Analytics → Admin → Flux de données
+          </p>
+        </div>
+
+        <div className="p-3 rounded-lg bg-secondary/50 text-xs text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground text-sm">Événements suivis automatiquement :</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            <li><strong>PageView</strong> — Chaque visite de page</li>
+            <li><strong>ViewContent</strong> — Consultation d'un produit</li>
+            <li><strong>AddToCart</strong> — Ajout au panier</li>
+            <li><strong>InitiateCheckout</strong> — Début de checkout</li>
+            <li><strong>Purchase</strong> — Achat confirmé (valeur, devise, produits)</li>
+          </ul>
+        </div>
+
+        <Button variant="hero" size="sm" onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          Enregistrer les pixels
+        </Button>
+      </div>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart, CartItem } from "@/hooks/useCart";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, MessageCircle, PackageCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
+import { trackInitiateCheckout, trackPurchase } from "@/lib/tracking";
 
 const shippingSchema = z.object({
   firstName: z.string().trim().min(1, "Prénom requis").max(100),
@@ -130,6 +131,9 @@ export default function Checkout() {
     setSubmitting(true);
     const completed: CompletedOrder[] = [];
 
+    // Fire InitiateCheckout event
+    trackInitiateCheckout(totalPrice, mainCurrency, items.reduce((s, i) => s + i.quantity, 0));
+
     try {
       for (const [storeId, storeItems] of Object.entries(itemsByStore)) {
         // 1. Decrement stock atomically
@@ -221,6 +225,22 @@ export default function Checkout() {
       }
 
       setCompletedOrders(completed);
+
+      // Fire Purchase event for each completed order
+      completed.forEach((order) => {
+        trackPurchase({
+          orderId: order.orderId,
+          orderNumber: order.orderNumber,
+          value: order.subtotal,
+          currency: order.currency,
+          items: order.items.map((i) => ({
+            id: i.productId,
+            name: i.name,
+            price: i.price,
+            quantity: i.quantity,
+          })),
+        });
+      });
 
       toast({
         title: "Commande confirmée !",
