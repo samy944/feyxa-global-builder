@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
-import { Bell, Check, TrendingUp, Package, Flame, Rocket } from "lucide-react";
+import { Bell, Check, TrendingUp, TrendingDown, Package, Flame, Rocket, ShoppingCart, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -89,6 +89,8 @@ export function NotificationBell() {
   }
 
   const typeIcon = (type: string, metadata: any) => {
+    if (type === "new_order") return <ShoppingCart size={14} className="text-primary" />;
+    if (type === "conversion_alert") return <TrendingDown size={14} className="text-destructive" />;
     const rank = metadata?.rank;
     if (rank && rank <= 3) return <Flame size={14} className="text-amber-500" />;
     if (metadata?.growth > 50) return <Rocket size={14} className="text-primary" />;
