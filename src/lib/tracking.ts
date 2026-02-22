@@ -6,6 +6,8 @@ interface TrackingSettings {
   meta_pixel_id: string | null;
   tiktok_pixel_id: string | null;
   google_tag_id: string | null;
+  snapchat_pixel_id: string | null;
+  pinterest_tag_id: string | null;
 }
 
 interface PurchaseItem {
@@ -66,6 +68,20 @@ function injectGoogleTag(tagId: string) {
   );
 }
 
+function injectSnapchatPixel(pixelId: string) {
+  injectInlineScript(
+    "feyxa-snap-pixel",
+    `(function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function(){a.handleRequest?a.handleRequest.apply(a,arguments):a.queue.push(arguments)};a.queue=[];var s=t.createElement('script');s.async=!0;s.src=n;var r=t.getElementsByTagName('script')[0];r.parentNode.insertBefore(s,r)})(window,document,'https://sc-static.net/scevent.min.js');snaptr('init','${pixelId}',{});snaptr('track','PAGE_VIEW');`
+  );
+}
+
+function injectPinterestTag(tagId: string) {
+  injectInlineScript(
+    "feyxa-pinterest-tag",
+    `!function(e){if(!window.pintrk){window.pintrk=function(){window.pintrk.queue.push(Array.prototype.slice.call(arguments))};var n=window.pintrk;n.queue=[],n.version="3.0";var t=document.createElement("script");t.async=!0,t.src=e;var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r)}}("https://s.pinimg.com/ct/core.js");pintrk('load','${tagId}');pintrk('page');`
+  );
+}
+
 // --- Public API ---
 
 export async function initStoreTracking(storeId: string) {
@@ -73,7 +89,7 @@ export async function initStoreTracking(storeId: string) {
 
   const { data } = await supabase
     .from("store_tracking_settings")
-    .select("meta_pixel_id, tiktok_pixel_id, google_tag_id")
+    .select("meta_pixel_id, tiktok_pixel_id, google_tag_id, snapchat_pixel_id, pinterest_tag_id")
     .eq("store_id", storeId)
     .maybeSingle();
 
@@ -82,6 +98,8 @@ export async function initStoreTracking(storeId: string) {
   if (data.meta_pixel_id) injectMetaPixel(data.meta_pixel_id);
   if (data.tiktok_pixel_id) injectTikTokPixel(data.tiktok_pixel_id);
   if (data.google_tag_id) injectGoogleTag(data.google_tag_id);
+  if (data.snapchat_pixel_id) injectSnapchatPixel(data.snapchat_pixel_id);
+  if (data.pinterest_tag_id) injectPinterestTag(data.pinterest_tag_id);
 
   injectedStoreId = storeId;
 }
@@ -106,10 +124,24 @@ function gtag(...args: any[]) {
   }
 }
 
+function snaptr(method: string, ...args: any[]) {
+  if (typeof window !== "undefined" && (window as any).snaptr) {
+    (window as any).snaptr(method, ...args);
+  }
+}
+
+function pintrk(method: string, ...args: any[]) {
+  if (typeof window !== "undefined" && (window as any).pintrk) {
+    (window as any).pintrk(method, ...args);
+  }
+}
+
 // --- Tracking Events ---
 
 export function trackPageView() {
   fbq("track", "PageView");
+  snaptr("track", "PAGE_VIEW");
+  pintrk("page");
   // TikTok pageview is automatic on load
   // gtag pageview is automatic via config
 }
@@ -135,6 +167,21 @@ export function trackViewContent(product: { id: string; name: string; price: num
     currency: product.currency,
     value: product.price,
     items: [{ item_id: product.id, item_name: product.name, price: product.price, item_category: product.category }],
+  });
+
+  snaptr("track", "VIEW_CONTENT", {
+    content_ids: [product.id],
+    content_name: product.name,
+    content_type: "product",
+    value: product.price,
+    currency: product.currency,
+  });
+
+  pintrk("track", "pagevisit", {
+    product_id: product.id,
+    product_name: product.name,
+    product_price: product.price,
+    product_currency: product.currency,
   });
 }
 
@@ -162,6 +209,24 @@ export function trackAddToCart(product: { id: string; name: string; price: numbe
     value: product.price * product.quantity,
     items: [{ item_id: product.id, item_name: product.name, price: product.price, quantity: product.quantity }],
   });
+
+  snaptr("track", "ADD_CART", {
+    content_ids: [product.id],
+    content_name: product.name,
+    value: product.price * product.quantity,
+    currency: product.currency,
+    num_items: product.quantity,
+  });
+
+  pintrk("track", "addtocart", {
+    product_id: product.id,
+    product_name: product.name,
+    product_price: product.price,
+    product_quantity: product.quantity,
+    order_quantity: product.quantity,
+    value: product.price * product.quantity,
+    currency: product.currency,
+  });
 }
 
 export function trackInitiateCheckout(value: number, currency: string, numItems: number) {
@@ -181,6 +246,18 @@ export function trackInitiateCheckout(value: number, currency: string, numItems:
     currency,
     value,
     items: [],
+  });
+
+  snaptr("track", "START_CHECKOUT", {
+    value,
+    currency,
+    num_items: numItems,
+  });
+
+  pintrk("track", "checkout", {
+    value,
+    currency,
+    order_quantity: numItems,
   });
 }
 
@@ -215,5 +292,21 @@ export function trackPurchase(data: PurchaseData) {
       price: i.price,
       quantity: i.quantity,
     })),
+  });
+
+  snaptr("track", "PURCHASE", {
+    content_ids: contentIds,
+    value: data.value,
+    currency: data.currency,
+    num_items: numItems,
+    transaction_id: data.orderNumber,
+  });
+
+  pintrk("track", "checkout", {
+    value: data.value,
+    currency: data.currency,
+    order_quantity: numItems,
+    order_id: data.orderNumber,
+    product_ids: contentIds,
   });
 }
