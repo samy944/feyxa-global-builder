@@ -28,6 +28,7 @@ import Checkout from "./pages/Checkout";
 import DashboardWallet from "./pages/DashboardWallet";
 import DashboardInsights from "./pages/DashboardInsights";
 import DashboardTrends from "./pages/DashboardTrends";
+import DashboardAnalytics from "./pages/DashboardAnalytics";
 import TrackOrder from "./pages/TrackOrder";
 import AdminPayouts from "./pages/AdminPayouts";
 import AdminReviews from "./pages/AdminReviews";
@@ -59,6 +60,7 @@ const App = () => (
               <Route path="wallet" element={<DashboardWallet />} />
               <Route path="insights" element={<DashboardInsights />} />
               <Route path="trends" element={<DashboardTrends />} />
+              <Route path="analytics" element={<DashboardAnalytics />} />
               <Route path="landing" element={<DashboardLanding />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>

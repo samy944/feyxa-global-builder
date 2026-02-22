@@ -90,7 +90,7 @@ export default function OneProductLanding() {
         const p = prods[0] as ProductData;
         setProduct(p);
         // Init tracking & fire events
-        initStoreTracking(storeData.id).then(() => {
+        initStoreTracking(storeData.id, storeData.currency).then(() => {
           trackPageView();
           trackViewContent({
             id: p.id,
