@@ -57,7 +57,7 @@ export default function StorefrontHome() {
     if (storeData) {
       setStore(storeData as StoreData);
       // Init tracking pixels for this store
-      initStoreTracking(storeData.id).then(() => trackPageView());
+      initStoreTracking(storeData.id, storeData.currency).then(() => trackPageView());
       const { data: prods } = await supabase
         .from("products")
         .select("*")

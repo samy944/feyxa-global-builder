@@ -90,7 +90,7 @@ export default function MarketProduct() {
       const p = data as unknown as ProductDetail;
       setProduct(p);
       // Init tracking & fire ViewContent
-      initStoreTracking(p.store_id).then(() => {
+      initStoreTracking(p.store_id, p.stores.currency).then(() => {
         trackViewContent({
           id: p.id,
           name: p.name,

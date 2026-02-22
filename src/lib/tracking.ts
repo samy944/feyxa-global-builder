@@ -82,9 +82,36 @@ function injectPinterestTag(tagId: string) {
   );
 }
 
+// --- Event Recording ---
+
+let currentStoreId: string | null = null;
+let currentCurrency: string = "XOF";
+
+function recordEvent(eventType: string, value: number = 0) {
+  if (!currentStoreId) return;
+  // Fire-and-forget to edge function
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/record-tracking-event`;
+  fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    },
+    body: JSON.stringify({
+      store_id: currentStoreId,
+      event_type: eventType,
+      value,
+      currency: currentCurrency,
+    }),
+  }).catch(() => {}); // silent fail
+}
+
 // --- Public API ---
 
-export async function initStoreTracking(storeId: string) {
+export async function initStoreTracking(storeId: string, currency?: string) {
+  currentStoreId = storeId;
+  if (currency) currentCurrency = currency;
+
   if (injectedStoreId === storeId) return; // already injected
 
   const { data } = await supabase
@@ -139,6 +166,7 @@ function pintrk(method: string, ...args: any[]) {
 // --- Tracking Events ---
 
 export function trackPageView() {
+  recordEvent("page_view");
   fbq("track", "PageView");
   snaptr("track", "PAGE_VIEW");
   pintrk("page");
@@ -147,6 +175,7 @@ export function trackPageView() {
 }
 
 export function trackViewContent(product: { id: string; name: string; price: number; currency: string; category?: string }) {
+  recordEvent("view_content", product.price);
   fbq("track", "ViewContent", {
     content_ids: [product.id],
     content_name: product.name,
@@ -186,6 +215,7 @@ export function trackViewContent(product: { id: string; name: string; price: num
 }
 
 export function trackAddToCart(product: { id: string; name: string; price: number; currency: string; quantity: number }) {
+  recordEvent("add_to_cart", product.price * product.quantity);
   fbq("track", "AddToCart", {
     content_ids: [product.id],
     content_name: product.name,
@@ -230,6 +260,7 @@ export function trackAddToCart(product: { id: string; name: string; price: numbe
 }
 
 export function trackInitiateCheckout(value: number, currency: string, numItems: number) {
+  recordEvent("initiate_checkout", value);
   fbq("track", "InitiateCheckout", {
     value,
     currency,
@@ -264,6 +295,7 @@ export function trackInitiateCheckout(value: number, currency: string, numItems:
 export function trackPurchase(data: PurchaseData) {
   const contentIds = data.items.map((i) => i.id);
   const numItems = data.items.reduce((s, i) => s + i.quantity, 0);
+  recordEvent("purchase", data.value);
 
   fbq("track", "Purchase", {
     content_ids: contentIds,

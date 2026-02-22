@@ -1182,6 +1182,16 @@ export type Database = {
         }
         Returns: string
       }
+      upsert_tracking_event: {
+        Args: {
+          _currency?: string
+          _event_date: string
+          _event_type: string
+          _store_id: string
+          _value?: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "marketplace_admin" | "marketplace_moderator"
