@@ -214,6 +214,8 @@ function TrackingPixelsSection() {
   const [metaPixelId, setMetaPixelId] = useState("");
   const [tiktokPixelId, setTiktokPixelId] = useState("");
   const [googleTagId, setGoogleTagId] = useState("");
+  const [snapchatPixelId, setSnapchatPixelId] = useState("");
+  const [pinterestTagId, setPinterestTagId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -226,7 +228,7 @@ function TrackingPixelsSection() {
     setLoading(true);
     const { data } = await supabase
       .from("store_tracking_settings")
-      .select("meta_pixel_id, tiktok_pixel_id, google_tag_id")
+      .select("meta_pixel_id, tiktok_pixel_id, google_tag_id, snapchat_pixel_id, pinterest_tag_id")
       .eq("store_id", store!.id)
       .maybeSingle();
 
@@ -234,6 +236,8 @@ function TrackingPixelsSection() {
       setMetaPixelId(data.meta_pixel_id || "");
       setTiktokPixelId(data.tiktok_pixel_id || "");
       setGoogleTagId(data.google_tag_id || "");
+      setSnapchatPixelId(data.snapchat_pixel_id || "");
+      setPinterestTagId(data.pinterest_tag_id || "");
     }
     setLoading(false);
   }
@@ -247,6 +251,8 @@ function TrackingPixelsSection() {
       meta_pixel_id: metaPixelId.trim() || null,
       tiktok_pixel_id: tiktokPixelId.trim() || null,
       google_tag_id: googleTagId.trim() || null,
+      snapchat_pixel_id: snapchatPixelId.trim() || null,
+      pinterest_tag_id: pinterestTagId.trim() || null,
     };
 
     const { error } = await supabase
@@ -311,6 +317,30 @@ function TrackingPixelsSection() {
           />
           <p className="text-xs text-muted-foreground mt-1">
             Trouvez-le dans Google Analytics → Admin → Flux de données
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">Snapchat Pixel ID</label>
+          <Input
+            value={snapchatPixelId}
+            onChange={(e) => setSnapchatPixelId(e.target.value)}
+            placeholder="Ex: 12345678-abcd-1234-efgh-123456789012"
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Trouvez-le dans Snapchat Ads Manager → Events Manager → Pixel ID
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">Pinterest Tag ID</label>
+          <Input
+            value={pinterestTagId}
+            onChange={(e) => setPinterestTagId(e.target.value)}
+            placeholder="Ex: 1234567890123"
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Trouvez-le dans Pinterest Ads → Conversions → Tag ID
           </p>
         </div>
 

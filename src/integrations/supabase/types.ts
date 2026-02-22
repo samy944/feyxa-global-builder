@@ -873,6 +873,8 @@ export type Database = {
           google_tag_id: string | null
           id: string
           meta_pixel_id: string | null
+          pinterest_tag_id: string | null
+          snapchat_pixel_id: string | null
           store_id: string
           tiktok_pixel_id: string | null
           updated_at: string
@@ -882,6 +884,8 @@ export type Database = {
           google_tag_id?: string | null
           id?: string
           meta_pixel_id?: string | null
+          pinterest_tag_id?: string | null
+          snapchat_pixel_id?: string | null
           store_id: string
           tiktok_pixel_id?: string | null
           updated_at?: string
@@ -891,6 +895,8 @@ export type Database = {
           google_tag_id?: string | null
           id?: string
           meta_pixel_id?: string | null
+          pinterest_tag_id?: string | null
+          snapchat_pixel_id?: string | null
           store_id?: string
           tiktok_pixel_id?: string | null
           updated_at?: string
