@@ -210,18 +210,23 @@ export default function DashboardSettings() {
 // --- Tracking Pixels Sub-component ---
 
 function TrackingPixelsSection() {
-  const { store } = useStore();
+  const { store, refetch: refetchStore } = useStore();
   const [metaPixelId, setMetaPixelId] = useState("");
   const [tiktokPixelId, setTiktokPixelId] = useState("");
   const [googleTagId, setGoogleTagId] = useState("");
   const [snapchatPixelId, setSnapchatPixelId] = useState("");
   const [pinterestTagId, setPinterestTagId] = useState("");
+  const [conversionThreshold, setConversionThreshold] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingThreshold, setSavingThreshold] = useState(false);
 
   useEffect(() => {
     if (!store) return;
     loadSettings();
+    // Load conversion threshold from store settings
+    const settings = (store.settings as Record<string, any>) || {};
+    setConversionThreshold(settings.conversion_threshold?.toString() || "");
   }, [store]);
 
   async function loadSettings() {
@@ -358,6 +363,67 @@ function TrackingPixelsSection() {
         <Button variant="hero" size="sm" onClick={handleSave} disabled={saving}>
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           Enregistrer les pixels
+        </Button>
+      </div>
+
+      {/* Conversion Alert Threshold */}
+      <div className="border-t border-border pt-6 mt-6 space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Alerte de conversion</h2>
+        <p className="text-sm text-muted-foreground -mt-3">
+          Recevez une notification quotidienne si votre taux de conversion (pages vues → achats) descend en dessous du seuil défini.
+        </p>
+        <div>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">Seuil de conversion (%)</label>
+          <div className="flex items-center gap-3">
+            <Input
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value={conversionThreshold}
+              onChange={(e) => setConversionThreshold(e.target.value)}
+              placeholder="Ex: 2.5"
+              className="font-mono text-sm w-40"
+            />
+            <span className="text-sm text-muted-foreground">%</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Laissez vide pour désactiver les alertes. Un bon taux e-commerce est entre 1% et 5%.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={savingThreshold}
+          onClick={async () => {
+            if (!store) return;
+            setSavingThreshold(true);
+            const currentSettings = (store.settings as Record<string, any>) || {};
+            const val = parseFloat(conversionThreshold);
+            const newSettings = {
+              ...currentSettings,
+              conversion_threshold: isNaN(val) || val <= 0 ? null : val,
+            };
+            const { error } = await supabase
+              .from("stores")
+              .update({ settings: newSettings })
+              .eq("id", store.id);
+            setSavingThreshold(false);
+            if (error) {
+              toast({ title: "Erreur", description: "Impossible de sauvegarder le seuil.", variant: "destructive" });
+            } else {
+              refetchStore();
+              toast({
+                title: isNaN(val) || val <= 0 ? "Alertes désactivées" : "Seuil enregistré",
+                description: isNaN(val) || val <= 0
+                  ? "Vous ne recevrez plus d'alertes de conversion."
+                  : `Vous serez alerté si votre taux descend en dessous de ${val}%.`,
+              });
+            }
+          }}
+        >
+          {savingThreshold ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          Enregistrer le seuil
         </Button>
       </div>
     </>
