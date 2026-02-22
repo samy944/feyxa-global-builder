@@ -1,5 +1,6 @@
 import { Clock } from "lucide-react";
 import SmartOpsWidget from "@/components/dashboard/SmartOpsWidget";
+import ConversionAlertWidget from "@/components/dashboard/ConversionAlertWidget";
 
 export default function DashboardOverview() {
   return (
@@ -14,6 +15,9 @@ export default function DashboardOverview() {
           <span>{new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</span>
         </div>
       </div>
+
+      {/* Conversion Alert Widget */}
+      <ConversionAlertWidget />
 
       {/* Smart Ops - AI-powered morning summary */}
       <SmartOpsWidget />
