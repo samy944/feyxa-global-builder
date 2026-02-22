@@ -2,6 +2,7 @@ import { Clock } from "lucide-react";
 import SmartOpsWidget from "@/components/dashboard/SmartOpsWidget";
 import ConversionAlertWidget from "@/components/dashboard/ConversionAlertWidget";
 import RecentOrdersWidget from "@/components/dashboard/RecentOrdersWidget";
+import TopProductsWidget from "@/components/dashboard/TopProductsWidget";
 
 export default function DashboardOverview() {
   return (
@@ -22,6 +23,9 @@ export default function DashboardOverview() {
 
       {/* Smart Ops - AI-powered morning summary */}
       <SmartOpsWidget />
+
+      {/* Top Products */}
+      <TopProductsWidget />
 
       {/* Recent Orders */}
       <RecentOrdersWidget />
