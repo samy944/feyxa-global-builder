@@ -867,6 +867,44 @@ export type Database = {
           },
         ]
       }
+      store_tracking_settings: {
+        Row: {
+          created_at: string
+          google_tag_id: string | null
+          id: string
+          meta_pixel_id: string | null
+          store_id: string
+          tiktok_pixel_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          google_tag_id?: string | null
+          id?: string
+          meta_pixel_id?: string | null
+          store_id: string
+          tiktok_pixel_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          google_tag_id?: string | null
+          id?: string
+          meta_pixel_id?: string | null
+          store_id?: string
+          tiktok_pixel_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_tracking_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           ban_reason: string | null
