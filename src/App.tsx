@@ -34,6 +34,7 @@ import TrackOrder from "./pages/TrackOrder";
 import AdminPayouts from "./pages/AdminPayouts";
 import AdminReviews from "./pages/AdminReviews";
 import MyOrders from "./pages/MyOrders";
+import DashboardShipping from "./pages/DashboardShipping";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="trends" element={<DashboardTrends />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
               <Route path="landing" element={<DashboardLanding />} />
+              <Route path="shipping" element={<DashboardShipping />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route path="/store/:slug" element={<StorefrontHome />} />
