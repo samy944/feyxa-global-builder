@@ -40,7 +40,11 @@ const navItems = [
   { icon: Settings, label: "Paramètres", path: "/dashboard/settings" },
 ];
 
-export function DashboardSidebar() {
+interface DashboardSidebarProps {
+  onNavigate?: () => void;
+}
+
+export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -86,6 +90,7 @@ export function DashboardSidebar() {
             <Link
               key={item.path}
               to={item.path}
+              onClick={onNavigate}
               className={cn(
                 "relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200",
                 collapsed && "justify-center px-0"
@@ -126,6 +131,7 @@ export function DashboardSidebar() {
       <div className="px-2 py-1" style={{ borderTop: "1px solid hsla(0,0%,100%,0.06)" }}>
         <Link
           to="/market"
+              onClick={onNavigate}
           className={cn(
             "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200",
             collapsed && "justify-center px-0"

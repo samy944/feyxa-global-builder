@@ -229,3 +229,12 @@ html {
     color: hsl(220 9% 62%); /* ~#9CA3AF */
   }
 }
+
+/* Hide scrollbar for horizontal scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
