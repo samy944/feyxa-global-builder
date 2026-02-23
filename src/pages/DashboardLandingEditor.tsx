@@ -124,6 +124,7 @@ export default function DashboardLandingEditor() {
   const [showAiOptimize, setShowAiOptimize] = useState(false);
   const [showAiDesign, setShowAiDesign] = useState(false);
   const autosaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [previewTheme, setPreviewTheme] = useState<typeof theme | null>(null);
   const sectionsRef = useRef(sections);
   const themeRef = useRef(theme);
   const seoTitleRef = useRef(seoTitle);
@@ -335,6 +336,7 @@ export default function DashboardLandingEditor() {
     return BLOCK_LIBRARY.filter(b => b.label.toLowerCase().includes(q) || b.type.toLowerCase().includes(q));
   }, [blockSearch]);
 
+  const canvasTheme = previewTheme || theme;
   const previewWidth = previewMode === "mobile" ? "w-[390px]" : previewMode === "tablet" ? "w-[768px]" : "w-full max-w-5xl";
 
   return (
@@ -472,7 +474,12 @@ export default function DashboardLandingEditor() {
 
         {/* === CENTER: Canvas Preview === */}
         <div className="flex-1 bg-muted/30 overflow-y-auto flex justify-center p-4">
-          <div className={`bg-white shadow-xl rounded-lg overflow-hidden transition-all ${previewWidth}`} style={{ backgroundColor: theme.bgColor }}>
+          <div className={`bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300 ${previewWidth}`} style={{ backgroundColor: canvasTheme.bgColor }}>
+            {previewTheme && (
+              <div className="sticky top-0 z-10 bg-violet-600 text-white text-center py-1.5 text-xs font-medium flex items-center justify-center gap-2">
+                <Eye className="w-3.5 h-3.5" /> Aperçu du thème — survolez un preset ou cliquez pour appliquer
+              </div>
+            )}
             {sections.filter(s => s.visible).length === 0 ? (
               <div className="py-32 text-center text-muted-foreground">
                 <Plus className="w-12 h-12 mx-auto mb-4 opacity-30" />
@@ -486,7 +493,7 @@ export default function DashboardLandingEditor() {
                   onClick={() => setSelectedSectionId(s.id)}
                   className={`relative cursor-pointer transition-all ${selectedSectionId === s.id ? "ring-2 ring-primary ring-offset-2" : "hover:ring-1 hover:ring-primary/20"}`}
                 >
-                  <LandingSectionRenderer section={s} theme={theme} onCtaClick={() => {}} />
+                  <LandingSectionRenderer section={s} theme={canvasTheme} onCtaClick={() => {}} />
                 </div>
               ))
             )}
@@ -538,8 +545,10 @@ export default function DashboardLandingEditor() {
                     currentTheme={theme}
                     onApply={(newTheme) => {
                       setTheme(prev => ({ ...prev, ...newTheme }));
+                      setPreviewTheme(null);
                       setIsDirty(true);
                     }}
+                    onPreview={(t) => setPreviewTheme(t ? { ...theme, ...t } : null)}
                   />
                   {/* Theme controls */}
                   <div>
@@ -685,10 +694,12 @@ export default function DashboardLandingEditor() {
         onApply={(newSections, newTheme, newSeoTitle, newSeoDesc) => {
           updateSections(newSections);
           setTheme(prev => ({ ...prev, ...newTheme }));
+          setPreviewTheme(null);
           if (newSeoTitle) setSeoTitle(newSeoTitle);
           if (newSeoDesc) setSeoDesc(newSeoDesc);
           setIsDirty(true);
         }}
+        onPreview={(t) => setPreviewTheme(t ? { ...theme, ...t } : null)}
       />
     </div>
   );
