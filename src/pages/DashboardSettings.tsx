@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   Store, Globe, Palette, Truck, CreditCard, Bell, Shield, Users, Save, Activity, Loader2
 } from "lucide-react";
+import { StorefrontThemePicker } from "@/components/dashboard/StorefrontThemePicker";
 
 const sections = [
   { id: "general", label: "Général", icon: Store },
@@ -195,7 +196,11 @@ export default function DashboardSettings() {
               <TrackingPixelsSection />
             )}
 
-            {["notifications", "theme", "security"].includes(activeSection) && (
+            {activeSection === "theme" && (
+              <ThemeSection />
+            )}
+
+            {["notifications", "security"].includes(activeSection) && (
               <div className="text-center py-8">
                 <p className="text-muted-foreground text-sm">Configuration {sections.find(s => s.id === activeSection)?.label} — bientôt disponible</p>
               </div>
@@ -427,5 +432,48 @@ function TrackingPixelsSection() {
         </Button>
       </div>
     </>
+  );
+}
+
+// --- Theme Section ---
+
+function ThemeSection() {
+  const { store, refetch } = useStore();
+  const [selectedTheme, setSelectedTheme] = useState("classic");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!store) return;
+    const theme = store.theme as Record<string, any> | null;
+    if (theme?.storefront_theme_id) {
+      setSelectedTheme(theme.storefront_theme_id);
+    }
+  }, [store]);
+
+  const handleSelect = async (themeId: string) => {
+    setSelectedTheme(themeId);
+    if (!store) return;
+    setSaving(true);
+    const currentTheme = (store.theme as Record<string, any>) || {};
+    const { error } = await supabase
+      .from("stores")
+      .update({ theme: { ...currentTheme, storefront_theme_id: themeId } as any })
+      .eq("id", store.id);
+
+    setSaving(false);
+    if (error) {
+      toast({ title: "Erreur", description: "Impossible de sauvegarder le thème.", variant: "destructive" });
+    } else {
+      toast({ title: "Thème appliqué !", description: "Votre boutique utilise maintenant le nouveau design." });
+      refetch();
+    }
+  };
+
+  return (
+    <StorefrontThemePicker
+      selectedThemeId={selectedTheme}
+      onSelect={handleSelect}
+      storeSlug={store?.slug}
+    />
   );
 }
