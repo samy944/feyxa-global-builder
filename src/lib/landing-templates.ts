@@ -1,4 +1,4 @@
-// ---- Landing Page Template System ----
+// ---- Landing Page Template System (Advanced) ----
 
 export interface LandingSection {
   id: string;
@@ -19,7 +19,22 @@ export type SectionType =
   | "cta"
   | "collection-grid"
   | "lead-capture"
-  | "waitlist";
+  | "waitlist"
+  // New advanced blocks
+  | "image"
+  | "video"
+  | "rich-text"
+  | "columns"
+  | "testimonials-grid"
+  | "stats"
+  | "comparison-table"
+  | "tabs"
+  | "trust-badges"
+  | "announcement-bar"
+  | "whatsapp-button"
+  | "sticky-cta"
+  | "before-after"
+  | "gallery";
 
 export interface LandingTemplate {
   id: string;
@@ -28,6 +43,59 @@ export interface LandingTemplate {
   icon: string;
   category: string;
   sections: LandingSection[];
+}
+
+// Block definitions for the editor library
+export interface BlockDefinition {
+  type: SectionType;
+  label: string;
+  icon: string;
+  category: "essential" | "content" | "conversion" | "social" | "advanced" | "ecommerce";
+  defaultData: Record<string, any>;
+}
+
+export const BLOCK_LIBRARY: BlockDefinition[] = [
+  // Essential
+  { type: "hero", label: "Hero", icon: "🎯", category: "essential", defaultData: { title: "Titre principal", subtitle: "Sous-titre accrocheur", ctaText: "Commander", imageUrl: "" } },
+  { type: "rich-text", label: "Texte riche", icon: "📝", category: "essential", defaultData: { content: "Votre texte ici. **Gras**, *italique* supportés." } },
+  { type: "image", label: "Image", icon: "🖼️", category: "essential", defaultData: { url: "", alt: "Image", caption: "" } },
+  { type: "video", label: "Vidéo", icon: "🎬", category: "essential", defaultData: { url: "", poster: "", autoplay: false } },
+  { type: "columns", label: "Colonnes", icon: "▥", category: "essential", defaultData: { title: "", cols: 3, items: [{ title: "Colonne 1", content: "Contenu" }, { title: "Colonne 2", content: "Contenu" }, { title: "Colonne 3", content: "Contenu" }] } },
+  { type: "gallery", label: "Galerie", icon: "🖼", category: "essential", defaultData: { title: "Galerie", images: [] } },
+
+  // Content
+  { type: "benefits", label: "Avantages", icon: "✨", category: "content", defaultData: { title: "Nos avantages", items: [{ icon: "✨", title: "Avantage", desc: "Description" }] } },
+  { type: "faq", label: "FAQ", icon: "❓", category: "content", defaultData: { title: "Questions fréquentes", items: [{ q: "Question ?", a: "Réponse." }] } },
+  { type: "tabs", label: "Onglets", icon: "📑", category: "content", defaultData: { items: [{ label: "Onglet 1", content: "Contenu 1" }, { label: "Onglet 2", content: "Contenu 2" }] } },
+  { type: "comparison-table", label: "Comparaison", icon: "⚖️", category: "content", defaultData: { title: "Comparaison", headers: ["Critère", "Nous", "Autres"], rows: [["Qualité", "✅ Premium", "❌ Standard"], ["Livraison", "✅ 48h", "❌ 7 jours"]] } },
+
+  // Conversion
+  { type: "cta", label: "CTA Final", icon: "🚀", category: "conversion", defaultData: { title: "Prêt à commander ?", subtitle: "Ne ratez pas cette offre.", ctaText: "Commander" } },
+  { type: "pricing", label: "Tarifs / Offre", icon: "💰", category: "conversion", defaultData: { title: "Nos offres", items: [{ name: "Standard", price: 10000, features: ["Feature 1"], highlight: false }] } },
+  { type: "countdown", label: "Compte à rebours", icon: "⏰", category: "conversion", defaultData: { title: "Offre limitée", endDate: new Date(Date.now() + 86400000).toISOString() } },
+  { type: "lead-capture", label: "Capture Lead", icon: "📧", category: "conversion", defaultData: { title: "Restez informé", placeholder: "Votre email ou WhatsApp", buttonText: "S'inscrire", incentive: "🎁 -10% offert" } },
+  { type: "waitlist", label: "Waitlist", icon: "📋", category: "conversion", defaultData: { title: "Rejoignez la waitlist", placeholder: "Votre email", buttonText: "Me notifier", spotsText: "Places limitées" } },
+  { type: "sticky-cta", label: "CTA Sticky", icon: "📌", category: "conversion", defaultData: { text: "Commander maintenant", ctaText: "Acheter", price: "" } },
+  { type: "guarantee", label: "Garantie", icon: "🛡️", category: "conversion", defaultData: { title: "Garantie satisfait ou remboursé", text: "Remboursement sous 30 jours.", icon: "🛡️" } },
+
+  // Social
+  { type: "social-proof", label: "Preuve sociale", icon: "⭐", category: "social", defaultData: { title: "Ils nous font confiance", stats: [{ value: "1,000+", label: "Clients" }], testimonials: [] } },
+  { type: "testimonials-grid", label: "Témoignages Grid", icon: "💬", category: "social", defaultData: { title: "Avis clients", items: [{ name: "Client A", text: "Super produit !", rating: 5, avatar: "" }] } },
+  { type: "stats", label: "Statistiques", icon: "📊", category: "social", defaultData: { items: [{ value: "10K+", label: "Clients" }, { value: "4.9", label: "Note" }, { value: "98%", label: "Satisfaits" }] } },
+  { type: "trust-badges", label: "Badges confiance", icon: "🏅", category: "social", defaultData: { items: [{ icon: "🔒", label: "Paiement sécurisé" }, { icon: "🚚", label: "Livraison rapide" }, { icon: "↩️", label: "Retours gratuits" }] } },
+
+  // E-commerce
+  { type: "product-highlights", label: "Produits", icon: "📦", category: "ecommerce", defaultData: { title: "Nos produits", items: [] } },
+  { type: "collection-grid", label: "Collection", icon: "🛍️", category: "ecommerce", defaultData: { title: "Notre collection", columns: 3 } },
+
+  // Advanced
+  { type: "announcement-bar", label: "Bandeau annonce", icon: "📢", category: "advanced", defaultData: { text: "🔥 Livraison gratuite dès 25 000 FCFA", bgColor: "" } },
+  { type: "whatsapp-button", label: "WhatsApp", icon: "💬", category: "advanced", defaultData: { phone: "", message: "Bonjour, je suis intéressé(e) !", label: "Nous contacter" } },
+  { type: "before-after", label: "Avant / Après", icon: "🔄", category: "advanced", defaultData: { title: "Résultats", beforeImage: "", afterImage: "", beforeLabel: "Avant", afterLabel: "Après" } },
+];
+
+export function getBlockDefinition(type: SectionType): BlockDefinition | undefined {
+  return BLOCK_LIBRARY.find(b => b.type === type);
 }
 
 function uid() {
@@ -117,6 +185,38 @@ export const LANDING_TEMPLATES: LandingTemplate[] = [
       { id: uid(), type: "cta", visible: true, data: { title: "Ne manquez pas le lancement", subtitle: "Inscription gratuite, sans engagement.", ctaText: "Rejoindre maintenant" } },
     ],
   },
+  // 2 new templates
+  {
+    id: "local-delivery",
+    name: "Livraison Locale",
+    description: "Focus livraison locale avec zones, délais et confiance.",
+    icon: "🏠",
+    category: "Local",
+    sections: [
+      { id: uid(), type: "announcement-bar", visible: true, data: { text: "🚚 Livraison gratuite à Douala et Yaoundé !" } },
+      { id: uid(), type: "hero", visible: true, data: { title: "Livré chez vous en 24h", subtitle: "Commandez maintenant, recevez demain. Simple, rapide, fiable.", ctaText: "Commander", imageUrl: "" } },
+      { id: uid(), type: "trust-badges", visible: true, data: { items: [{ icon: "🚚", label: "Livraison 24h" }, { icon: "💳", label: "Paiement à la livraison" }, { icon: "🔒", label: "100% Sécurisé" }, { icon: "↩️", label: "Retour gratuit" }] } },
+      { id: uid(), type: "product-highlights", visible: true, data: { title: "Nos best-sellers", items: [] } },
+      { id: uid(), type: "stats", visible: true, data: { items: [{ value: "5,000+", label: "Livraisons" }, { value: "24h", label: "Délai moyen" }, { value: "4.9/5", label: "Satisfaction" }] } },
+      { id: uid(), type: "faq", visible: true, data: { title: "Questions livraison", items: [{ q: "Dans quelles villes livrez-vous ?", a: "Douala, Yaoundé, et les principales villes du Cameroun." }, { q: "Quel est le délai ?", a: "24-48h selon votre localisation." }] } },
+      { id: uid(), type: "cta", visible: true, data: { title: "Commandez maintenant", subtitle: "Livraison rapide et paiement à la livraison.", ctaText: "Commander" } },
+    ],
+  },
+  {
+    id: "seller-spotlight",
+    name: "Seller Spotlight",
+    description: "Page vitrine vendeur marketplace avec produits et avis.",
+    icon: "🌟",
+    category: "Marketplace",
+    sections: [
+      { id: uid(), type: "hero", visible: true, data: { title: "Bienvenue dans notre boutique", subtitle: "Découvrez nos produits artisanaux de qualité, fabriqués avec passion.", ctaText: "Voir nos produits", imageUrl: "" } },
+      { id: uid(), type: "stats", visible: true, data: { items: [{ value: "500+", label: "Produits vendus" }, { value: "4.8/5", label: "Avis clients" }, { value: "2 ans", label: "Sur Feyxa" }] } },
+      { id: uid(), type: "product-highlights", visible: true, data: { title: "Nos produits vedettes", items: [] } },
+      { id: uid(), type: "testimonials-grid", visible: true, data: { title: "Ce que disent nos clients", items: [{ name: "Marie L.", text: "Qualité exceptionnelle et service impeccable.", rating: 5, avatar: "" }, { name: "Paul K.", text: "Livraison rapide et produit conforme.", rating: 5, avatar: "" }] } },
+      { id: uid(), type: "guarantee", visible: true, data: { title: "Notre engagement qualité", text: "Chaque produit est vérifié et garanti. Satisfaction assurée ou remboursé.", icon: "🛡️" } },
+      { id: uid(), type: "whatsapp-button", visible: true, data: { phone: "", message: "Bonjour ! J'ai une question.", label: "Nous contacter sur WhatsApp" } },
+    ],
+  },
 ];
 
 export function getTemplateById(id: string): LandingTemplate | undefined {
@@ -126,6 +226,5 @@ export function getTemplateById(id: string): LandingTemplate | undefined {
 export function getDefaultSectionsForTemplate(templateId: string): LandingSection[] {
   const t = getTemplateById(templateId);
   if (!t) return LANDING_TEMPLATES[0].sections;
-  // Deep clone to avoid mutations
   return JSON.parse(JSON.stringify(t.sections));
 }
