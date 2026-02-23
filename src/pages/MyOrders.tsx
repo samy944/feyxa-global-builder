@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { MarketLayout } from "@/components/market/MarketLayout";
 import { ReviewForm } from "@/components/market/ReviewForm";
+import { CreateTicketDialog } from "@/components/tickets/CreateTicketDialog";
 import { motion } from "framer-motion";
-import { Loader2, Star, Package, ChevronRight } from "lucide-react";
+import { Loader2, Star, Package, ChevronRight, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,7 @@ interface MyOrder {
   total: number;
   currency: string;
   created_at: string;
-  stores: { name: string; slug: string; id: string };
+  stores: { name: string; slug: string; id: string; owner_id: string };
   order_items: OrderItem[];
 }
 
@@ -65,6 +66,11 @@ export default function MyOrders() {
     storeId: string;
     orderId: string;
   } | null>(null);
+  const [ticketTarget, setTicketTarget] = useState<{
+    storeId: string;
+    sellerId: string;
+    orderId: string;
+  } | null>(null);
 
   useEffect(() => {
     if (user) fetchOrders();
@@ -88,7 +94,7 @@ export default function MyOrders() {
 
     const { data: ordersData } = await supabase
       .from("orders")
-      .select("id, order_number, status, total, currency, created_at, stores!inner(id, name, slug), order_items(id, product_name, product_id, quantity, unit_price, total)")
+      .select("id, order_number, status, total, currency, created_at, stores!inner(id, name, slug, owner_id), order_items(id, product_name, product_id, quantity, unit_price, total)")
       .in("customer_id", customerIds)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -212,6 +218,27 @@ export default function MyOrders() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Ticket button */}
+                  <div className="px-5 py-3 border-t border-border flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTicketTarget({
+                        storeId: order.stores.id,
+                        sellerId: (order.stores as any).owner_id,
+                        orderId: order.id,
+                      })}
+                    >
+                      <MessageSquare size={14} className="mr-1" />
+                      Ouvrir un ticket
+                    </Button>
+                    <Link to={`/track/${order.order_number}`}>
+                      <Button variant="ghost" size="sm" className="text-xs">
+                        Suivre la commande
+                      </Button>
+                    </Link>
+                  </div>
                 </motion.div>
               ))}
             </div>
@@ -228,6 +255,16 @@ export default function MyOrders() {
           storeId={reviewTarget.storeId}
           orderId={reviewTarget.orderId}
           onSuccess={fetchOrders}
+        />
+      )}
+
+      {ticketTarget && (
+        <CreateTicketDialog
+          open={!!ticketTarget}
+          onOpenChange={(open) => !open && setTicketTarget(null)}
+          storeId={ticketTarget.storeId}
+          sellerId={ticketTarget.sellerId}
+          orderId={ticketTarget.orderId}
         />
       )}
     </MarketLayout>

@@ -1284,6 +1284,111 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          escalated_at: string | null
+          id: string
+          order_id: string | null
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          product_id: string | null
+          resolved_at: string | null
+          seller_id: string
+          status: Database["public"]["Enums"]["ticket_status"]
+          store_id: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          escalated_at?: string | null
+          id?: string
+          order_id?: string | null
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          product_id?: string | null
+          resolved_at?: string | null
+          seller_id: string
+          status?: Database["public"]["Enums"]["ticket_status"]
+          store_id: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          escalated_at?: string | null
+          id?: string
+          order_id?: string | null
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          product_id?: string | null
+          resolved_at?: string | null
+          seller_id?: string
+          status?: Database["public"]["Enums"]["ticket_status"]
+          store_id?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_messages: {
+        Row: {
+          attachments: Json | null
+          created_at: string
+          id: string
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          created_at?: string
+          id?: string
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          created_at?: string
+          id?: string
+          message?: string
+          sender_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracking_events: {
         Row: {
           created_at: string
@@ -1575,6 +1680,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_ticket: {
+        Args: { _ticket_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_review_order: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
@@ -1665,6 +1774,13 @@ export type Database = {
       payment_status: "pending" | "paid" | "cod" | "failed" | "refunded"
       payout_status: "pending" | "approved" | "paid" | "rejected"
       store_role: "owner" | "admin" | "staff"
+      ticket_priority: "low" | "medium" | "high" | "urgent"
+      ticket_status:
+        | "open"
+        | "pending_seller"
+        | "pending_customer"
+        | "resolved"
+        | "escalated"
       wallet_tx_type:
         | "escrow_hold"
         | "escrow_release"
@@ -1814,6 +1930,14 @@ export const Constants = {
       payment_status: ["pending", "paid", "cod", "failed", "refunded"],
       payout_status: ["pending", "approved", "paid", "rejected"],
       store_role: ["owner", "admin", "staff"],
+      ticket_priority: ["low", "medium", "high", "urgent"],
+      ticket_status: [
+        "open",
+        "pending_seller",
+        "pending_customer",
+        "resolved",
+        "escalated",
+      ],
       wallet_tx_type: [
         "escrow_hold",
         "escrow_release",

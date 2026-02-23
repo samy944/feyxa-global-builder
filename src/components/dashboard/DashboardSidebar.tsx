@@ -15,6 +15,7 @@ import {
   Zap,
   TrendingUp,
   Store,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -32,6 +33,7 @@ const navItems = [
   { icon: Zap, label: "Insights", path: "/dashboard/insights" },
   { icon: TrendingUp, label: "Trends", path: "/dashboard/trends" },
   { icon: FileText, label: "Landing Pages", path: "/dashboard/landings" },
+  { icon: MessageSquare, label: "Tickets", path: "/dashboard/tickets" },
   { icon: Settings, label: "Paramètres", path: "/dashboard/settings" },
 ];
 
