@@ -176,8 +176,23 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useLocation() {
+export function useLocation(): LocationCtx {
   const ctx = useContext(LocationContext);
-  if (!ctx) throw new Error("useLocation must be used within LocationProvider");
+  if (!ctx) {
+    // Graceful fallback when rendered outside LocationProvider (e.g. HMR edge-case)
+    return {
+      country: null,
+      city: null,
+      countries: [],
+      cities: [],
+      loading: true,
+      autoDetected: false,
+      showLocationNotif: false,
+      dismissLocationNotif: () => {},
+      setCountry: () => {},
+      setCity: () => {},
+      loadCities: async () => {},
+    };
+  }
   return ctx;
 }
