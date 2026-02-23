@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { GlobalSearch } from "@/components/market/GlobalSearch";
 
 const navLinks = [
@@ -18,6 +19,7 @@ export function MarketNavbar() {
   const location = useLocation();
   const { totalItems, setIsOpen } = useCart();
   const { user } = useAuth();
+  const { role } = useUserRole();
 
   return (
     <motion.header
@@ -71,11 +73,13 @@ export function MarketNavbar() {
           {user ? (
             <>
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/my-orders">Mes commandes</Link>
+                <Link to="/account">Mon compte</Link>
               </Button>
-              <Button variant="hero" size="sm" asChild>
-                <Link to="/dashboard">Dashboard</Link>
-              </Button>
+              {role === "vendor" && (
+                <Button variant="hero" size="sm" asChild>
+                  <Link to="/dashboard">Dashboard</Link>
+                </Button>
+              )}
             </>
           ) : (
             <>
@@ -83,7 +87,7 @@ export function MarketNavbar() {
                 <Link to="/login">Connexion</Link>
               </Button>
               <Button variant="hero" size="sm" asChild>
-                <Link to="/signup">Vendre sur Feyxa</Link>
+                <Link to="/signup">Créer un compte</Link>
               </Button>
             </>
           )}
@@ -125,9 +129,27 @@ export function MarketNavbar() {
                 {link.label}
               </Link>
             ))}
-            <Button variant="hero" size="sm" asChild>
-              <Link to="/signup">Vendre sur Feyxa</Link>
-            </Button>
+            {user ? (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/account" onClick={() => setOpen(false)}>Mon compte</Link>
+                </Button>
+                {role === "vendor" && (
+                  <Button variant="hero" size="sm" asChild>
+                    <Link to="/dashboard" onClick={() => setOpen(false)}>Dashboard</Link>
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/login" onClick={() => setOpen(false)}>Connexion</Link>
+                </Button>
+                <Button variant="hero" size="sm" asChild>
+                  <Link to="/signup" onClick={() => setOpen(false)}>Créer un compte</Link>
+                </Button>
+              </>
+            )}
           </div>
         </motion.div>
       )}

@@ -49,6 +49,9 @@ import AdminTickets from "./pages/AdminTickets";
 import AdminReturns from "./pages/AdminReturns";
 import DashboardAI from "./pages/DashboardAI";
 import ConfirmDelivery from "./pages/ConfirmDelivery";
+import ClientDashboard from "./pages/ClientDashboard";
+import ClientOrders from "./pages/ClientOrders";
+import ClientProfile from "./pages/ClientProfile";
 
 const queryClient = new QueryClient();
 
@@ -119,6 +122,13 @@ const App = () => (
             <Route path="/my-orders" element={
               <AuthRoute><MyOrders /></AuthRoute>
             } />
+            {/* Client Dashboard */}
+            <Route path="/account" element={
+              <AuthRoute><ClientDashboard /></AuthRoute>
+            }>
+              <Route index element={<ClientOrders />} />
+              <Route path="profile" element={<ClientProfile />} />
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
           <CartDrawer />
