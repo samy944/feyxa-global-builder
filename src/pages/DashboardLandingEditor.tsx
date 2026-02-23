@@ -855,6 +855,7 @@ export default function DashboardLandingEditor() {
         sections={sections}
         currentTheme={theme}
         storeName={landing?.title}
+        storeId={landing?.store_id || ""}
         onApply={(newSections, newTheme, newSeoTitle, newSeoDesc) => {
           updateSections(newSections);
           setTheme(prev => ({ ...prev, ...newTheme }));

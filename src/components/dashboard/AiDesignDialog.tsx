@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Wand2, Check, ArrowLeft, Palette, Type, Layers } from "lucide-react";
+import { Wand2, Check, ArrowLeft, Palette, Type, Layers, ImageIcon, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LandingSection } from "@/lib/landing-templates";
@@ -22,7 +22,7 @@ const PROMPT_SUGGESTIONS = [
   { label: "Élégance rose", prompt: "Design élégant et féminin, tons rose poudré et doré" },
 ];
 
-type Step = "prompt" | "preview";
+type Step = "prompt" | "generating" | "preview";
 
 interface ThemeResult {
   primaryColor: string;
@@ -40,20 +40,23 @@ interface Props {
   currentTheme: Record<string, string>;
   storeName?: string;
   productName?: string;
+  storeId?: string;
   onApply: (sections: LandingSection[], theme: ThemeResult, seoTitle: string, seoDescription: string) => void;
   onPreview?: (theme: ThemeResult | null) => void;
 }
 
-export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, storeName, productName, onApply, onPreview }: Props) {
+export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, storeName, productName, storeId, onApply, onPreview }: Props) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [themeOnly, setThemeOnly] = useState(false);
   const [step, setStep] = useState<Step>("prompt");
+  const [generationStatus, setGenerationStatus] = useState("");
   const [result, setResult] = useState<{
     theme: ThemeResult;
     sections: LandingSection[];
     seoTitle: string;
     seoDescription: string;
+    imagesGenerated?: number;
   } | null>(null);
 
   const handleGenerate = async () => {
@@ -62,10 +65,27 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
       return;
     }
     setLoading(true);
+    setStep("generating");
+    setGenerationStatus("Création du design par l'IA...");
+
     try {
-      const { data, error } = await supabase.functions.invoke("design-landing", {
-        body: { sections, prompt: prompt.trim(), storeName, productName, currentTheme, themeOnly },
-      });
+      const body: any = {
+        sections,
+        prompt: prompt.trim(),
+        storeName,
+        productName,
+        currentTheme,
+        themeOnly,
+      };
+
+      // Pass storeId to enable automatic image generation
+      if (storeId && !themeOnly) {
+        body.storeId = storeId;
+        body.generateImages = true;
+        setGenerationStatus("Création du design + génération des images IA...");
+      }
+
+      const { data, error } = await supabase.functions.invoke("design-landing", { body });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -73,7 +93,7 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
       if (themeOnly) {
         setResult({
           theme: data.theme || currentTheme,
-          sections, // keep existing sections unchanged
+          sections,
           seoTitle: "",
           seoDescription: "",
         });
@@ -89,15 +109,16 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
           sections: optimizedSections,
           seoTitle: data.seoTitle || "",
           seoDescription: data.seoDescription || "",
+          imagesGenerated: data.imagesGenerated || 0,
         });
       }
       setStep("preview");
-      // Emit preview to canvas
-      const themeResult = themeOnly ? (data.theme || currentTheme) : (data.theme || currentTheme);
+      const themeResult = data.theme || currentTheme;
       onPreview?.(themeResult as ThemeResult);
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || "Erreur lors de la génération");
+      setStep("prompt");
     } finally {
       setLoading(false);
     }
@@ -108,7 +129,10 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
     onPreview?.(null);
     onApply(result.sections, result.theme, result.seoTitle, result.seoDescription);
     onOpenChange(false);
-    toast.success(themeOnly ? "Thème appliqué avec succès !" : "Design appliqué avec succès !");
+    const msg = result.imagesGenerated
+      ? `Design appliqué avec ${result.imagesGenerated} image(s) générée(s) !`
+      : themeOnly ? "Thème appliqué avec succès !" : "Design appliqué avec succès !";
+    toast.success(msg);
     setStep("prompt");
     setResult(null);
     setPrompt("");
@@ -135,7 +159,7 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
                 Designer IA — Prompt libre
               </DialogTitle>
               <DialogDescription>
-                Décrivez le style souhaité et l'IA transformera entièrement le design de votre landing page.
+                Décrivez le style souhaité. L'IA créera le design ET générera les images automatiquement.
               </DialogDescription>
             </DialogHeader>
 
@@ -190,6 +214,27 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
           </>
         )}
 
+        {step === "generating" && (
+          <div className="flex flex-col items-center justify-center py-16 space-y-6">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <p className="text-sm font-semibold">{generationStatus}</p>
+              <p className="text-xs text-muted-foreground">
+                Cette opération peut prendre 30-60 secondes avec la génération d'images.
+              </p>
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1"><Wand2 className="w-3 h-3" /> Design</span>
+              <span>+</span>
+              <span className="flex items-center gap-1"><ImageIcon className="w-3 h-3" /> Images IA</span>
+            </div>
+          </div>
+        )}
+
         {step === "preview" && result && (
           <>
             <DialogHeader>
@@ -197,8 +242,14 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
                 <Wand2 className="w-5 h-5 text-primary" />
                 {themeOnly ? "Aperçu du nouveau thème" : "Aperçu du nouveau design"}
               </DialogTitle>
-              <DialogDescription className="text-xs">
-                « {prompt} » {themeOnly && <Badge variant="secondary" className="text-[9px] ml-1">Thème seul</Badge>}
+              <DialogDescription className="text-xs flex items-center gap-2">
+                « {prompt} »
+                {themeOnly && <Badge variant="secondary" className="text-[9px]">Thème seul</Badge>}
+                {!!result.imagesGenerated && (
+                  <Badge variant="secondary" className="text-[9px] flex items-center gap-1">
+                    <ImageIcon className="w-3 h-3" /> {result.imagesGenerated} image(s) générée(s)
+                  </Badge>
+                )}
               </DialogDescription>
             </DialogHeader>
 
@@ -238,7 +289,7 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
                   </div>
                 </div>
 
-                {/* Sections summary — hidden in themeOnly mode */}
+                {/* Sections summary */}
                 {!themeOnly && (
                 <div className="rounded-xl border border-border p-4 space-y-2">
                   <div className="flex items-center gap-2 mb-2">
@@ -253,6 +304,10 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
                         <span className="text-foreground truncate flex-1">
                           {s.data?.title || s.data?.text || s.data?.content || "—"}
                         </span>
+                        {/* Show image indicator */}
+                        {(s.data?.imageUrl || s.data?.url || s.data?.beforeImage) && (
+                          <ImageIcon className="w-3 h-3 text-primary" />
+                        )}
                       </div>
                     ))}
                   </div>
