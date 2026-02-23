@@ -54,6 +54,8 @@ import ClientOrders from "./pages/ClientOrders";
 import ClientProfile from "./pages/ClientProfile";
 import ClientWishlist from "./pages/ClientWishlist";
 import ClientOverview from "./pages/ClientOverview";
+import DashboardStores from "./pages/DashboardStores";
+import NewStore from "./pages/NewStore";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +96,8 @@ const App = () => (
               <Route path="ai" element={<DashboardAI />} />
               <Route path="tickets" element={<DashboardTickets />} />
               <Route path="returns" element={<DashboardReturns />} />
+              <Route path="stores" element={<DashboardStores />} />
+              <Route path="stores/new" element={<NewStore />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route path="/store/:slug" element={<StorefrontHome />} />
