@@ -16,8 +16,9 @@ import {
   MapPin, Phone, User, CalendarDays, Clock,
   CheckCircle2, XCircle, AlertTriangle, CircleDot,
   Copy, ExternalLink, MessageSquare, History,
-  ShoppingBag, Receipt, Tag, Hash,
+  ShoppingBag, Receipt, Tag, Hash, FileDown,
 } from "lucide-react";
+import { generateInvoicePDF } from "@/lib/generate-invoice-pdf";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
 import OrderAttributionWidget from "@/components/dashboard/OrderAttributionWidget";
@@ -574,6 +575,15 @@ export default function DashboardOrderDetail() {
               onClick={() => copyToClipboard(`${window.location.origin}/track/${order.order_number}`)}
             >
               <ExternalLink size={12} className="mr-1" /> Copier le lien de suivi
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+              onClick={() => generateInvoicePDF(order, { name: store?.name || "Boutique", city: store?.city, currency: order.currency })}
+            >
+              <FileDown size={12} className="mr-1" /> Télécharger la facture PDF
             </Button>
           </motion.div>
 

@@ -47,6 +47,7 @@ import DashboardTickets from "./pages/DashboardTickets";
 import DashboardReturns from "./pages/DashboardReturns";
 import AdminTickets from "./pages/AdminTickets";
 import AdminReturns from "./pages/AdminReturns";
+import DashboardAI from "./pages/DashboardAI";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,7 @@ const App = () => (
               <Route path="landings/:id/ab" element={<DashboardLandingAB />} />
               <Route path="landing" element={<DashboardLandings />} />
               <Route path="shipping" element={<DashboardShipping />} />
+              <Route path="ai" element={<DashboardAI />} />
               <Route path="tickets" element={<DashboardTickets />} />
               <Route path="returns" element={<DashboardReturns />} />
               <Route path="settings" element={<DashboardSettings />} />
