@@ -1,8 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
 import { ShoppingBag, Menu, X, Heart, User } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -24,33 +22,40 @@ export function MarketNavbar() {
   const { count: wishlistCount } = useWishlist();
 
   return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4 }}
+    <header
       className="fixed top-0 left-0 right-0 z-50"
-      style={{ background: "rgba(17,17,20,0.85)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+      style={{
+        background: "rgba(14,14,17,0.88)",
+        backdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+      }}
     >
       <div className="container flex h-14 items-center justify-between">
         <Link to="/market" className="flex items-center gap-2.5">
-          <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-xs">F</span>
+          <div
+            className="h-7 w-7 rounded-md flex items-center justify-center"
+            style={{ background: "hsl(var(--primary))" }}
+          >
+            <span className="font-bold text-xs" style={{ color: "#0E0E11" }}>F</span>
           </div>
-          <span className="font-heading text-lg tracking-wide text-foreground">
-            FEYXA MARKET
+          <span
+            className="text-base tracking-wide"
+            style={{ color: "#FFFFFF", fontWeight: 600 }}
+          >
+            FEYXA
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-7">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               to={link.href}
-              className={`text-sm font-medium transition-colors duration-200 ${
-                location.pathname === link.href
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className="text-sm transition-opacity duration-200 hover:opacity-70"
+              style={{
+                color: location.pathname === link.href ? "#FFFFFF" : "#9CA3AF",
+                fontWeight: 500,
+              }}
             >
               {link.label}
             </Link>
@@ -61,15 +66,19 @@ export function MarketNavbar() {
           <GlobalSearch />
         </div>
 
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-1.5">
           {user && (
             <Link
               to="/account/wishlist"
-              className="relative text-muted-foreground hover:text-primary transition-colors p-1.5"
+              className="relative p-2 transition-opacity duration-200 hover:opacity-70"
+              style={{ color: "#9CA3AF" }}
             >
-              <Heart size={19} />
+              <Heart size={18} />
               {wishlistCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-pink-500 text-white text-[10px] font-bold flex items-center justify-center">
+                <span
+                  className="absolute -top-0 -right-0 h-4 w-4 rounded-full text-[10px] font-bold flex items-center justify-center"
+                  style={{ background: "#ec4899", color: "#FFF" }}
+                >
                   {wishlistCount}
                 </span>
               )}
@@ -77,73 +86,108 @@ export function MarketNavbar() {
           )}
           <button
             onClick={() => setIsOpen(true)}
-            className="relative text-muted-foreground hover:text-primary transition-colors p-1.5"
+            className="relative p-2 transition-opacity duration-200 hover:opacity-70"
+            style={{ color: "#9CA3AF" }}
           >
-            <ShoppingBag size={19} />
+            <ShoppingBag size={18} />
             {totalItems > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+              <span
+                className="absolute -top-0 -right-0 h-4 w-4 rounded-full text-[10px] font-bold flex items-center justify-center"
+                style={{ background: "hsl(var(--primary))", color: "#0E0E11" }}
+              >
                 {totalItems}
               </span>
             )}
           </button>
           {user ? (
             <>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/account">
-                  <User size={16} className="mr-1" /> Mon compte
-                </Link>
-              </Button>
+              <Link
+                to="/account"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm transition-opacity duration-200 hover:opacity-70"
+                style={{ color: "#9CA3AF", fontWeight: 500 }}
+              >
+                <User size={15} /> Mon compte
+              </Link>
               {isVendor && (
-                <Button variant="hero" size="sm" asChild>
-                  <Link to="/dashboard">Dashboard</Link>
-                </Button>
+                <Link
+                  to="/dashboard"
+                  className="px-4 py-1.5 text-sm transition-opacity duration-200 hover:opacity-90"
+                  style={{
+                    background: "hsl(var(--primary))",
+                    color: "#0E0E11",
+                    borderRadius: "0.5rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Dashboard
+                </Link>
               )}
             </>
           ) : (
             <>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/login">Connexion</Link>
-              </Button>
-              <Button variant="hero" size="sm" asChild>
-                <Link to="/signup">Créer un compte</Link>
-              </Button>
+              <Link
+                to="/login"
+                className="px-3 py-1.5 text-sm transition-opacity duration-200 hover:opacity-70"
+                style={{ color: "#9CA3AF", fontWeight: 500 }}
+              >
+                Connexion
+              </Link>
+              <Link
+                to="/signup"
+                className="px-4 py-1.5 text-sm transition-opacity duration-200 hover:opacity-90"
+                style={{
+                  background: "hsl(var(--primary))",
+                  color: "#0E0E11",
+                  borderRadius: "0.5rem",
+                  fontWeight: 600,
+                }}
+              >
+                Créer un compte
+              </Link>
             </>
           )}
         </div>
 
+        {/* Mobile */}
         <div className="flex items-center gap-2 md:hidden">
           {user && (
-            <Link to="/account/wishlist" className="relative text-foreground p-1">
-              <Heart size={19} />
+            <Link to="/account/wishlist" className="relative p-1" style={{ color: "#FFFFFF" }}>
+              <Heart size={18} />
               {wishlistCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center">
+                <span
+                  className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full text-[9px] font-bold flex items-center justify-center"
+                  style={{ background: "#ec4899", color: "#FFF" }}
+                >
                   {wishlistCount}
                 </span>
               )}
             </Link>
           )}
-          <button
-            onClick={() => setIsOpen(true)}
-            className="relative text-foreground p-1"
-          >
-            <ShoppingBag size={19} />
+          <button onClick={() => setIsOpen(true)} className="relative p-1" style={{ color: "#FFFFFF" }}>
+            <ShoppingBag size={18} />
             {totalItems > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">
+              <span
+                className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full text-[9px] font-bold flex items-center justify-center"
+                style={{ background: "hsl(var(--primary))", color: "#0E0E11" }}
+              >
                 {totalItems}
               </span>
             )}
           </button>
-          <button className="text-foreground" onClick={() => setOpen(!open)}>
+          <button onClick={() => setOpen(!open)} style={{ color: "#FFFFFF" }}>
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </div>
 
+      {/* Mobile menu */}
       {open && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="md:hidden glass border-t border-border"
+        <div
+          className="md:hidden"
+          style={{
+            background: "#141419",
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+          }}
         >
           <div className="container py-4 flex flex-col gap-3">
             <GlobalSearch />
@@ -151,7 +195,8 @@ export function MarketNavbar() {
               <Link
                 key={link.href}
                 to={link.href}
-                className="text-sm text-muted-foreground py-2"
+                className="text-sm py-2"
+                style={{ color: "#9CA3AF" }}
                 onClick={() => setOpen(false)}
               >
                 {link.label}
@@ -159,28 +204,48 @@ export function MarketNavbar() {
             ))}
             {user ? (
               <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/account" onClick={() => setOpen(false)}>Mon compte</Link>
-                </Button>
+                <Link
+                  to="/account"
+                  className="text-sm py-2"
+                  style={{ color: "#9CA3AF" }}
+                  onClick={() => setOpen(false)}
+                >
+                  Mon compte
+                </Link>
                 {isVendor && (
-                  <Button variant="hero" size="sm" asChild>
-                    <Link to="/dashboard" onClick={() => setOpen(false)}>Dashboard</Link>
-                  </Button>
+                  <Link
+                    to="/dashboard"
+                    className="text-sm py-2"
+                    style={{ color: "#FFFFFF", fontWeight: 600 }}
+                    onClick={() => setOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
                 )}
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/login" onClick={() => setOpen(false)}>Connexion</Link>
-                </Button>
-                <Button variant="hero" size="sm" asChild>
-                  <Link to="/signup" onClick={() => setOpen(false)}>Créer un compte</Link>
-                </Button>
+                <Link
+                  to="/login"
+                  className="text-sm py-2"
+                  style={{ color: "#9CA3AF" }}
+                  onClick={() => setOpen(false)}
+                >
+                  Connexion
+                </Link>
+                <Link
+                  to="/signup"
+                  className="text-sm py-2"
+                  style={{ color: "#FFFFFF", fontWeight: 600 }}
+                  onClick={() => setOpen(false)}
+                >
+                  Créer un compte
+                </Link>
               </>
             )}
           </div>
-        </motion.div>
+        </div>
       )}
-    </motion.header>
+    </header>
   );
 }

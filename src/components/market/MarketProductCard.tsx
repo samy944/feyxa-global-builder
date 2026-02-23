@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Store, MapPin, Star } from "lucide-react";
+import { Store, MapPin } from "lucide-react";
 
 interface MarketProductCardProps {
   id: string;
@@ -28,14 +27,9 @@ export function MarketProductCard({
   store_slug,
   store_city,
   currency,
-  avg_rating,
-  review_count,
-  index = 0,
 }: MarketProductCardProps) {
   const imageUrl =
-    Array.isArray(images) && images.length > 0
-      ? images[0]
-      : null;
+    Array.isArray(images) && images.length > 0 ? images[0] : null;
 
   const formatPrice = (p: number) => {
     if (currency === "XOF") return `${p.toLocaleString("fr-FR")} FCFA`;
@@ -43,80 +37,81 @@ export function MarketProductCard({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.4 }}
+    <Link
+      to={`/market/product/${slug}`}
+      className="group block overflow-hidden transition-opacity duration-200 hover:opacity-90"
+      style={{ borderRadius: "0.75rem" }}
     >
-      <Link
-        to={`/market/product/${slug}`}
-        className="group block rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-glow transition-all duration-300"
+      {/* Image */}
+      <div
+        className="aspect-square relative overflow-hidden"
+        style={{ background: "#1A1A1F", borderRadius: "0.75rem" }}
       >
-        {/* Image */}
-        <div className="aspect-square bg-secondary relative overflow-hidden">
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground/30">
-              <Store size={40} />
-            </div>
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center" style={{ color: "#333" }}>
+            <Store size={36} />
+          </div>
+        )}
+        {compare_at_price && compare_at_price > price && (
+          <div
+            className="absolute top-2.5 right-2.5 text-[10px] px-2 py-0.5"
+            style={{
+              background: "rgba(239,68,68,0.9)",
+              color: "#FFFFFF",
+              borderRadius: "0.375rem",
+              fontWeight: 600,
+            }}
+          >
+            -{Math.round(((compare_at_price - price) / compare_at_price) * 100)}%
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="pt-3.5 pb-1 space-y-1.5">
+        <h3
+          className="text-sm leading-snug line-clamp-2"
+          style={{ color: "#FFFFFF", fontWeight: 500 }}
+        >
+          {name}
+        </h3>
+
+        <div className="flex items-center gap-1.5 text-xs" style={{ color: "#6B7280" }}>
+          <Store size={11} />
+          <Link
+            to={`/market/vendor/${store_slug}`}
+            className="transition-colors duration-200 hover:opacity-70"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {store_name}
+          </Link>
+          {store_city && (
+            <>
+              <span style={{ color: "#333" }}>·</span>
+              <MapPin size={10} />
+              <span>{store_city}</span>
+            </>
           )}
+        </div>
+
+        <div className="flex items-baseline gap-2 pt-0.5">
+          <span style={{ color: "#FFFFFF", fontWeight: 600, fontSize: "0.9375rem" }}>
+            {formatPrice(price)}
+          </span>
           {compare_at_price && compare_at_price > price && (
-            <div className="absolute top-2 right-2 bg-destructive text-destructive-foreground text-[10px] font-semibold px-2 py-0.5 rounded-full">
-              -{Math.round(((compare_at_price - price) / compare_at_price) * 100)}%
-            </div>
+            <span className="line-through" style={{ color: "#6B7280", fontSize: "0.75rem" }}>
+              {formatPrice(compare_at_price)}
+            </span>
           )}
         </div>
-
-        {/* Info */}
-        <div className="p-4 space-y-2">
-          <h3 className="font-medium text-foreground text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-            {name}
-          </h3>
-
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Store size={11} />
-            <Link
-              to={`/market/vendor/${store_slug}`}
-              className="hover:text-foreground transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {store_name}
-            </Link>
-            {store_city && (
-              <>
-                <span className="text-border">·</span>
-                <MapPin size={10} />
-                <span>{store_city}</span>
-              </>
-            )}
-          </div>
-
-          {avg_rating != null && avg_rating > 0 && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Star size={11} className="fill-primary text-primary" />
-              <span>{avg_rating.toFixed(1)}</span>
-              {review_count != null && review_count > 0 && (
-                <span>({review_count})</span>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-baseline gap-2">
-            <span className="font-bold text-foreground">{formatPrice(price)}</span>
-            {compare_at_price && compare_at_price > price && (
-              <span className="text-xs text-muted-foreground line-through">
-                {formatPrice(compare_at_price)}
-              </span>
-            )}
-          </div>
-        </div>
-      </Link>
-    </motion.div>
+      </div>
+    </Link>
   );
 }
