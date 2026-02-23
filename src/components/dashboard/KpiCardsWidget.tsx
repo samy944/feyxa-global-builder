@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { ShoppingCart, DollarSign, Eye, TrendingUp, TrendingDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
@@ -10,7 +9,7 @@ interface KpiData {
   revenueToday: number;
   revenueWeek: number;
   visitorsToday: number;
-  ordersTrend: number; // percentage change vs yesterday
+  ordersTrend: number;
   revenueTrend: number;
 }
 
@@ -90,71 +89,60 @@ export default function KpiCardsWidget() {
       value: data.ordersToday.toString(),
       trend: data.ordersTrend,
       icon: ShoppingCart,
-      color: "text-primary",
-      bg: "bg-primary/10",
     },
     {
       label: "CA du jour",
       value: formatCurrency(data.revenueToday),
       trend: data.revenueTrend,
       icon: DollarSign,
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
     },
     {
       label: "CA de la semaine",
       value: formatCurrency(data.revenueWeek),
       trend: null,
       icon: DollarSign,
-      color: "text-blue-500",
-      bg: "bg-blue-500/10",
     },
     {
       label: "Visiteurs aujourd'hui",
       value: data.visitorsToday.toString(),
       trend: null,
       icon: Eye,
-      color: "text-amber-500",
-      bg: "bg-amber-500/10",
     },
   ];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       {kpis.map((kpi) => (
-        <Card key={kpi.label} className="relative overflow-hidden">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", kpi.bg)}>
-                <kpi.icon size={20} className={kpi.color} />
-              </div>
-              {kpi.trend !== null && kpi.trend !== 0 && (
-                <span
-                  className={cn(
-                    "flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5",
-                    kpi.trend > 0
-                      ? "text-emerald-600 bg-emerald-500/10"
-                      : "text-destructive bg-destructive/10"
-                  )}
-                >
-                  {kpi.trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                  {Math.abs(kpi.trend).toFixed(0)}%
-                </span>
-              )}
-            </div>
-            {loading ? (
-              <div className="space-y-2">
-                <div className="h-7 w-24 bg-muted animate-pulse rounded" />
-                <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-              </div>
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-foreground tracking-tight">{kpi.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{kpi.label}</p>
-              </>
+        <div
+          key={kpi.label}
+          className="rounded-lg border border-border bg-card p-5 transition-colors duration-200"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <kpi.icon size={18} className="text-muted-foreground" />
+            {kpi.trend !== null && kpi.trend !== 0 && (
+              <span
+                className={cn(
+                  "flex items-center gap-1 text-xs font-medium",
+                  kpi.trend > 0 ? "text-emerald-500" : "text-destructive"
+                )}
+              >
+                {kpi.trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                {Math.abs(kpi.trend).toFixed(0)}%
+              </span>
             )}
-          </CardContent>
-        </Card>
+          </div>
+          {loading ? (
+            <div className="space-y-2">
+              <div className="h-9 w-28 bg-muted rounded" />
+              <div className="h-4 w-32 bg-muted rounded" />
+            </div>
+          ) : (
+            <>
+              <p className="text-[32px] font-bold text-foreground tracking-tight leading-none">{kpi.value}</p>
+              <p className="text-xs text-muted-foreground mt-2 font-medium">{kpi.label}</p>
+            </>
+          )}
+        </div>
       ))}
     </div>
   );

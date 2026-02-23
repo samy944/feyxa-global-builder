@@ -10,7 +10,14 @@ export default function DashboardLayout() {
       <DashboardSidebar />
       <OrderRealtimeListener />
       <div className="flex-1 overflow-x-hidden flex flex-col">
-        <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-end gap-3 px-6 sticky top-0 z-30">
+        <header
+          className="h-14 flex items-center justify-end gap-3 px-6 sticky top-0 z-30"
+          style={{
+            background: "hsl(var(--background) / 0.85)",
+            backdropFilter: "blur(12px)",
+            borderBottom: "1px solid hsl(var(--border))",
+          }}
+        >
           <ThemeToggle compact />
           <NotificationBell />
         </header>
