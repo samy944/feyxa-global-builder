@@ -29,7 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft, Eye, Save, Plus, Trash2, GripVertical, Monitor, Smartphone, Tablet,
-  Settings2, Palette, Search, Copy, EyeOff, Undo2, Redo2, History, Layers,
+  Settings2, Palette, Search, Copy, EyeOff, Undo2, Redo2, History, Layers, Maximize2, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ImageUploader } from "@/components/landing/ImageUploader";
@@ -116,6 +116,7 @@ export default function DashboardLandingEditor() {
   const [blockSearch, setBlockSearch] = useState("");
   const [revisions, setRevisions] = useState<any[]>([]);
   const [showRevisions, setShowRevisions] = useState(false);
+  const [showFullPreview, setShowFullPreview] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const autosaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sectionsRef = useRef(sections);
@@ -374,10 +375,13 @@ export default function DashboardLandingEditor() {
           <Button size="sm" variant="ghost" onClick={() => setShowRevisions(!showRevisions)} title="Historique">
             <History className="w-4 h-4" />
           </Button>
+          <Button size="sm" variant="outline" onClick={() => setShowFullPreview(true)} title="Preview plein écran">
+            <Maximize2 className="w-4 h-4 mr-1" /> Preview
+          </Button>
           {landing?.slug && (
-            <Button size="sm" variant="outline" asChild>
+            <Button size="sm" variant="ghost" asChild title="Ouvrir dans un nouvel onglet">
               <a href={`/lp/${landing.slug}`} target="_blank" rel="noopener noreferrer">
-                <Eye className="w-4 h-4 mr-1" /> Preview
+                <Eye className="w-4 h-4" />
               </a>
             </Button>
           )}
@@ -601,6 +605,41 @@ export default function DashboardLandingEditor() {
           </div>
         )}
       </div>
+
+      {/* Fullscreen Preview Modal */}
+      {showFullPreview && (
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col">
+          <div className="h-12 border-b border-border bg-card flex items-center justify-between px-4 shrink-0">
+            <span className="text-sm font-semibold text-foreground">{landing?.title} — Preview</span>
+            <div className="flex items-center gap-2">
+              <div className="flex border border-border rounded-lg overflow-hidden">
+                {[
+                  { mode: "desktop" as const, icon: Monitor, label: "Desktop" },
+                  { mode: "tablet" as const, icon: Tablet, label: "Tablet" },
+                  { mode: "mobile" as const, icon: Smartphone, label: "Mobile" },
+                ].map(({ mode, icon: Icon }) => (
+                  <button key={mode} onClick={() => setPreviewMode(mode)} className={`px-2.5 py-1.5 ${previewMode === mode ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}>
+                    <Icon className="w-4 h-4" />
+                  </button>
+                ))}
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setShowFullPreview(false)}>
+                <X className="w-4 h-4 mr-1" /> Fermer
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto flex justify-center bg-muted/30 p-4">
+            <div
+              className={`bg-white shadow-xl rounded-lg overflow-hidden transition-all ${previewWidth}`}
+              style={{ backgroundColor: theme.bgColor, fontFamily: `"${theme.fontBody}", sans-serif` }}
+            >
+              {sections.filter(s => s.visible).map(s => (
+                <LandingSectionRenderer key={s.id} section={s} theme={theme} onCtaClick={() => {}} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
