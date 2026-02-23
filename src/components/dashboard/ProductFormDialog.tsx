@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
+import VariantEditor, { type VariantRow } from "@/components/dashboard/VariantEditor";
 import { useStore } from "@/hooks/useStore";
 import { toast } from "sonner";
 import {
@@ -26,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Loader2, ImagePlus, X, GripVertical, Plus, Trash2,
+  Loader2, ImagePlus, X, GripVertical, Plus,
   Package, DollarSign, Layers, Tag, Settings2, Globe, BarChart3, Weight, Barcode, Info
 } from "lucide-react";
 
@@ -83,15 +84,7 @@ interface ImageItem {
   preview: string;
 }
 
-interface VariantRow {
-  _key: string;
-  id?: string;
-  name: string;
-  price: number;
-  stock_quantity: number;
-  sku: string;
-  options: Record<string, string>;
-}
+// VariantRow imported from VariantEditor above
 
 interface MarketCategory {
   id: string;
@@ -105,17 +98,7 @@ function slugify(text: string) {
 const MAX_IMAGES = 6;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-function newVariantRow(defaults?: Partial<VariantRow>): VariantRow {
-  return {
-    _key: Math.random().toString(36).slice(2, 8),
-    name: "",
-    price: 0,
-    stock_quantity: 0,
-    sku: "",
-    options: {},
-    ...defaults,
-  };
-}
+// newVariantRow moved to VariantEditor
 
 export default function ProductFormDialog({ open, onOpenChange, onSuccess, product }: Props) {
   const { store } = useStore();
@@ -199,18 +182,24 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
         .then(({ data }) => {
           if (data && data.length > 0) {
             setHasVariants(true);
-            const rows: VariantRow[] = data.map((v) => ({
-              _key: Math.random().toString(36).slice(2, 8),
-              id: v.id,
-              name: v.name,
-              price: v.price,
-              stock_quantity: v.stock_quantity,
-              sku: v.sku || "",
-              options: (v.options as Record<string, string>) || {},
-            }));
+            const rows: VariantRow[] = data.map((v) => {
+              const opts = (v.options as Record<string, string>) || {};
+              const { _image_url, _description, ...cleanOpts } = opts;
+              return {
+                _key: Math.random().toString(36).slice(2, 8),
+                id: v.id,
+                name: v.name,
+                price: v.price,
+                stock_quantity: v.stock_quantity,
+                sku: v.sku || "",
+                options: cleanOpts,
+                image_url: _image_url || "",
+                description: _description || "",
+              };
+            });
             setVariants(rows);
             const types = new Set<string>();
-            rows.forEach((r) => Object.keys(r.options).forEach((k) => types.add(k)));
+            rows.forEach((r) => Object.keys(r.options).forEach((k) => !k.startsWith("_") && types.add(k)));
             setOptionTypes(types.size > 0 ? Array.from(types) : ["Taille"]);
           } else {
             setHasVariants(false);
@@ -302,41 +291,7 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
     return urls;
   };
 
-  // --- Variant helpers ---
-  const addVariant = () => setVariants((prev) => [...prev, newVariantRow()]);
-
-  const removeVariant = (index: number) => {
-    setVariants((prev) => {
-      const v = prev[index];
-      if (v.id) setDeletedVariantIds((d) => [...d, v.id!]);
-      return prev.filter((_, i) => i !== index);
-    });
-  };
-
-  const updateVariant = (index: number, field: keyof VariantRow, value: any) => {
-    setVariants((prev) => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
-  };
-
-  const updateVariantOption = (index: number, optionType: string, value: string) => {
-    setVariants((prev) => prev.map((v, i) => i === index ? { ...v, options: { ...v.options, [optionType]: value } } : v));
-  };
-
-  const addOptionType = () => {
-    const name = prompt("Nom de l'option (ex: Couleur, Matière, Pointure)");
-    if (name && name.trim() && !optionTypes.includes(name.trim())) {
-      setOptionTypes((prev) => [...prev, name.trim()]);
-    }
-  };
-
-  const removeOptionType = (type: string) => {
-    setOptionTypes((prev) => prev.filter((t) => t !== type));
-    setVariants((prev) => prev.map((v) => {
-      const opts = { ...v.options };
-      delete opts[type];
-      return { ...v, options: opts };
-    }));
-  };
-
+  // autoGenerateVariantName helper for submit validation
   const autoGenerateVariantName = (v: VariantRow) => {
     const parts = optionTypes.map((t) => v.options[t]).filter(Boolean);
     return parts.length > 0 ? parts.join(" / ") : "";
@@ -402,13 +357,17 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
       }
       for (const v of variants) {
         const variantName = v.name || autoGenerateVariantName(v);
+        // Store image_url and description inside options jsonb
+        const enrichedOptions: Record<string, string> = { ...v.options };
+        if (v.image_url) enrichedOptions._image_url = v.image_url;
+        if (v.description) enrichedOptions._description = v.description;
         const payload = {
           product_id: productId,
           name: variantName,
           price: v.price,
           stock_quantity: v.stock_quantity,
           sku: v.sku || null,
-          options: v.options,
+          options: enrichedOptions,
         };
         if (v.id) {
           await supabase.from("product_variants").update(payload).eq("id", v.id);
@@ -655,123 +614,20 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
             </TabsContent>
 
             {/* ── TAB: Variants ── */}
-            <TabsContent value="variants" className="space-y-5 mt-0">
-              <div className="rounded-xl border border-border overflow-hidden">
-                <div className="flex items-center justify-between p-4 bg-secondary/30">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                      <Layers size={14} /> Variantes du produit
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Créez des déclinaisons (tailles, couleurs, matières...) avec prix et stock indépendants
-                    </p>
-                  </div>
-                  <Switch checked={hasVariants} onCheckedChange={(v) => {
-                    setHasVariants(v);
-                    if (v && variants.length === 0) addVariant();
-                  }} />
-                </div>
-
-                {hasVariants && (
-                  <div className="p-4 space-y-4 border-t border-border">
-                    {/* Option types */}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Types d'options</Label>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {optionTypes.map((type) => (
-                          <Badge key={type} variant="outline" className="gap-1 px-2.5 py-1 text-xs font-medium border-primary/30 bg-primary/5 text-primary">
-                            {type}
-                            {optionTypes.length > 1 && (
-                              <button type="button" onClick={() => removeOptionType(type)} className="hover:text-destructive ml-0.5">
-                                <X size={10} />
-                              </button>
-                            )}
-                          </Badge>
-                        ))}
-                        <Button type="button" variant="ghost" size="sm" onClick={addOptionType} className="text-xs text-primary h-7">
-                          <Plus size={12} />
-                          Ajouter un type
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Variant rows */}
-                    <div className="space-y-3">
-                      {variants.map((v, vi) => (
-                        <div key={v._key} className="rounded-lg border border-border p-3 space-y-3 bg-card hover:border-primary/20 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-foreground">
-                              {autoGenerateVariantName(v) || `Variante ${vi + 1}`}
-                            </span>
-                            <button type="button" onClick={() => removeVariant(vi)} className="text-muted-foreground hover:text-destructive transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-
-                          {/* Option values */}
-                          <div className="grid grid-cols-2 gap-2">
-                            {optionTypes.map((type) => (
-                              <div key={type} className="space-y-1">
-                                <Label className="text-xs text-muted-foreground">{type}</Label>
-                                <Input
-                                  placeholder={`Ex: ${type === "Taille" ? "M, L, XL" : type === "Couleur" ? "Noir, Blanc" : "..."}`}
-                                  value={v.options[type] || ""}
-                                  onChange={(e) => updateVariantOption(vi, type, e.target.value)}
-                                  className="h-8 text-xs"
-                                />
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Price, stock, SKU */}
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Prix ({store?.currency || "XOF"})</Label>
-                              <Input
-                                type="number" step="1"
-                                value={v.price}
-                                onChange={(e) => updateVariant(vi, "price", Number(e.target.value))}
-                                className="h-8 text-xs"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Stock</Label>
-                              <Input
-                                type="number"
-                                value={v.stock_quantity}
-                                onChange={(e) => updateVariant(vi, "stock_quantity", Number(e.target.value))}
-                                className="h-8 text-xs"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">SKU</Label>
-                              <Input
-                                placeholder="SKU"
-                                value={v.sku}
-                                onChange={(e) => updateVariant(vi, "sku", e.target.value)}
-                                className="h-8 text-xs"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <Button type="button" variant="outline" size="sm" onClick={addVariant} className="w-full">
-                      <Plus size={14} />
-                      Ajouter une variante
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {!hasVariants && (
-                <div className="rounded-xl border border-dashed border-border p-6 text-center space-y-2">
-                  <Layers size={32} className="mx-auto text-muted-foreground/40" />
-                  <p className="text-sm text-muted-foreground">Activez les variantes pour proposer différentes options</p>
-                  <p className="text-xs text-muted-foreground/70">Idéal pour les tailles, couleurs, matières, pointures...</p>
-                </div>
-              )}
+            <TabsContent value="variants" className="mt-0">
+              <VariantEditor
+                hasVariants={hasVariants}
+                setHasVariants={setHasVariants}
+                variants={variants}
+                setVariants={setVariants}
+                optionTypes={optionTypes}
+                setOptionTypes={setOptionTypes}
+                deletedVariantIds={deletedVariantIds}
+                setDeletedVariantIds={setDeletedVariantIds}
+                storeId={store?.id || ""}
+                currency={store?.currency || "XOF"}
+                basePrice={Number(price) || 0}
+              />
             </TabsContent>
 
             {/* ── TAB: Publishing ── */}
