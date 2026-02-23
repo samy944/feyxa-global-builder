@@ -149,6 +149,9 @@ export default function LandingPagePublic() {
           section={section}
           theme={theme}
           onCtaClick={handleCtaClick}
+          storeId={landing.store_id}
+          productId={landing.product_id}
+          collectionId={landing.collection_id}
         />
       ))}
     </div>
