@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -116,6 +116,20 @@ export default function DashboardLandingEditor() {
   const [blockSearch, setBlockSearch] = useState("");
   const [revisions, setRevisions] = useState<any[]>([]);
   const [showRevisions, setShowRevisions] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const autosaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sectionsRef = useRef(sections);
+  const themeRef = useRef(theme);
+  const seoTitleRef = useRef(seoTitle);
+  const seoDescRef = useRef(seoDesc);
+  const abEnabledRef = useRef(abEnabled);
+
+  // Keep refs in sync
+  useEffect(() => { sectionsRef.current = sections; }, [sections]);
+  useEffect(() => { themeRef.current = theme; }, [theme]);
+  useEffect(() => { seoTitleRef.current = seoTitle; }, [seoTitle]);
+  useEffect(() => { seoDescRef.current = seoDesc; }, [seoDesc]);
+  useEffect(() => { abEnabledRef.current = abEnabled; }, [abEnabled]);
 
   // Undo/Redo
   const [history, setHistory] = useState<LandingSection[][]>([]);
@@ -192,36 +206,52 @@ export default function DashboardLandingEditor() {
       .then(({ data }) => setRevisions(data || []));
   }, [id, lastSaved]);
 
-  const handleSave = async () => {
+  const handleSave = async (silent = false) => {
     if (!id) return;
     setSaving(true);
 
-    // Save revision first
-    await supabase.from("landing_revisions").insert({
-      landing_page_id: id,
-      sections: sections as any,
-      theme: theme as any,
-      label: `v${revisions.length + 1}`,
-    });
+    // Save revision only on manual save
+    if (!silent) {
+      await supabase.from("landing_revisions").insert({
+        landing_page_id: id,
+        sections: sectionsRef.current as any,
+        theme: themeRef.current as any,
+        label: `v${revisions.length + 1}`,
+      });
+    }
 
     const { error } = await supabase
       .from("landing_pages")
       .update({
-        sections: sections as any,
-        theme: theme as any,
-        seo_title: seoTitle,
-        seo_description: seoDesc,
-        ab_enabled: abEnabled,
+        sections: sectionsRef.current as any,
+        theme: themeRef.current as any,
+        seo_title: seoTitleRef.current,
+        seo_description: seoDescRef.current,
+        ab_enabled: abEnabledRef.current,
       })
       .eq("id", id);
 
     setSaving(false);
-    if (error) toast.error(error.message);
-    else {
+    setIsDirty(false);
+    if (error) {
+      if (!silent) toast.error(error.message);
+    } else {
       setLastSaved(new Date());
-      toast.success("Sauvegardé !");
+      if (!silent) toast.success("Sauvegardé !");
     }
   };
+
+  // Autosave every 30s when dirty
+  useEffect(() => {
+    autosaveRef.current = setInterval(() => {
+      if (isDirty && id) {
+        handleSave(true);
+      }
+    }, 30000);
+    return () => {
+      if (autosaveRef.current) clearInterval(autosaveRef.current);
+    };
+  }, [isDirty, id]);
 
   const handleRestoreRevision = async (revisionId: string) => {
     const { data } = await supabase
@@ -242,6 +272,7 @@ export default function DashboardLandingEditor() {
   const updateSections = (newSections: LandingSection[]) => {
     setSections(newSections);
     pushHistory(newSections);
+    setIsDirty(true);
   };
 
   const addSection = (type: SectionType) => {
@@ -278,7 +309,7 @@ export default function DashboardLandingEditor() {
 
   const updateSectionData = (sectionId: string, newData: Record<string, any>) => {
     setSections(sections.map(s => s.id === sectionId ? { ...s, data: newData } : s));
-    // Don't push to history on every keystroke, only on blur/save
+    setIsDirty(true);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -309,7 +340,13 @@ export default function DashboardLandingEditor() {
             <ArrowLeft className="w-4 h-4 mr-1" /> Retour
           </Button>
           <span className="text-sm font-medium text-foreground truncate max-w-[200px]">{landing?.title}</span>
-          {lastSaved && <span className="text-[10px] text-muted-foreground">Sauvé {lastSaved.toLocaleTimeString()}</span>}
+          {saving ? (
+            <span className="text-[10px] text-primary animate-pulse">Sauvegarde...</span>
+          ) : isDirty ? (
+            <span className="text-[10px] text-destructive/70">● Modifié</span>
+          ) : lastSaved ? (
+            <span className="text-[10px] text-muted-foreground">✓ Sauvé {lastSaved.toLocaleTimeString()}</span>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           {/* Undo/Redo */}
@@ -344,7 +381,7 @@ export default function DashboardLandingEditor() {
               </a>
             </Button>
           )}
-          <Button size="sm" onClick={handleSave} disabled={saving}>
+          <Button size="sm" onClick={() => handleSave(false)} disabled={saving}>
             <Save className="w-4 h-4 mr-1" /> {saving ? "..." : "Sauvegarder"}
           </Button>
         </div>
@@ -489,9 +526,9 @@ export default function DashboardLandingEditor() {
                       { label: "Texte", key: "textColor" as const },
                     ].map(c => (
                       <div key={c.key} className="flex items-center gap-2 mb-2">
-                        <input type="color" value={theme[c.key]} onChange={e => setTheme({ ...theme, [c.key]: e.target.value })} className="w-7 h-7 rounded cursor-pointer border-0" />
+                        <input type="color" value={theme[c.key]} onChange={e => { setTheme({ ...theme, [c.key]: e.target.value }); setIsDirty(true); }} className="w-7 h-7 rounded cursor-pointer border-0" />
                         <Label className="text-xs flex-1">{c.label}</Label>
-                        <Input value={theme[c.key]} onChange={e => setTheme({ ...theme, [c.key]: e.target.value })} className="h-6 text-[10px] w-20" />
+                        <Input value={theme[c.key]} onChange={e => { setTheme({ ...theme, [c.key]: e.target.value }); setIsDirty(true); }} className="h-6 text-[10px] w-20" />
                       </div>
                     ))}
                   </div>
@@ -500,15 +537,15 @@ export default function DashboardLandingEditor() {
                     <div className="space-y-2">
                       <div>
                         <Label className="text-[10px]">Titres</Label>
-                        <Input value={theme.fontHeading} onChange={e => setTheme({ ...theme, fontHeading: e.target.value })} className="h-7 text-xs mt-0.5" />
+                        <Input value={theme.fontHeading} onChange={e => { setTheme({ ...theme, fontHeading: e.target.value }); setIsDirty(true); }} className="h-7 text-xs mt-0.5" />
                       </div>
                       <div>
                         <Label className="text-[10px]">Corps</Label>
-                        <Input value={theme.fontBody} onChange={e => setTheme({ ...theme, fontBody: e.target.value })} className="h-7 text-xs mt-0.5" />
+                        <Input value={theme.fontBody} onChange={e => { setTheme({ ...theme, fontBody: e.target.value }); setIsDirty(true); }} className="h-7 text-xs mt-0.5" />
                       </div>
                       <div>
                         <Label className="text-[10px]">Radius</Label>
-                        <Input value={theme.radius} onChange={e => setTheme({ ...theme, radius: e.target.value })} className="h-7 text-xs mt-0.5" />
+                        <Input value={theme.radius} onChange={e => { setTheme({ ...theme, radius: e.target.value }); setIsDirty(true); }} className="h-7 text-xs mt-0.5" />
                       </div>
                     </div>
                   </div>
@@ -517,18 +554,18 @@ export default function DashboardLandingEditor() {
                     <div className="space-y-2">
                       <div>
                         <Label className="text-[10px]">Meta Title</Label>
-                        <Input value={seoTitle} onChange={e => setSeoTitle(e.target.value)} className="h-7 text-xs mt-0.5" maxLength={60} />
+                        <Input value={seoTitle} onChange={e => { setSeoTitle(e.target.value); setIsDirty(true); }} className="h-7 text-xs mt-0.5" maxLength={60} />
                         <p className="text-[9px] text-muted-foreground mt-0.5">{seoTitle.length}/60</p>
                       </div>
                       <div>
                         <Label className="text-[10px]">Meta Description</Label>
-                        <Textarea value={seoDesc} onChange={e => setSeoDesc(e.target.value)} className="text-xs mt-0.5" maxLength={160} rows={2} />
+                        <Textarea value={seoDesc} onChange={e => { setSeoDesc(e.target.value); setIsDirty(true); }} className="text-xs mt-0.5" maxLength={160} rows={2} />
                         <p className="text-[9px] text-muted-foreground mt-0.5">{seoDesc.length}/160</p>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Switch checked={abEnabled} onCheckedChange={setAbEnabled} />
+                    <Switch checked={abEnabled} onCheckedChange={(v) => { setAbEnabled(v); setIsDirty(true); }} />
                     <Label className="text-xs">A/B Testing</Label>
                   </div>
                 </div>
