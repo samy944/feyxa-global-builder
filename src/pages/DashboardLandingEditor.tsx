@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import { ImageUploader } from "@/components/landing/ImageUploader";
 import { AiOptimizeDialog } from "@/components/dashboard/AiOptimizeDialog";
 import { AiDesignDialog } from "@/components/dashboard/AiDesignDialog";
+import { LandingThemePresets } from "@/components/dashboard/LandingThemePresets";
 
 const BLOCK_CATEGORIES = [
   { key: "essential", label: "Essentiels" },
@@ -532,6 +533,14 @@ export default function DashboardLandingEditor() {
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-3 space-y-4">
+                  {/* Theme presets */}
+                  <LandingThemePresets
+                    currentTheme={theme}
+                    onApply={(newTheme) => {
+                      setTheme(prev => ({ ...prev, ...newTheme }));
+                      setIsDirty(true);
+                    }}
+                  />
                   {/* Theme controls */}
                   <div>
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Couleurs</p>
