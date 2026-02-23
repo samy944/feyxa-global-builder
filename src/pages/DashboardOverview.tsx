@@ -8,7 +8,7 @@ import KpiCardsWidget from "@/components/dashboard/KpiCardsWidget";
 
 export default function DashboardOverview() {
   return (
-    <div className="p-6 lg:p-8 space-y-10">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-10">
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>

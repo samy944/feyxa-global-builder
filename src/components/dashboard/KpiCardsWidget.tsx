@@ -111,18 +111,18 @@ export default function KpiCardsWidget() {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-4 md:overflow-visible scrollbar-hide snap-x snap-mandatory">
       {kpis.map((kpi) => (
         <div
           key={kpi.label}
-          className="rounded-lg border border-border bg-card p-5 transition-colors duration-200"
+          className="min-w-[200px] md:min-w-0 snap-start rounded-lg border border-border bg-card p-4 md:p-5 transition-colors duration-200 shrink-0 md:shrink"
         >
-          <div className="flex items-center justify-between mb-4">
-            <kpi.icon size={18} className="text-muted-foreground" />
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <kpi.icon size={16} className="text-muted-foreground" />
             {kpi.trend !== null && kpi.trend !== 0 && (
               <span
                 className={cn(
-                  "flex items-center gap-1 text-xs font-medium",
+                  "flex items-center gap-1 text-xs font-semibold",
                   kpi.trend > 0 ? "text-emerald-500" : "text-destructive"
                 )}
               >
@@ -133,13 +133,13 @@ export default function KpiCardsWidget() {
           </div>
           {loading ? (
             <div className="space-y-2">
-              <div className="h-9 w-28 bg-muted rounded" />
-              <div className="h-4 w-32 bg-muted rounded" />
+              <div className="h-8 w-24 bg-muted rounded" />
+              <div className="h-3 w-28 bg-muted rounded" />
             </div>
           ) : (
             <>
-              <p className="text-[32px] font-bold text-foreground tracking-tight leading-none">{kpi.value}</p>
-              <p className="text-xs text-muted-foreground mt-2 font-medium">{kpi.label}</p>
+              <p className="text-2xl md:text-[32px] font-bold text-foreground tracking-tight leading-none">{kpi.value}</p>
+              <p className="text-[11px] md:text-xs text-muted-foreground mt-1.5 md:mt-2 font-medium">{kpi.label}</p>
             </>
           )}
         </div>
