@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Store,
   MessageSquare,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -34,6 +35,7 @@ const navItems = [
   { icon: TrendingUp, label: "Trends", path: "/dashboard/trends" },
   { icon: FileText, label: "Landing Pages", path: "/dashboard/landings" },
   { icon: MessageSquare, label: "Tickets", path: "/dashboard/tickets" },
+  { icon: RotateCcw, label: "Retours", path: "/dashboard/returns" },
   { icon: Settings, label: "Paramètres", path: "/dashboard/settings" },
 ];
 

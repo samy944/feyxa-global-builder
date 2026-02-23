@@ -42,7 +42,9 @@ import AdminReviews from "./pages/AdminReviews";
 import MyOrders from "./pages/MyOrders";
 import DashboardShipping from "./pages/DashboardShipping";
 import DashboardTickets from "./pages/DashboardTickets";
+import DashboardReturns from "./pages/DashboardReturns";
 import AdminTickets from "./pages/AdminTickets";
+import AdminReturns from "./pages/AdminReturns";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +81,7 @@ const App = () => (
               <Route path="landing" element={<DashboardLandings />} />
               <Route path="shipping" element={<DashboardShipping />} />
               <Route path="tickets" element={<DashboardTickets />} />
+              <Route path="returns" element={<DashboardReturns />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route path="/store/:slug" element={<StorefrontHome />} />
@@ -101,6 +104,9 @@ const App = () => (
             } />
             <Route path="/admin/tickets" element={
               <ProtectedRoute><AdminTickets /></ProtectedRoute>
+            } />
+            <Route path="/admin/returns" element={
+              <ProtectedRoute><AdminReturns /></ProtectedRoute>
             } />
             <Route path="/my-orders" element={
               <ProtectedRoute><MyOrders /></ProtectedRoute>

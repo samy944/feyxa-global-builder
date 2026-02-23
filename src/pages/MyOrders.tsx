@@ -4,8 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { MarketLayout } from "@/components/market/MarketLayout";
 import { ReviewForm } from "@/components/market/ReviewForm";
 import { CreateTicketDialog } from "@/components/tickets/CreateTicketDialog";
+import { ReturnRequestDialog } from "@/components/returns/ReturnRequestDialog";
 import { motion } from "framer-motion";
-import { Loader2, Star, Package, ChevronRight, MessageSquare } from "lucide-react";
+import { Loader2, Star, Package, ChevronRight, MessageSquare, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ const statusLabels: Record<string, string> = {
   delivered: "Livrée",
   cancelled: "Annulée",
   refunded: "Remboursée",
+  dispute: "Litige",
 };
 
 const statusColors: Record<string, string> = {
@@ -53,6 +55,7 @@ const statusColors: Record<string, string> = {
   delivered: "bg-primary/10 text-primary",
   cancelled: "bg-destructive/10 text-destructive",
   refunded: "bg-muted text-muted-foreground",
+  dispute: "bg-destructive/10 text-destructive",
 };
 
 export default function MyOrders() {
@@ -67,6 +70,11 @@ export default function MyOrders() {
     orderId: string;
   } | null>(null);
   const [ticketTarget, setTicketTarget] = useState<{
+    storeId: string;
+    sellerId: string;
+    orderId: string;
+  } | null>(null);
+  const [returnTarget, setReturnTarget] = useState<{
     storeId: string;
     sellerId: string;
     orderId: string;
@@ -233,6 +241,20 @@ export default function MyOrders() {
                       <MessageSquare size={14} className="mr-1" />
                       Ouvrir un ticket
                     </Button>
+                    {["delivered", "shipped"].includes(order.status) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setReturnTarget({
+                          storeId: order.stores.id,
+                          sellerId: (order.stores as any).owner_id,
+                          orderId: order.id,
+                        })}
+                      >
+                        <RotateCcw size={14} className="mr-1" />
+                        Demander un retour
+                      </Button>
+                    )}
                     <Link to={`/track/${order.order_number}`}>
                       <Button variant="ghost" size="sm" className="text-xs">
                         Suivre la commande
@@ -265,6 +287,17 @@ export default function MyOrders() {
           storeId={ticketTarget.storeId}
           sellerId={ticketTarget.sellerId}
           orderId={ticketTarget.orderId}
+        />
+      )}
+
+      {returnTarget && (
+        <ReturnRequestDialog
+          open={!!returnTarget}
+          onOpenChange={(open) => !open && setReturnTarget(null)}
+          orderId={returnTarget.orderId}
+          storeId={returnTarget.storeId}
+          sellerId={returnTarget.sellerId}
+          onCreated={fetchOrders}
         />
       )}
     </MarketLayout>

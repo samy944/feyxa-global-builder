@@ -1075,6 +1075,76 @@ export type Database = {
         }
         Relationships: []
       }
+      return_requests: {
+        Row: {
+          admin_notes: string | null
+          buyer_id: string
+          created_at: string
+          description: string | null
+          id: string
+          images: Json | null
+          order_id: string
+          product_id: string | null
+          reason: string
+          seller_id: string
+          status: Database["public"]["Enums"]["return_status"]
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          buyer_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: Json | null
+          order_id: string
+          product_id?: string | null
+          reason: string
+          seller_id: string
+          status?: Database["public"]["Enums"]["return_status"]
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          buyer_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: Json | null
+          order_id?: string
+          product_id?: string | null
+          reason?: string
+          seller_id?: string
+          status?: Database["public"]["Enums"]["return_status"]
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_requests_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           buyer_id: string
@@ -1771,8 +1841,16 @@ export type Database = {
         | "delivered"
         | "cancelled"
         | "refunded"
+        | "dispute"
       payment_status: "pending" | "paid" | "cod" | "failed" | "refunded"
       payout_status: "pending" | "approved" | "paid" | "rejected"
+      return_status:
+        | "requested"
+        | "reviewing"
+        | "approved"
+        | "rejected"
+        | "received"
+        | "refunded"
       store_role: "owner" | "admin" | "staff"
       ticket_priority: "low" | "medium" | "high" | "urgent"
       ticket_status:
@@ -1926,9 +2004,18 @@ export const Constants = {
         "delivered",
         "cancelled",
         "refunded",
+        "dispute",
       ],
       payment_status: ["pending", "paid", "cod", "failed", "refunded"],
       payout_status: ["pending", "approved", "paid", "rejected"],
+      return_status: [
+        "requested",
+        "reviewing",
+        "approved",
+        "rejected",
+        "received",
+        "refunded",
+      ],
       store_role: ["owner", "admin", "staff"],
       ticket_priority: ["low", "medium", "high", "urgent"],
       ticket_status: [
