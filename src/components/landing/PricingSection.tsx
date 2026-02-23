@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const plans = [
@@ -56,29 +56,20 @@ const plans = [
   },
 ];
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 30 },
-  show: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.12, duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
-  }),
-};
-
 export function PricingSection() {
   const [annual, setAnnual] = useState(false);
 
   return (
-    <section id="pricing" className="relative overflow-hidden" style={{ padding: "120px 0" }}>
+    <section id="pricing" className="relative py-28 overflow-hidden">
       {/* Background */}
+      <div className="absolute inset-0 -z-10 grid-pattern opacity-[0.08]" />
       <div
         className="absolute inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(ellipse 60% 50% at 50% 60%, hsla(106, 75%, 47%, 0.04), transparent 70%)",
+            "radial-gradient(ellipse 50% 50% at 50% 30%, hsla(var(--primary) / 0.06), transparent 70%)",
         }}
       />
-      <div className="absolute inset-0 grid-pattern opacity-15 -z-10" />
 
       <div className="container relative z-10">
         {/* Header */}
@@ -87,20 +78,18 @@ export function PricingSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="text-center mb-20 max-w-2xl mx-auto"
+          className="text-center mb-16 max-w-2xl mx-auto"
         >
-          <p
-            className="text-sm font-medium mb-5 tracking-widest uppercase"
-            style={{ color: "hsl(106, 75%, 47%)" }}
-          >
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary mb-6">
+            <Zap size={12} className="fill-primary" />
             Tarifs
-          </p>
+          </span>
           <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl leading-[1] mb-6 text-foreground">
             SIMPLE &
             <br />
             <span className="text-gradient">TRANSPARENT.</span>
           </h2>
-          <p className="text-lg leading-relaxed" style={{ color: "hsl(0, 0%, 55%)" }}>
+          <p className="text-lg leading-relaxed text-muted-foreground">
             Pas de frais cachés. Commencez gratuitement, évoluez quand vous êtes prêt.
           </p>
         </motion.div>
@@ -113,42 +102,31 @@ export function PricingSection() {
           transition={{ delay: 0.2, duration: 0.4 }}
           className="flex items-center justify-center gap-4 mb-16"
         >
-          <span
-            className="text-sm font-medium transition-colors duration-200"
-            style={{ color: annual ? "hsl(0, 0%, 40%)" : "hsl(0, 0%, 90%)" }}
-          >
+          <span className={`text-sm font-medium transition-colors duration-200 ${annual ? "text-muted-foreground" : "text-foreground"}`}>
             Mensuel
           </span>
           <button
             onClick={() => setAnnual(!annual)}
-            className="relative h-8 w-14 rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="relative h-8 w-14 rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             style={{
-              background: annual ? "hsl(106, 75%, 47%)" : "hsl(0, 0%, 22%)",
+              background: annual ? "hsl(var(--primary))" : "hsl(var(--muted))",
             }}
             aria-label="Basculer entre mensuel et annuel"
           >
             <motion.div
-              className="absolute top-1 left-1 h-6 w-6 rounded-full"
-              style={{ background: "hsl(0, 0%, 100%)" }}
+              className="absolute top-1 left-1 h-6 w-6 rounded-full bg-foreground"
               animate={{ x: annual ? 24 : 0 }}
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
           </button>
-          <span
-            className="text-sm font-medium transition-colors duration-200"
-            style={{ color: annual ? "hsl(0, 0%, 90%)" : "hsl(0, 0%, 40%)" }}
-          >
+          <span className={`text-sm font-medium transition-colors duration-200 ${annual ? "text-foreground" : "text-muted-foreground"}`}>
             Annuel
           </span>
           {annual && (
             <motion.span
               initial={{ opacity: 0, scale: 0.8, x: -8 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
-              className="text-xs font-semibold rounded-full px-3 py-1"
-              style={{
-                background: "hsla(106, 75%, 47%, 0.15)",
-                color: "hsl(106, 75%, 47%)",
-              }}
+              className="text-xs font-semibold rounded-full px-3 py-1 border border-primary/20 bg-primary/10 text-primary"
             >
               -20%
             </motion.span>
@@ -156,35 +134,23 @@ export function PricingSection() {
         </motion.div>
 
         {/* Cards */}
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-5 lg:gap-6 max-w-5xl mx-auto">
           {plans.map((plan, i) => (
             <motion.div
               key={plan.name}
-              custom={i}
-              variants={cardVariants}
-              initial="hidden"
-              whileInView="show"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-40px" }}
-              className="group relative rounded-2xl p-7 sm:p-8 flex flex-col transition-all duration-300"
-              style={{
-                background: plan.popular
-                  ? "linear-gradient(160deg, hsl(0, 0%, 13%) 0%, hsl(0, 0%, 9%) 100%)"
-                  : "hsl(0, 0%, 10%)",
-                border: plan.popular
-                  ? "1px solid hsla(106, 75%, 47%, 0.25)"
-                  : "1px solid hsla(0, 0%, 100%, 0.08)",
-              }}
+              transition={{ delay: i * 0.12, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               whileHover={{ y: -6 }}
+              className={`group relative rounded-2xl p-7 sm:p-8 flex flex-col transition-all duration-300 border backdrop-blur-sm ${
+                plan.popular
+                  ? "border-primary/30 bg-card/80"
+                  : "border-border/50 bg-card/50 hover:border-primary/15"
+              }`}
             >
               {/* Hover glow */}
-              <div
-                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-0 pointer-events-none"
-                style={{
-                  boxShadow: plan.popular
-                    ? "0 0 60px -10px hsla(106, 75%, 47%, 0.2), 0 20px 50px -15px hsla(0, 0%, 0%, 0.4)"
-                    : "0 0 40px -10px hsla(106, 75%, 47%, 0.12), 0 20px 50px -15px hsla(0, 0%, 0%, 0.3)",
-                }}
-              />
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none shadow-glow" />
 
               {/* Popular badge */}
               {plan.popular && (
@@ -192,12 +158,8 @@ export function PricingSection() {
                   initial={{ opacity: 0, scale: 0.8 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
-                  transition={{ delay: 0.4, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full px-4 py-1.5"
-                  style={{
-                    background: "linear-gradient(135deg, hsl(106, 75%, 47%), hsl(97, 65%, 35%))",
-                    boxShadow: "0 4px 20px -4px hsla(106, 75%, 47%, 0.4)",
-                  }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                  className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full px-4 py-1.5 bg-primary shadow-glow"
                 >
                   <Sparkles size={12} className="text-primary-foreground" />
                   <span className="text-xs font-semibold text-primary-foreground tracking-wide">
@@ -211,7 +173,7 @@ export function PricingSection() {
                 <h3 className="font-heading text-2xl text-foreground mb-1.5">
                   {plan.name.toUpperCase()}
                 </h3>
-                <p className="text-sm leading-relaxed" style={{ color: "hsl(0, 0%, 50%)" }}>
+                <p className="text-sm leading-relaxed text-muted-foreground">
                   {plan.desc}
                 </p>
               </div>
@@ -230,18 +192,14 @@ export function PricingSection() {
                     €{annual ? plan.yearly : plan.monthly}
                   </motion.span>
                 </AnimatePresence>
-                <span className="text-sm ml-1" style={{ color: "hsl(0, 0%, 45%)" }}>
-                  /mois
-                </span>
+                <span className="text-sm ml-1 text-muted-foreground">/mois</span>
                 {annual && plan.monthly > 0 && (
                   <motion.span
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="block text-xs mt-1"
-                    style={{ color: "hsl(0, 0%, 40%)" }}
+                    className="block text-xs mt-1 text-muted-foreground"
                   >
-                    <span style={{ textDecoration: "line-through" }}>€{plan.monthly}</span>
-                    {" "}facturé annuellement
+                    <span className="line-through">€{plan.monthly}</span>{" "}facturé annuellement
                   </motion.span>
                 )}
               </div>
@@ -249,14 +207,9 @@ export function PricingSection() {
               {/* Features */}
               <ul className="relative z-10 space-y-3.5 mb-8 flex-1">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-3 text-sm" style={{ color: "hsl(0, 0%, 60%)" }}>
-                    <div
-                      className="shrink-0 h-5 w-5 rounded-full flex items-center justify-center"
-                      style={{
-                        background: "hsla(106, 75%, 47%, 0.1)",
-                      }}
-                    >
-                      <Check size={11} style={{ color: "hsl(106, 75%, 47%)" }} />
+                  <li key={f} className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <div className="shrink-0 h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Check size={11} className="text-primary" />
                     </div>
                     {f}
                   </li>
