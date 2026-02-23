@@ -3,12 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, ShoppingBag, Store } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Signup() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const [accountType, setAccountType] = useState<"client" | "vendor">("client");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,13 +23,13 @@ export default function Signup() {
       return;
     }
     setLoading(true);
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName, accountType);
     setLoading(false);
     if (error) {
       toast.error(error.message);
     } else {
       toast.success("Compte créé avec succès !");
-      navigate("/onboarding");
+      navigate(accountType === "vendor" ? "/onboarding" : "/market");
     }
   };
 
@@ -47,11 +48,52 @@ export default function Signup() {
             </div>
             <span className="font-bold text-xl tracking-tight text-foreground">Feyxa</span>
           </Link>
-          <h1 className="text-2xl font-bold text-foreground">Créez votre boutique</h1>
-          <p className="text-sm text-muted-foreground mt-1">Rejoignez des milliers de vendeurs sur Feyxa</p>
+          <h1 className="text-2xl font-bold text-foreground">Rejoignez Feyxa</h1>
+          <p className="text-sm text-muted-foreground mt-1">Créez votre compte en quelques secondes</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-card p-8">
+        <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-border bg-card p-8">
+          {/* Account type selector */}
+          <div>
+            <label className="text-sm font-medium text-foreground mb-2 block">Type de compte</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setAccountType("client")}
+                className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                  accountType === "client"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                    : "border-border hover:border-primary/40"
+                }`}
+              >
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                  accountType === "client" ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
+                }`}>
+                  <ShoppingBag size={20} />
+                </div>
+                <span className="text-sm font-semibold text-foreground">Client</span>
+                <span className="text-[11px] text-muted-foreground text-center leading-tight">Acheter sur la marketplace</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType("vendor")}
+                className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                  accountType === "vendor"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                    : "border-border hover:border-primary/40"
+                }`}
+              >
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                  accountType === "vendor" ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
+                }`}>
+                  <Store size={20} />
+                </div>
+                <span className="text-sm font-semibold text-foreground">Vendeur</span>
+                <span className="text-[11px] text-muted-foreground text-center leading-tight">Créer ma boutique en ligne</span>
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">Nom complet</label>
             <input
@@ -92,7 +134,7 @@ export default function Signup() {
             </div>
           </div>
           <Button variant="hero" className="w-full" disabled={loading}>
-            {loading ? "Création..." : "Créer mon compte"}
+            {loading ? "Création..." : accountType === "vendor" ? "Créer ma boutique" : "Créer mon compte"}
             <ArrowRight size={16} />
           </Button>
           <p className="text-xs text-muted-foreground text-center">

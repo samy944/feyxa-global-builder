@@ -2011,7 +2011,11 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "marketplace_admin" | "marketplace_moderator"
+      app_role:
+        | "marketplace_admin"
+        | "marketplace_moderator"
+        | "client"
+        | "vendor"
       discount_type: "percentage" | "fixed"
       escrow_status: "held" | "released" | "refunded" | "disputed"
       landing_status: "draft" | "published" | "archived"
@@ -2174,7 +2178,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["marketplace_admin", "marketplace_moderator"],
+      app_role: [
+        "marketplace_admin",
+        "marketplace_moderator",
+        "client",
+        "vendor",
+      ],
       discount_type: ["percentage", "fixed"],
       escrow_status: ["held", "released", "refunded", "disputed"],
       landing_status: ["draft", "published", "archived"],

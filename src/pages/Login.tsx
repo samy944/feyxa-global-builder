@@ -24,9 +24,25 @@ export default function Login() {
       toast.error(error.message);
       return;
     }
-    // Check if user has a store
+
     const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (authUser) {
+    if (!authUser) {
+      setLoading(false);
+      navigate("/market");
+      return;
+    }
+
+    // Check role from user_roles table
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", authUser.id)
+      .in("role", ["client", "vendor"]);
+
+    const isVendor = roles?.some((r) => r.role === "vendor");
+
+    if (isVendor) {
+      // Check if vendor has a store
       const { data: store } = await supabase
         .from("stores")
         .select("id")
@@ -37,7 +53,7 @@ export default function Login() {
       navigate(store ? "/dashboard" : "/onboarding");
     } else {
       setLoading(false);
-      navigate("/dashboard");
+      navigate("/market");
     }
   };
 
@@ -57,7 +73,7 @@ export default function Login() {
             <span className="font-bold text-xl tracking-tight text-foreground">Feyxa</span>
           </Link>
           <h1 className="text-2xl font-bold text-foreground">Bon retour parmi nous</h1>
-          <p className="text-sm text-muted-foreground mt-1">Connectez-vous à votre compte vendeur</p>
+          <p className="text-sm text-muted-foreground mt-1">Connectez-vous à votre compte Feyxa</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-card p-8">
