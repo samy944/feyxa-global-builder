@@ -2,6 +2,7 @@ import { LandingSection } from "@/lib/landing-templates";
 import { motion } from "framer-motion";
 import { Star, Shield, Clock, MessageCircle } from "lucide-react";
 import { useState, useEffect } from "react";
+import { LiveProductBlock } from "./LiveProductBlock";
 
 interface Props {
   section: LandingSection;
@@ -14,6 +15,10 @@ interface Props {
     fontBody: string;
   };
   onCtaClick?: () => void;
+  storeId?: string;
+  productId?: string | null;
+  collectionId?: string | null;
+  onAddToCart?: (product: any, variant?: any) => void;
 }
 
 const fadeUp = {
@@ -23,7 +28,7 @@ const fadeUp = {
   transition: { duration: 0.5 },
 };
 
-export function LandingSectionRenderer({ section, theme, onCtaClick }: Props) {
+export function LandingSectionRenderer({ section, theme, onCtaClick, storeId, productId, collectionId, onAddToCart }: Props) {
   if (!section.visible) return null;
 
   const { data } = section;
@@ -103,22 +108,21 @@ export function LandingSectionRenderer({ section, theme, onCtaClick }: Props) {
       );
 
     case "product-highlights":
-      return (
+      return storeId ? (
+        <LiveProductBlock
+          storeId={storeId}
+          productId={productId}
+          title={data.title}
+          theme={t}
+          onAddToCart={onAddToCart}
+          mode="highlights"
+          columns={2}
+        />
+      ) : (
         <motion.section {...fadeUp} className="py-16 md:py-24 px-6">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-12" style={{ fontFamily: `"${t.fontHeading}", sans-serif`, color: t.textColor }}>{data.title}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {(data.items || []).map((item: any, i: number) => (
-                <div key={i} className="p-6 rounded-xl border border-black/5 bg-white" style={{ borderRadius: t.radius }}>
-                  {item.imageUrl && <img src={item.imageUrl} alt={item.name} className="w-full h-48 object-cover rounded-lg mb-4" loading="lazy" />}
-                  <h3 className="font-semibold text-lg mb-2" style={{ color: t.textColor }}>{item.name}</h3>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl font-bold" style={{ color: t.primaryColor }}>{item.price?.toLocaleString()} FCFA</span>
-                    {item.originalPrice && <span className="text-sm line-through opacity-40" style={{ color: t.textColor }}>{item.originalPrice?.toLocaleString()} FCFA</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="text-center text-sm opacity-40" style={{ color: t.textColor }}>Connectez une boutique pour afficher les produits</p>
           </div>
         </motion.section>
       );
@@ -214,13 +218,21 @@ export function LandingSectionRenderer({ section, theme, onCtaClick }: Props) {
       );
 
     case "collection-grid":
-      return (
+      return storeId ? (
+        <LiveProductBlock
+          storeId={storeId}
+          collectionId={collectionId}
+          title={data.title}
+          theme={t}
+          onAddToCart={onAddToCart}
+          mode="collection"
+          columns={data.columns || 3}
+        />
+      ) : (
         <motion.section {...fadeUp} className="py-16 md:py-24 px-6">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-12" style={{ fontFamily: `"${t.fontHeading}", sans-serif`, color: t.textColor }}>{data.title}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="aspect-square rounded-xl bg-black/5 flex items-center justify-center text-sm opacity-40" style={{ borderRadius: t.radius }}>Produits de la collection</div>
-            </div>
+            <p className="text-center text-sm opacity-40" style={{ color: t.textColor }}>Connectez une boutique pour afficher la collection</p>
           </div>
         </motion.section>
       );
