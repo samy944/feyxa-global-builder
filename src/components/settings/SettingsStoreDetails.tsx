@@ -5,6 +5,7 @@ import { useStore } from "@/hooks/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Save, Loader2, Upload } from "lucide-react";
+import BrandConfigurator, { BrandConfig } from "@/components/dashboard/BrandConfigurator";
 
 export default function SettingsStoreDetails() {
   const { store, refetch } = useStore();
@@ -65,86 +66,106 @@ export default function SettingsStoreDetails() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Informations de la boutique</h2>
-        <p className="text-sm text-muted-foreground mt-1">Les informations de base de votre boutique, visibles par vos clients.</p>
-      </div>
+    <div className="space-y-8">
+      {/* ── Informations de base ── */}
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Informations de la boutique</h2>
+          <p className="text-sm text-muted-foreground mt-1">Les informations de base de votre boutique, visibles par vos clients.</p>
+        </div>
 
-      {/* Logo */}
-      <div>
-        <label className="text-sm font-medium text-foreground mb-1.5 block">Logo</label>
-        <div className="flex items-center gap-4">
-          {logoUrl ? (
-            <img src={logoUrl} alt="Logo" className="h-16 w-16 rounded-lg object-cover border border-border" />
-          ) : (
-            <div className="h-16 w-16 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground">
-              <Upload size={20} />
+        {/* Logo */}
+        <div>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">Logo</label>
+          <div className="flex items-center gap-4">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="h-16 w-16 rounded-lg object-cover border border-border" />
+            ) : (
+              <div className="h-16 w-16 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground">
+                <Upload size={20} />
+              </div>
+            )}
+            <label className="cursor-pointer">
+              <Button variant="outline" size="sm" asChild>
+                <span>{uploading ? <Loader2 size={14} className="animate-spin" /> : "Changer le logo"}</span>
+              </Button>
+              <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploading} />
+            </label>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">Nom de la boutique *</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ma Boutique" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="Décrivez votre boutique en quelques mots..."
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">Ville</label>
+            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Cotonou" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Devise</label>
+              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="XOF">XOF (Franc CFA)</option>
+                <option value="EUR">EUR (Euro)</option>
+                <option value="USD">USD (Dollar US)</option>
+              </select>
             </div>
-          )}
-          <label className="cursor-pointer">
-            <Button variant="outline" size="sm" asChild>
-              <span>{uploading ? <Loader2 size={14} className="animate-spin" /> : "Changer le logo"}</span>
-            </Button>
-            <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploading} />
-          </label>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Langue</label>
+              <select value={locale} onChange={(e) => setLocale(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">Délai de livraison estimé</label>
+            <Input value={deliveryDelay} onChange={(e) => setDeliveryDelay(e.target.value)} placeholder="2-5 jours" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">Slug (URL)</label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">feyxa.app/store/</span>
+              <Input value={slug} disabled className="font-mono text-sm flex-1 bg-secondary/50" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Le slug ne peut pas être modifié après la création.</p>
+          </div>
         </div>
+
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          Enregistrer
+        </Button>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">Nom de la boutique *</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ma Boutique" />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            placeholder="Décrivez votre boutique en quelques mots..."
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+      {/* ── Identité de marque ── */}
+      {store && (
+        <div className="border-t border-border pt-8">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Identité de marque</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Clonez le design d'un site existant ou configurez manuellement vos couleurs, polices et logo.
+            </p>
+          </div>
+          <BrandConfigurator
+            storeId={store.id}
+            initialBrand={store.theme as BrandConfig | null}
+            onBrandChange={() => {}}
           />
         </div>
-        <div>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">Ville</label>
-          <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Cotonou" />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Devise</label>
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-              <option value="XOF">XOF (Franc CFA)</option>
-              <option value="EUR">EUR (Euro)</option>
-              <option value="USD">USD (Dollar US)</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Langue</label>
-            <select value={locale} onChange={(e) => setLocale(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-              <option value="fr">Français</option>
-              <option value="en">English</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">Délai de livraison estimé</label>
-          <Input value={deliveryDelay} onChange={(e) => setDeliveryDelay(e.target.value)} placeholder="2-5 jours" />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">Slug (URL)</label>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">feyxa.app/store/</span>
-            <Input value={slug} disabled className="font-mono text-sm flex-1 bg-secondary/50" />
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Le slug ne peut pas être modifié après la création.</p>
-        </div>
-      </div>
-
-      <Button onClick={handleSave} disabled={saving}>
-        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-        Enregistrer
-      </Button>
+      )}
     </div>
   );
 }

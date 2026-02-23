@@ -6,14 +6,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Store, MapPin, Zap, Globe, ArrowRight, ArrowLeft,
-  TrendingUp, Target, Package, Loader2, Sparkles,
+  TrendingUp, Target, Package, Loader2, Sparkles, Palette,
 } from "lucide-react";
 import { toast } from "sonner";
+import BrandConfigurator, { BrandConfig } from "@/components/dashboard/BrandConfigurator";
 
 const steps = [
   { icon: Store, label: "Nom", desc: "Nom de votre boutique" },
   { icon: MapPin, label: "Localisation", desc: "Pays et devise" },
   { icon: Zap, label: "Modèle", desc: "Type de boutique" },
+  { icon: Palette, label: "Marque", desc: "Identité visuelle" },
   { icon: Globe, label: "Domaine", desc: "Sous-domaine" },
 ];
 
@@ -45,6 +47,10 @@ export default function NewStore() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [brandConfig, setBrandConfig] = useState<BrandConfig | null>(null);
+
+  // Temporary store ID for brand configurator (created on step entry)
+  const [tempStoreId] = useState(() => crypto.randomUUID());
 
   const [data, setData] = useState({
     name: "",
@@ -66,6 +72,7 @@ export default function NewStore() {
       if (data.template === "niche" && data.nicheDesc.length < 3) return false;
       return true;
     }
+    if (step === 3) return true; // Brand step is optional
     return slug.length >= 2;
   };
 
@@ -79,6 +86,8 @@ export default function NewStore() {
       slug,
       currency: data.currency,
       city: data.country,
+      theme: brandConfig as any,
+      logo_url: brandConfig?.logoUrl || null,
       settings: {
         country: data.country,
         smart_start_template: data.template !== "skip" ? data.template : null,
@@ -258,8 +267,23 @@ export default function NewStore() {
             </div>
           )}
 
-          {/* Step 3: Domain */}
+          {/* Step 3: Brand Configurator */}
           {step === 3 && (
+            <div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Clonez le design d'un site existant ou configurez manuellement votre identité visuelle.
+              </p>
+              <BrandConfigurator
+                storeId={tempStoreId}
+                initialBrand={brandConfig}
+                onBrandChange={setBrandConfig}
+                compact
+              />
+            </div>
+          )}
+
+          {/* Step 4: Domain */}
+          {step === 4 && (
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Sous-domaine</label>
@@ -306,7 +330,10 @@ export default function NewStore() {
           {loading ? (
             <Loader2 size={16} className="inline animate-spin" />
           ) : step < steps.length - 1 ? (
-            <>Suivant <ArrowRight size={14} className="inline ml-1" /></>
+            <>
+              {step === 3 ? "Suivant (optionnel)" : "Suivant"}
+              <ArrowRight size={14} className="inline ml-1" />
+            </>
           ) : (
             "Créer la boutique"
           )}
