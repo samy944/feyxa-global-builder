@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,7 @@ import {
 import {
   Search, Eye, ChevronDown, ChevronUp,
   Package, Truck, CreditCard, Loader2,
-  MapPin, Phone, User, CalendarDays,
+  MapPin, Phone, User, CalendarDays, ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
@@ -68,6 +69,7 @@ const statusFilters: OrderStatus[] = ["new", "confirmed", "packed", "shipped", "
 
 export default function DashboardOrders() {
   const { store } = useStore();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
@@ -267,15 +269,24 @@ export default function DashboardOrders() {
                       </a>
                     </Button>
                   )}
-                  <Button
+                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-xs"
                     onClick={() => setExpandedId(isExpanded ? null : order.id)}
                   >
                     <Eye size={12} className="mr-1" />
-                    Détails
+                    Aperçu
                     {isExpanded ? <ChevronUp size={12} className="ml-1" /> : <ChevronDown size={12} className="ml-1" />}
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => navigate(`/dashboard/orders/${order.id}`)}
+                  >
+                    <ExternalLink size={12} className="mr-1" />
+                    Détails complets
                   </Button>
                 </div>
               </div>
