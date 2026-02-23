@@ -471,6 +471,54 @@ export type Database = {
           },
         ]
       }
+      landing_revisions: {
+        Row: {
+          author_id: string | null
+          created_at: string
+          id: string
+          label: string | null
+          landing_page_id: string
+          sections: Json
+          theme: Json | null
+          variant_id: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          landing_page_id: string
+          sections?: Json
+          theme?: Json | null
+          variant_id?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          landing_page_id?: string
+          sections?: Json
+          theme?: Json | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_revisions_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_revisions_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "landing_ab_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_categories: {
         Row: {
           created_at: string
