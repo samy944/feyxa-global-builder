@@ -48,6 +48,7 @@ import DashboardReturns from "./pages/DashboardReturns";
 import AdminTickets from "./pages/AdminTickets";
 import AdminReturns from "./pages/AdminReturns";
 import DashboardAI from "./pages/DashboardAI";
+import ConfirmDelivery from "./pages/ConfirmDelivery";
 
 const queryClient = new QueryClient();
 
@@ -102,6 +103,7 @@ const App = () => (
             <Route path="/r/:code" element={<TrackingRedirect />} />
             <Route path="/track" element={<TrackOrder />} />
             <Route path="/track/:orderNumber" element={<TrackOrder />} />
+            <Route path="/confirm-delivery/:token" element={<ConfirmDelivery />} />
             <Route path="/admin/payouts" element={
               <ProtectedRoute><AdminPayouts /></ProtectedRoute>
             } />

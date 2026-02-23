@@ -292,6 +292,60 @@ export type Database = {
           },
         ]
       }
+      delivery_confirmations: {
+        Row: {
+          confirmed_by: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          method: string
+          order_id: string
+          otp_code: string | null
+          store_id: string
+          token_hash: string
+          used_at: string | null
+        }
+        Insert: {
+          confirmed_by?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          method?: string
+          order_id: string
+          otp_code?: string | null
+          store_id: string
+          token_hash: string
+          used_at?: string | null
+        }
+        Update: {
+          confirmed_by?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          method?: string
+          order_id?: string
+          otp_code?: string | null
+          store_id?: string
+          token_hash?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_confirmations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_confirmations_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_proof_files: {
         Row: {
           created_at: string

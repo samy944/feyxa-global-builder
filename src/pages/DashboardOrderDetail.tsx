@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
 import OrderAttributionWidget from "@/components/dashboard/OrderAttributionWidget";
 import DeliveryProofSection from "@/components/dashboard/DeliveryProofSection";
+import DeliveryQRSection from "@/components/dashboard/DeliveryQRSection";
 import { toast } from "sonner";
 
 type OrderStatus = "new" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled" | "refunded" | "dispute";
@@ -599,6 +600,11 @@ export default function DashboardOrderDetail() {
             >
               <FileDown size={12} className="mr-1" /> Télécharger la facture PDF
             </Button>
+            <DeliveryQRSection
+              orderId={order.id}
+              storeId={store!.id}
+              orderStatus={order.status}
+            />
           </motion.div>
 
           {/* Customer card */}
