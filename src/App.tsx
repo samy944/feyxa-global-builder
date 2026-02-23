@@ -40,6 +40,7 @@ import TrackingRedirect from "./pages/TrackingRedirect";
 import AdminPayouts from "./pages/AdminPayouts";
 import AdminReviews from "./pages/AdminReviews";
 import MyOrders from "./pages/MyOrders";
+import DashboardCustomers from "./pages/DashboardCustomers";
 import DashboardShipping from "./pages/DashboardShipping";
 import DashboardTickets from "./pages/DashboardTickets";
 import DashboardReturns from "./pages/DashboardReturns";
@@ -70,6 +71,7 @@ const App = () => (
               <Route index element={<DashboardOverview />} />
               <Route path="products" element={<DashboardProducts />} />
               <Route path="orders" element={<DashboardOrders />} />
+              <Route path="customers" element={<DashboardCustomers />} />
               <Route path="wallet" element={<DashboardWallet />} />
               <Route path="insights" element={<DashboardInsights />} />
               <Route path="trends" element={<DashboardTrends />} />
