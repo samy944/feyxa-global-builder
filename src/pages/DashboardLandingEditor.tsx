@@ -4,39 +4,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LandingSectionRenderer } from "@/components/landing/LandingSectionRenderer";
-import { LandingSection, SectionType, BLOCK_LIBRARY, BlockDefinition, getBlockDefinition } from "@/lib/landing-templates";
+import { LandingSection, SectionType, BLOCK_LIBRARY, getBlockDefinition } from "@/lib/landing-templates";
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
+  arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft, Eye, Save, Plus, Trash2, GripVertical, Monitor, Smartphone, Tablet,
-  Settings2, Palette, Search, Copy, EyeOff, Undo2, Redo2, History, Layers, Maximize2, X, Sparkles, Wand2, ImagePlus, FileText,
+  Palette, Search, Copy, EyeOff, Undo2, Redo2, History, Layers, Maximize2, X, Sparkles, Wand2, FileText, Brush,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ImageUploader } from "@/components/landing/ImageUploader";
 import { AiOptimizeDialog } from "@/components/dashboard/AiOptimizeDialog";
 import { AiDesignDialog } from "@/components/dashboard/AiDesignDialog";
 import { LandingThemePresets } from "@/components/dashboard/LandingThemePresets";
 import { AiImageDialog } from "@/components/dashboard/AiImageDialog";
+import { BuilderCanvas } from "@/components/builder/BuilderCanvas";
+import { SectionDataEditor } from "@/components/builder/SectionDataEditor";
+import { SectionStyleEditor } from "@/components/builder/SectionStyleEditor";
+import { LandingSectionRenderer } from "@/components/landing/LandingSectionRenderer";
 
 const BLOCK_CATEGORIES = [
   { key: "essential", label: "Essentiels" },
@@ -47,21 +38,11 @@ const BLOCK_CATEGORIES = [
   { key: "advanced", label: "Avancé" },
 ] as const;
 
-// Sortable layer item
+// Sortable layer item (left panel)
 function SortableLayerItem({
-  section,
-  isSelected,
-  onSelect,
-  onRemove,
-  onToggleVisibility,
-  onDuplicate,
+  section, isSelected, onSelect, onRemove, onToggleVisibility, onDuplicate,
 }: {
-  section: LandingSection;
-  isSelected: boolean;
-  onSelect: () => void;
-  onRemove: () => void;
-  onToggleVisibility: () => void;
-  onDuplicate: () => void;
+  section: LandingSection; isSelected: boolean; onSelect: () => void; onRemove: () => void; onToggleVisibility: () => void; onDuplicate: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
@@ -102,12 +83,8 @@ export default function DashboardLandingEditor() {
   const [landing, setLanding] = useState<any>(null);
   const [sections, setSections] = useState<LandingSection[]>([]);
   const [theme, setTheme] = useState({
-    primaryColor: "#3b82f6",
-    bgColor: "#ffffff",
-    textColor: "#0f172a",
-    radius: "0.75rem",
-    fontHeading: "Clash Display",
-    fontBody: "Manrope",
+    primaryColor: "#3b82f6", bgColor: "#ffffff", textColor: "#0f172a",
+    radius: "0.75rem", fontHeading: "Clash Display", fontBody: "Manrope",
   });
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDesc, setSeoDesc] = useState("");
@@ -131,12 +108,12 @@ export default function DashboardLandingEditor() {
   const seoTitleRef = useRef(seoTitle);
   const seoDescRef = useRef(seoDesc);
   const abEnabledRef = useRef(abEnabled);
-
-  // Multi-page state
   const [subpages, setSubpages] = useState<any[]>([]);
   const [activeSubpageId, setActiveSubpageId] = useState<string | null>(null);
   const [showAiImage, setShowAiImage] = useState(false);
   const [aiImageTargetField, setAiImageTargetField] = useState<{ sectionId: string; field: string } | null>(null);
+  const [rightTab, setRightTab] = useState<"content" | "style">("content");
+  const [showInsertMenu, setShowInsertMenu] = useState<number | null>(null);
 
   // Keep refs in sync
   useEffect(() => { sectionsRef.current = sections; }, [sections]);
@@ -177,13 +154,14 @@ export default function DashboardLandingEditor() {
       if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
       if ((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) { e.preventDefault(); redo(); }
       if (e.key === "Delete" && selectedSectionId) { removeSection(selectedSectionId); }
+      if (e.key === "Escape") { setSelectedSectionId(null); setShowInsertMenu(null); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo, selectedSectionId]);
 
-  // DnD sensors
-  const sensors = useSensors(
+  // DnD sensors for layers panel
+  const layerSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
@@ -203,12 +181,8 @@ export default function DashboardLandingEditor() {
         setSeoDesc(data.seo_description || "");
         setAbEnabled(data.ab_enabled || false);
 
-        // Fetch subpages
         const { data: subs } = await supabase
-          .from("landing_subpages")
-          .select("*")
-          .eq("landing_page_id", id)
-          .order("sort_order");
+          .from("landing_subpages").select("*").eq("landing_page_id", id).order("sort_order");
 
         if (subs && subs.length > 0) {
           setSubpages(subs);
@@ -227,92 +201,50 @@ export default function DashboardLandingEditor() {
       });
   }, [id]);
 
-  // Fetch revisions
   useEffect(() => {
     if (!id) return;
-    supabase
-      .from("landing_revisions")
-      .select("id, created_at, label")
-      .eq("landing_page_id", id)
-      .order("created_at", { ascending: false })
-      .limit(20)
+    supabase.from("landing_revisions").select("id, created_at, label")
+      .eq("landing_page_id", id).order("created_at", { ascending: false }).limit(20)
       .then(({ data }) => setRevisions(data || []));
   }, [id, lastSaved]);
 
   const handleSave = async (silent = false) => {
     if (!id) return;
     setSaving(true);
-
-    // Save revision only on manual save
     if (!silent) {
       await supabase.from("landing_revisions").insert({
-        landing_page_id: id,
-        sections: sectionsRef.current as any,
-        theme: themeRef.current as any,
-        label: `v${revisions.length + 1}`,
+        landing_page_id: id, sections: sectionsRef.current as any,
+        theme: themeRef.current as any, label: `v${revisions.length + 1}`,
       });
     }
-
-    // If multi-page mode, save to the active subpage
     if (activeSubpageId) {
-      await supabase
-        .from("landing_subpages")
-        .update({ sections: sectionsRef.current as any })
-        .eq("id", activeSubpageId);
+      await supabase.from("landing_subpages").update({ sections: sectionsRef.current as any }).eq("id", activeSubpageId);
     }
-
-    const { error } = await supabase
-      .from("landing_pages")
-      .update({
-        sections: activeSubpageId ? (landing?.sections || []) : sectionsRef.current as any,
-        theme: themeRef.current as any,
-        seo_title: seoTitleRef.current,
-        seo_description: seoDescRef.current,
-        ab_enabled: abEnabledRef.current,
-      })
-      .eq("id", id);
+    const { error } = await supabase.from("landing_pages").update({
+      sections: activeSubpageId ? (landing?.sections || []) : sectionsRef.current as any,
+      theme: themeRef.current as any, seo_title: seoTitleRef.current,
+      seo_description: seoDescRef.current, ab_enabled: abEnabledRef.current,
+    }).eq("id", id);
 
     setSaving(false);
     setIsDirty(false);
-    if (error) {
-      if (!silent) toast.error(error.message);
-    } else {
-      setLastSaved(new Date());
-      if (!silent) toast.success("Sauvegardé !");
-    }
+    if (error) { if (!silent) toast.error(error.message); }
+    else { setLastSaved(new Date()); if (!silent) toast.success("Sauvegardé !"); }
   };
 
-  // === Subpage management ===
+  // Subpage management
   const addSubpage = async () => {
     if (!id) return;
     const title = `Page ${subpages.length + 1}`;
     const slug = `page-${subpages.length + 1}`;
     const isHome = subpages.length === 0;
-
-    // If first subpage, migrate current sections
     const migratedSections = isHome ? sectionsRef.current : [];
-
-    const { data, error } = await supabase
-      .from("landing_subpages")
-      .insert({
-        landing_page_id: id,
-        title,
-        slug,
-        sections: migratedSections as any,
-        sort_order: subpages.length,
-        is_home: isHome,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
+    const { data, error } = await supabase.from("landing_subpages")
+      .insert({ landing_page_id: id, title, slug, sections: migratedSections as any, sort_order: subpages.length, is_home: isHome })
+      .select().single();
+    if (error) { toast.error(error.message); return; }
     if (data) {
-      const newSubs = [...subpages, data];
-      setSubpages(newSubs);
+      setSubpages([...subpages, data]);
       setActiveSubpageId(data.id);
       const s = (data.sections as unknown as LandingSection[]) || [];
       setSections(s);
@@ -322,14 +254,9 @@ export default function DashboardLandingEditor() {
   };
 
   const switchSubpage = async (subpageId: string) => {
-    // Save current subpage first if dirty
     if (isDirty && activeSubpageId) {
-      await supabase
-        .from("landing_subpages")
-        .update({ sections: sectionsRef.current as any })
-        .eq("id", activeSubpageId);
+      await supabase.from("landing_subpages").update({ sections: sectionsRef.current as any }).eq("id", activeSubpageId);
     }
-
     const sub = subpages.find(s => s.id === subpageId);
     if (!sub) return;
     setActiveSubpageId(subpageId);
@@ -341,18 +268,14 @@ export default function DashboardLandingEditor() {
   };
 
   const renameSubpage = async (subpageId: string, newTitle: string) => {
-    await supabase
-      .from("landing_subpages")
+    await supabase.from("landing_subpages")
       .update({ title: newTitle, slug: newTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") })
       .eq("id", subpageId);
     setSubpages(subpages.map(s => s.id === subpageId ? { ...s, title: newTitle } : s));
   };
 
   const deleteSubpage = async (subpageId: string) => {
-    if (subpages.length <= 1) {
-      toast.error("Impossible de supprimer la dernière page");
-      return;
-    }
+    if (subpages.length <= 1) { toast.error("Impossible de supprimer la dernière page"); return; }
     await supabase.from("landing_subpages").delete().eq("id", subpageId);
     const remaining = subpages.filter(s => s.id !== subpageId);
     setSubpages(remaining);
@@ -366,28 +289,17 @@ export default function DashboardLandingEditor() {
     toast.success("Page supprimée");
   };
 
-  // Autosave every 30s when dirty
+  // Autosave
   useEffect(() => {
-    autosaveRef.current = setInterval(() => {
-      if (isDirty && id) {
-        handleSave(true);
-      }
-    }, 30000);
-    return () => {
-      if (autosaveRef.current) clearInterval(autosaveRef.current);
-    };
+    autosaveRef.current = setInterval(() => { if (isDirty && id) handleSave(true); }, 30000);
+    return () => { if (autosaveRef.current) clearInterval(autosaveRef.current); };
   }, [isDirty, id]);
 
   const handleRestoreRevision = async (revisionId: string) => {
-    const { data } = await supabase
-      .from("landing_revisions")
-      .select("sections, theme")
-      .eq("id", revisionId)
-      .single();
+    const { data } = await supabase.from("landing_revisions").select("sections, theme").eq("id", revisionId).single();
     if (data) {
       const s = (data.sections as unknown as LandingSection[]) || [];
-      setSections(s);
-      pushHistory(s);
+      setSections(s); pushHistory(s);
       if (data.theme) setTheme(prev => ({ ...prev, ...(data.theme as any) }));
       setShowRevisions(false);
       toast.success("Révision restaurée");
@@ -404,13 +316,35 @@ export default function DashboardLandingEditor() {
     const block = getBlockDefinition(type);
     const newSection: LandingSection = {
       id: Math.random().toString(36).slice(2, 10),
-      type,
-      visible: true,
+      type, visible: true,
       data: JSON.parse(JSON.stringify(block?.defaultData || {})),
     };
     updateSections([...sections, newSection]);
     setSelectedSectionId(newSection.id);
     setLeftTab("layers");
+  };
+
+  const insertSectionAt = (type: SectionType, atIndex: number) => {
+    const block = getBlockDefinition(type);
+    const newSection: LandingSection = {
+      id: Math.random().toString(36).slice(2, 10),
+      type, visible: true,
+      data: JSON.parse(JSON.stringify(block?.defaultData || {})),
+    };
+    const arr = [...sections];
+    // Map visible index to actual index
+    const visibleSections = sections.filter(s => s.visible);
+    let actualIndex = atIndex;
+    if (atIndex < visibleSections.length) {
+      const targetSection = visibleSections[atIndex];
+      actualIndex = sections.findIndex(s => s.id === targetSection.id);
+    } else {
+      actualIndex = sections.length;
+    }
+    arr.splice(actualIndex, 0, newSection);
+    updateSections(arr);
+    setSelectedSectionId(newSection.id);
+    setShowInsertMenu(null);
   };
 
   const removeSection = (sectionId: string) => {
@@ -437,7 +371,12 @@ export default function DashboardLandingEditor() {
     setIsDirty(true);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const updateSectionStyle = (sectionId: string, newStyle: Record<string, any>) => {
+    setSections(sections.map(s => s.id === sectionId ? { ...s, data: { ...s.data, _style: newStyle } } : s));
+    setIsDirty(true);
+  };
+
+  const handleLayerDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = sections.findIndex(s => s.id === active.id);
@@ -447,15 +386,13 @@ export default function DashboardLandingEditor() {
   };
 
   const selectedSection = sections.find(s => s.id === selectedSectionId);
+  const canvasTheme = previewTheme || theme;
 
   const filteredBlocks = useMemo(() => {
     if (!blockSearch) return BLOCK_LIBRARY;
     const q = blockSearch.toLowerCase();
     return BLOCK_LIBRARY.filter(b => b.label.toLowerCase().includes(q) || b.type.toLowerCase().includes(q));
   }, [blockSearch]);
-
-  const canvasTheme = previewTheme || theme;
-  const previewWidth = previewMode === "mobile" ? "w-[390px]" : previewMode === "tablet" ? "w-[768px]" : "w-full max-w-5xl";
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)]">
@@ -475,7 +412,6 @@ export default function DashboardLandingEditor() {
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          {/* Undo/Redo */}
           <Button size="icon" variant="ghost" onClick={undo} disabled={historyIndex <= 0} className="w-8 h-8" title="Annuler (Ctrl+Z)">
             <Undo2 className="w-4 h-4" />
           </Button>
@@ -483,38 +419,33 @@ export default function DashboardLandingEditor() {
             <Redo2 className="w-4 h-4" />
           </Button>
           <div className="w-px h-6 bg-border mx-1" />
-          {/* Viewport switcher */}
           <div className="flex border border-border rounded-lg overflow-hidden">
-            {[
+            {([
               { mode: "desktop" as const, icon: Monitor },
               { mode: "tablet" as const, icon: Tablet },
               { mode: "mobile" as const, icon: Smartphone },
-            ].map(({ mode, icon: Icon }) => (
+            ]).map(({ mode, icon: Icon }) => (
               <button key={mode} onClick={() => setPreviewMode(mode)} className={`px-2 py-1 ${previewMode === mode ? "bg-primary/10 text-primary" : "text-muted-foreground"}`}>
                 <Icon className="w-4 h-4" />
               </button>
             ))}
           </div>
           <div className="w-px h-6 bg-border mx-1" />
-          {/* Revisions */}
           <Button size="sm" variant="ghost" onClick={() => setShowRevisions(!showRevisions)} title="Historique">
             <History className="w-4 h-4" />
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setShowAiDesign(true)} className="gap-1.5 text-violet-600 border-violet-300 hover:bg-violet-50">
+          <Button size="sm" variant="outline" onClick={() => setShowAiDesign(true)} className="gap-1.5 text-violet-600 border-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950">
             <Wand2 className="w-4 h-4" /> Design IA
           </Button>
           <Button size="sm" variant="outline" onClick={() => setShowAiOptimize(true)} className="gap-1.5 text-primary border-primary/30 hover:bg-primary/5">
             <Sparkles className="w-4 h-4" /> Copywriting IA
           </Button>
-          
           <Button size="sm" variant="outline" onClick={() => setShowFullPreview(true)} title="Preview plein écran">
             <Maximize2 className="w-4 h-4 mr-1" /> Preview
           </Button>
           {landing?.slug && (
             <Button size="sm" variant="ghost" asChild title="Ouvrir dans un nouvel onglet">
-              <a href={`/lp/${landing.slug}`} target="_blank" rel="noopener noreferrer">
-                <Eye className="w-4 h-4" />
-              </a>
+              <a href={`/lp/${landing.slug}`} target="_blank" rel="noopener noreferrer"><Eye className="w-4 h-4" /></a>
             </Button>
           )}
           <Button size="sm" onClick={() => handleSave(false)} disabled={saving}>
@@ -553,16 +484,13 @@ export default function DashboardLandingEditor() {
               )}
             </button>
           ))}
-          <button
-            onClick={addSubpage}
-            className="px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-md transition-colors flex items-center gap-1"
-          >
+          <button onClick={addSubpage} className="px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-md transition-colors flex items-center gap-1">
             <Plus className="w-3 h-3" /> Page
           </button>
         </div>
       )}
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* === LEFT SIDEBAR: Blocks Library + Layers === */}
         <div className="w-64 border-r border-border bg-card flex flex-col shrink-0">
           <div className="flex border-b border-border shrink-0">
@@ -607,7 +535,7 @@ export default function DashboardLandingEditor() {
               )}
 
               {leftTab === "layers" && (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <DndContext sensors={layerSensors} collisionDetection={closestCenter} onDragEnd={handleLayerDragEnd}>
                   <SortableContext items={sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-1.5">
                       {sections.map(s => (
@@ -629,99 +557,100 @@ export default function DashboardLandingEditor() {
           </ScrollArea>
         </div>
 
-        {/* === CENTER: Canvas Preview === */}
-        <div className="flex-1 bg-muted/30 overflow-y-auto flex justify-center p-4">
-          <div className={`bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300 ${previewWidth}`} style={{ backgroundColor: canvasTheme.bgColor }}>
-            {previewTheme && (
-              <div className="sticky top-0 z-10 bg-violet-600 text-white text-center py-1.5 text-xs font-medium flex items-center justify-center gap-2">
-                <Eye className="w-3.5 h-3.5" /> Aperçu du thème — survolez un preset ou cliquez pour appliquer
-              </div>
-            )}
-            {sections.filter(s => s.visible).length === 0 ? (
-              <div className="py-32 text-center text-muted-foreground">
-                <Plus className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <p className="text-lg mb-2">Aucune section</p>
-                <p className="text-sm">Ajoutez des blocs depuis le panneau de gauche</p>
-              </div>
-            ) : (
-              sections.filter(s => s.visible).map(s => (
-                <div
-                  key={s.id}
-                  onClick={() => setSelectedSectionId(s.id)}
-                  className={`relative cursor-pointer transition-all ${selectedSectionId === s.id ? "ring-2 ring-primary ring-offset-2" : "hover:ring-1 hover:ring-primary/20"}`}
-                >
-                  <LandingSectionRenderer section={s} theme={canvasTheme} onCtaClick={() => {}} />
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        {/* === CENTER: Visual Builder Canvas === */}
+        <BuilderCanvas
+          sections={sections}
+          theme={canvasTheme}
+          previewMode={previewMode}
+          selectedSectionId={selectedSectionId}
+          onSelectSection={setSelectedSectionId}
+          onUpdateSections={updateSections}
+          onRemoveSection={removeSection}
+          onDuplicateSection={duplicateSection}
+          onToggleVisibility={toggleSectionVisibility}
+          onInsertSection={insertSectionAt}
+          showInsertMenu={showInsertMenu}
+          onShowInsertMenu={setShowInsertMenu}
+        />
 
         {/* === RIGHT SIDEBAR: Properties Panel === */}
         <div className="w-72 border-l border-border bg-card flex flex-col shrink-0">
           {selectedSection ? (
             <>
               <div className="p-3 border-b border-border shrink-0">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <span>{getBlockDefinition(selectedSection.type)?.icon}</span>
                     {getBlockDefinition(selectedSection.type)?.label}
                   </h3>
-                  <Button size="icon" variant="ghost" className="w-6 h-6" onClick={() => setSelectedSectionId(null)}>
-                    ✕
-                  </Button>
+                  <Button size="icon" variant="ghost" className="w-6 h-6" onClick={() => setSelectedSectionId(null)}>✕</Button>
+                </div>
+                {/* Content / Style tabs */}
+                <div className="flex border border-border rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setRightTab("content")}
+                    className={`flex-1 py-1.5 text-[10px] font-medium flex items-center justify-center gap-1 transition-colors ${
+                      rightTab === "content" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <FileText className="w-3 h-3" /> Contenu
+                  </button>
+                  <button
+                    onClick={() => setRightTab("style")}
+                    className={`flex-1 py-1.5 text-[10px] font-medium flex items-center justify-center gap-1 transition-colors ${
+                      rightTab === "style" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Brush className="w-3 h-3" /> Style
+                  </button>
                 </div>
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-3">
-                  <SectionDataEditor
-                    section={selectedSection}
-                    onChange={(d) => updateSectionData(selectedSection.id, d)}
-                    onAiImage={(field) => {
-                      setAiImageTargetField({ sectionId: selectedSection.id, field });
-                      setShowAiImage(true);
-                    }}
-                  />
+                  {rightTab === "content" ? (
+                    <SectionDataEditor
+                      section={selectedSection}
+                      onChange={(d) => updateSectionData(selectedSection.id, d)}
+                      onAiImage={(field) => {
+                        setAiImageTargetField({ sectionId: selectedSection.id, field });
+                        setShowAiImage(true);
+                      }}
+                    />
+                  ) : (
+                    <SectionStyleEditor
+                      section={selectedSection}
+                      onChange={(style) => updateSectionStyle(selectedSection.id, style)}
+                    />
+                  )}
                 </div>
               </ScrollArea>
             </>
           ) : (
             <>
-              {/* Theme / SEO panel when nothing selected */}
               <div className="flex border-b border-border shrink-0">
                 {[
                   { key: "theme", icon: <Palette className="w-3.5 h-3.5" />, label: "Style" },
                   { key: "seo", icon: <Search className="w-3.5 h-3.5" />, label: "SEO" },
                 ].map(tab => (
-                  <button
-                    key={tab.key}
-                    onClick={() => {}}
-                    className="flex-1 py-2.5 text-xs font-medium flex items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground"
-                  >
+                  <button key={tab.key} className="flex-1 py-2.5 text-xs font-medium flex items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground">
                     {tab.icon} {tab.label}
                   </button>
                 ))}
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-3 space-y-4">
-                  {/* Theme presets */}
                   <LandingThemePresets
                     currentTheme={theme}
-                    onApply={(newTheme) => {
-                      setTheme(prev => ({ ...prev, ...newTheme }));
-                      setPreviewTheme(null);
-                      setIsDirty(true);
-                    }}
+                    onApply={(newTheme) => { setTheme(prev => ({ ...prev, ...newTheme })); setPreviewTheme(null); setIsDirty(true); }}
                     onPreview={(t) => setPreviewTheme(t ? { ...theme, ...t } : null)}
                   />
-                  {/* Theme controls */}
                   <div>
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Couleurs</p>
-                    {[
+                    {([
                       { label: "Principale", key: "primaryColor" as const },
                       { label: "Fond", key: "bgColor" as const },
                       { label: "Texte", key: "textColor" as const },
-                    ].map(c => (
+                    ]).map(c => (
                       <div key={c.key} className="flex items-center gap-2 mb-2">
                         <input type="color" value={theme[c.key]} onChange={e => { setTheme({ ...theme, [c.key]: e.target.value }); setIsDirty(true); }} className="w-7 h-7 rounded cursor-pointer border-0" />
                         <Label className="text-xs flex-1">{c.label}</Label>
@@ -771,9 +700,9 @@ export default function DashboardLandingEditor() {
           )}
         </div>
 
-        {/* Revisions Panel (overlay) */}
+        {/* Revisions Panel */}
         {showRevisions && (
-          <div className="absolute right-0 top-12 w-64 bg-card border-l border-border shadow-xl z-50 h-[calc(100vh-3.5rem-3rem)] overflow-y-auto">
+          <div className="absolute right-0 top-0 w-64 bg-card border-l border-border shadow-xl z-50 h-full overflow-y-auto">
             <div className="p-3 border-b border-border flex items-center justify-between">
               <h3 className="text-sm font-semibold">Historique</h3>
               <Button size="icon" variant="ghost" className="w-6 h-6" onClick={() => setShowRevisions(false)}>✕</Button>
@@ -786,9 +715,7 @@ export default function DashboardLandingEditor() {
                   <div key={r.id} className="p-2.5 rounded-lg border border-border text-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{r.label || "Révision"}</span>
-                      <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => handleRestoreRevision(r.id)}>
-                        Restaurer
-                      </Button>
+                      <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => handleRestoreRevision(r.id)}>Restaurer</Button>
                     </div>
                     <p className="text-muted-foreground text-[10px]">{new Date(r.created_at).toLocaleString()}</p>
                   </div>
@@ -806,11 +733,11 @@ export default function DashboardLandingEditor() {
             <span className="text-sm font-semibold text-foreground">{landing?.title} — Preview</span>
             <div className="flex items-center gap-2">
               <div className="flex border border-border rounded-lg overflow-hidden">
-                {[
-                  { mode: "desktop" as const, icon: Monitor, label: "Desktop" },
-                  { mode: "tablet" as const, icon: Tablet, label: "Tablet" },
-                  { mode: "mobile" as const, icon: Smartphone, label: "Mobile" },
-                ].map(({ mode, icon: Icon }) => (
+                {([
+                  { mode: "desktop" as const, icon: Monitor },
+                  { mode: "tablet" as const, icon: Tablet },
+                  { mode: "mobile" as const, icon: Smartphone },
+                ]).map(({ mode, icon: Icon }) => (
                   <button key={mode} onClick={() => setPreviewMode(mode)} className={`px-2.5 py-1.5 ${previewMode === mode ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}>
                     <Icon className="w-4 h-4" />
                   </button>
@@ -823,247 +750,54 @@ export default function DashboardLandingEditor() {
           </div>
           <div className="flex-1 overflow-y-auto flex justify-center bg-muted/30 p-4">
             <div
-              className={`bg-white shadow-xl rounded-lg overflow-hidden transition-all ${previewWidth}`}
+              className={`bg-white shadow-xl rounded-lg overflow-hidden transition-all ${previewMode === "mobile" ? "w-[390px]" : previewMode === "tablet" ? "w-[768px]" : "w-full max-w-5xl"}`}
               style={{ backgroundColor: theme.bgColor, fontFamily: `"${theme.fontBody}", sans-serif` }}
             >
               {sections.filter(s => s.visible).map(s => (
-                <LandingSectionRenderer key={s.id} section={s} theme={theme} onCtaClick={() => {}} />
+                <div key={s.id}>
+                  <div style={(() => {
+                    const st = s.data?._style || {};
+                    const r: React.CSSProperties = {};
+                    if (st.backgroundColor) r.backgroundColor = st.backgroundColor;
+                    if (st.paddingY !== undefined) { r.paddingTop = `${st.paddingY}px`; r.paddingBottom = `${st.paddingY}px`; }
+                    if (st.paddingX !== undefined) { r.paddingLeft = `${st.paddingX}px`; r.paddingRight = `${st.paddingX}px`; }
+                    return r;
+                  })()}>
+                    <LandingSectionRenderer section={s} theme={theme} onCtaClick={() => {}} />
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         </div>
       )}
-      {/* AI Optimize Dialog */}
+
+      {/* AI Dialogs */}
       <AiOptimizeDialog
-        open={showAiOptimize}
-        onOpenChange={setShowAiOptimize}
-        sections={sections}
-        seoTitle={seoTitle}
-        seoDescription={seoDesc}
-        storeName={landing?.title}
-        onApply={(newSections, newSeoTitle, newSeoDesc) => {
-          updateSections(newSections);
-          setSeoTitle(newSeoTitle);
-          setSeoDesc(newSeoDesc);
-          setIsDirty(true);
-        }}
+        open={showAiOptimize} onOpenChange={setShowAiOptimize}
+        sections={sections} seoTitle={seoTitle} seoDescription={seoDesc} storeName={landing?.title}
+        onApply={(newSections, newSeoTitle, newSeoDesc) => { updateSections(newSections); setSeoTitle(newSeoTitle); setSeoDesc(newSeoDesc); setIsDirty(true); }}
       />
-      {/* AI Design Dialog */}
       <AiDesignDialog
-        open={showAiDesign}
-        onOpenChange={setShowAiDesign}
-        sections={sections}
-        currentTheme={theme}
-        storeName={landing?.title}
-        storeId={landing?.store_id || ""}
+        open={showAiDesign} onOpenChange={setShowAiDesign}
+        sections={sections} currentTheme={theme} storeName={landing?.title} storeId={landing?.store_id || ""}
         onApply={(newSections, newTheme, newSeoTitle, newSeoDesc) => {
-          updateSections(newSections);
-          setTheme(prev => ({ ...prev, ...newTheme }));
-          setPreviewTheme(null);
-          if (newSeoTitle) setSeoTitle(newSeoTitle);
-          if (newSeoDesc) setSeoDesc(newSeoDesc);
-          setIsDirty(true);
+          updateSections(newSections); setTheme(prev => ({ ...prev, ...newTheme })); setPreviewTheme(null);
+          if (newSeoTitle) setSeoTitle(newSeoTitle); if (newSeoDesc) setSeoDesc(newSeoDesc); setIsDirty(true);
         }}
         onPreview={(t) => setPreviewTheme(t ? { ...theme, ...t } : null)}
       />
-      {/* AI Image Dialog */}
       <AiImageDialog
-        open={showAiImage}
-        onOpenChange={setShowAiImage}
-        storeId={landing?.store_id || ""}
-        context={landing?.title}
+        open={showAiImage} onOpenChange={setShowAiImage}
+        storeId={landing?.store_id || ""} context={landing?.title}
         onImageGenerated={(url) => {
           if (aiImageTargetField && selectedSectionId) {
             const section = sections.find(s => s.id === selectedSectionId);
-            if (section) {
-              updateSectionData(selectedSectionId, { ...section.data, [aiImageTargetField.field]: url });
-            }
+            if (section) updateSectionData(selectedSectionId, { ...section.data, [aiImageTargetField.field]: url });
           }
           setAiImageTargetField(null);
         }}
       />
-    </div>
-  );
-}
-
-// --- Generic section data editor ---
-function SectionDataEditor({ section, onChange, onAiImage }: { section: LandingSection; onChange: (d: any) => void; onAiImage?: (field: string) => void }) {
-  const { data } = section;
-  const set = (key: string, value: any) => onChange({ ...data, [key]: value });
-
-  const AiImageBtn = ({ field }: { field: string }) => (
-    onAiImage ? (
-      <button
-        onClick={() => onAiImage(field)}
-        className="text-[10px] text-violet-600 hover:text-violet-800 flex items-center gap-1 mt-1"
-      >
-        <Wand2 className="w-3 h-3" /> Générer avec l'IA
-      </button>
-    ) : null
-  );
-
-  return (
-    <div className="space-y-3 text-xs">
-      {data.title !== undefined && (
-        <div>
-          <Label className="text-[10px]">Titre</Label>
-          <Input value={data.title} onChange={e => set("title", e.target.value)} className="h-7 text-xs mt-0.5" />
-        </div>
-      )}
-      {data.subtitle !== undefined && (
-        <div>
-          <Label className="text-[10px]">Sous-titre</Label>
-          <Input value={data.subtitle} onChange={e => set("subtitle", e.target.value)} className="h-7 text-xs mt-0.5" />
-        </div>
-      )}
-      {data.ctaText !== undefined && (
-        <div>
-          <Label className="text-[10px]">Texte CTA</Label>
-          <Input value={data.ctaText} onChange={e => set("ctaText", e.target.value)} className="h-7 text-xs mt-0.5" />
-        </div>
-      )}
-      {data.text !== undefined && (
-        <div>
-          <Label className="text-[10px]">Texte</Label>
-          <Textarea value={data.text} onChange={e => set("text", e.target.value)} className="text-xs mt-0.5" rows={3} />
-        </div>
-      )}
-      {data.content !== undefined && (
-        <div>
-          <Label className="text-[10px]">Contenu</Label>
-          <Textarea value={data.content} onChange={e => set("content", e.target.value)} className="text-xs mt-0.5" rows={4} />
-        </div>
-      )}
-      {data.imageUrl !== undefined && (
-        <div>
-          <ImageUploader value={data.imageUrl} onChange={(v) => set("imageUrl", v)} label="Image" />
-          <AiImageBtn field="imageUrl" />
-        </div>
-      )}
-      {data.url !== undefined && section.type === "image" && (
-        <div>
-          <ImageUploader value={data.url} onChange={(v) => set("url", v)} label="Image" />
-          <AiImageBtn field="url" />
-        </div>
-      )}
-      {data.url !== undefined && section.type !== "image" && (
-        <div>
-          <Label className="text-[10px]">URL</Label>
-          <Input value={data.url} onChange={e => set("url", e.target.value)} className="h-7 text-xs mt-0.5" placeholder="https://..." />
-        </div>
-      )}
-      {data.beforeImage !== undefined && (
-        <div>
-          <ImageUploader value={data.beforeImage} onChange={(v) => set("beforeImage", v)} label="Image Avant" />
-          <AiImageBtn field="beforeImage" />
-        </div>
-      )}
-      {data.afterImage !== undefined && (
-        <div>
-          <ImageUploader value={data.afterImage} onChange={(v) => set("afterImage", v)} label="Image Après" />
-          <AiImageBtn field="afterImage" />
-        </div>
-      )}
-      {data.poster !== undefined && (
-        <ImageUploader value={data.poster} onChange={(v) => set("poster", v)} label="Poster vidéo" />
-      )}
-      {data.placeholder !== undefined && (
-        <div>
-          <Label className="text-[10px]">Placeholder</Label>
-          <Input value={data.placeholder} onChange={e => set("placeholder", e.target.value)} className="h-7 text-xs mt-0.5" />
-        </div>
-      )}
-      {data.buttonText !== undefined && (
-        <div>
-          <Label className="text-[10px]">Texte bouton</Label>
-          <Input value={data.buttonText} onChange={e => set("buttonText", e.target.value)} className="h-7 text-xs mt-0.5" />
-        </div>
-      )}
-      {data.phone !== undefined && (
-        <div>
-          <Label className="text-[10px]">Téléphone WhatsApp</Label>
-          <Input value={data.phone} onChange={e => set("phone", e.target.value)} className="h-7 text-xs mt-0.5" placeholder="+237..." />
-        </div>
-      )}
-      {data.message !== undefined && (
-        <div>
-          <Label className="text-[10px]">Message par défaut</Label>
-          <Input value={data.message} onChange={e => set("message", e.target.value)} className="h-7 text-xs mt-0.5" />
-        </div>
-      )}
-      {data.label !== undefined && (
-        <div>
-          <Label className="text-[10px]">Label</Label>
-          <Input value={data.label} onChange={e => set("label", e.target.value)} className="h-7 text-xs mt-0.5" />
-        </div>
-      )}
-      {data.endDate !== undefined && (
-        <div>
-          <Label className="text-[10px]">Date de fin</Label>
-          <Input type="datetime-local" value={data.endDate?.slice(0, 16)} onChange={e => set("endDate", new Date(e.target.value).toISOString())} className="h-7 text-xs mt-0.5" />
-        </div>
-      )}
-      {data.price !== undefined && typeof data.price === "string" && (
-        <div>
-          <Label className="text-[10px]">Prix affiché</Label>
-          <Input value={data.price} onChange={e => set("price", e.target.value)} className="h-7 text-xs mt-0.5" />
-        </div>
-      )}
-      {/* Headers for comparison table */}
-      {data.headers && Array.isArray(data.headers) && (
-        <div>
-          <Label className="text-[10px] mb-1 block">En-têtes</Label>
-          {data.headers.map((h: string, i: number) => (
-            <Input key={i} value={h} onChange={e => { const headers = [...data.headers]; headers[i] = e.target.value; set("headers", headers); }} className="h-6 text-[11px] mb-1" />
-          ))}
-        </div>
-      )}
-      {/* Rows for comparison table */}
-      {data.rows && Array.isArray(data.rows) && (
-        <div>
-          <Label className="text-[10px] mb-1 block">Lignes ({data.rows.length})</Label>
-          {data.rows.map((row: string[], ri: number) => (
-            <div key={ri} className="flex gap-1 mb-1">
-              {row.map((cell: string, ci: number) => (
-                <Input key={ci} value={cell} onChange={e => { const rows = data.rows.map((r: string[]) => [...r]); rows[ri][ci] = e.target.value; set("rows", rows); }} className="h-6 text-[10px]" />
-              ))}
-              <button onClick={() => { const rows = data.rows.filter((_: any, j: number) => j !== ri); set("rows", rows); }} className="text-[10px] text-destructive shrink-0">✕</button>
-            </div>
-          ))}
-          <Button size="sm" variant="outline" className="w-full h-6 text-[10px]" onClick={() => set("rows", [...data.rows, data.headers.map(() => "")])}>
-            <Plus className="w-3 h-3 mr-1" /> Ligne
-          </Button>
-        </div>
-      )}
-      {/* Items array editor */}
-      {data.items && Array.isArray(data.items) && (
-        <div>
-          <Label className="text-[10px] mb-1 block">{section.type === "faq" ? "Questions" : "Éléments"} ({data.items.length})</Label>
-          {data.items.map((item: any, i: number) => (
-            <div key={i} className="p-2 border border-border rounded mb-1.5 space-y-1">
-              {item.title !== undefined && <Input value={item.title} onChange={e => { const items = [...data.items]; items[i] = { ...items[i], title: e.target.value }; set("items", items); }} className="h-6 text-[10px]" placeholder="Titre" />}
-              {item.name !== undefined && <Input value={item.name} onChange={e => { const items = [...data.items]; items[i] = { ...items[i], name: e.target.value }; set("items", items); }} className="h-6 text-[10px]" placeholder="Nom" />}
-              {item.desc !== undefined && <Input value={item.desc} onChange={e => { const items = [...data.items]; items[i] = { ...items[i], desc: e.target.value }; set("items", items); }} className="h-6 text-[10px]" placeholder="Description" />}
-              {item.content !== undefined && <Input value={item.content} onChange={e => { const items = [...data.items]; items[i] = { ...items[i], content: e.target.value }; set("items", items); }} className="h-6 text-[10px]" placeholder="Contenu" />}
-              {item.label !== undefined && <Input value={item.label} onChange={e => { const items = [...data.items]; items[i] = { ...items[i], label: e.target.value }; set("items", items); }} className="h-6 text-[10px]" placeholder="Label" />}
-              {item.value !== undefined && <Input value={item.value} onChange={e => { const items = [...data.items]; items[i] = { ...items[i], value: e.target.value }; set("items", items); }} className="h-6 text-[10px]" placeholder="Valeur" />}
-              {item.text !== undefined && <Input value={item.text} onChange={e => { const items = [...data.items]; items[i] = { ...items[i], text: e.target.value }; set("items", items); }} className="h-6 text-[10px]" placeholder="Texte" />}
-              {item.q !== undefined && <Input value={item.q} onChange={e => { const items = [...data.items]; items[i] = { ...items[i], q: e.target.value }; set("items", items); }} className="h-6 text-[10px]" placeholder="Question" />}
-              {item.a !== undefined && <Input value={item.a} onChange={e => { const items = [...data.items]; items[i] = { ...items[i], a: e.target.value }; set("items", items); }} className="h-6 text-[10px]" placeholder="Réponse" />}
-              {item.icon !== undefined && <Input value={item.icon} onChange={e => { const items = [...data.items]; items[i] = { ...items[i], icon: e.target.value }; set("items", items); }} className="h-6 text-[10px]" placeholder="Icône (emoji)" />}
-              <button onClick={() => set("items", data.items.filter((_: any, j: number) => j !== i))} className="text-[9px] text-destructive">Supprimer</button>
-            </div>
-          ))}
-          <Button size="sm" variant="outline" className="w-full h-6 text-[10px]" onClick={() => {
-            const template = data.items[0] || {};
-            const newItem: any = {};
-            Object.keys(template).forEach(k => { newItem[k] = ""; });
-            set("items", [...data.items, newItem]);
-          }}>
-            <Plus className="w-3 h-3 mr-1" /> Ajouter
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
