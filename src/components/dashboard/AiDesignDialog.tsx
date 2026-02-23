@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Wand2, Check, ArrowLeft, Palette, Type, Layers } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -44,6 +46,7 @@ interface Props {
 export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, storeName, productName, onApply }: Props) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
+  const [themeOnly, setThemeOnly] = useState(false);
   const [step, setStep] = useState<Step>("prompt");
   const [result, setResult] = useState<{
     theme: ThemeResult;
@@ -60,24 +63,33 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("design-landing", {
-        body: { sections, prompt: prompt.trim(), storeName, productName, currentTheme },
+        body: { sections, prompt: prompt.trim(), storeName, productName, currentTheme, themeOnly },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const optimizedSections = (data.sections || []).map((s: any) => ({
-        ...s,
-        id: s.id || Math.random().toString(36).slice(2, 10),
-        visible: s.visible !== undefined ? s.visible : true,
-      }));
+      if (themeOnly) {
+        setResult({
+          theme: data.theme || currentTheme,
+          sections, // keep existing sections unchanged
+          seoTitle: "",
+          seoDescription: "",
+        });
+      } else {
+        const optimizedSections = (data.sections || []).map((s: any) => ({
+          ...s,
+          id: s.id || Math.random().toString(36).slice(2, 10),
+          visible: s.visible !== undefined ? s.visible : true,
+        }));
 
-      setResult({
-        theme: data.theme || currentTheme,
-        sections: optimizedSections,
-        seoTitle: data.seoTitle || "",
-        seoDescription: data.seoDescription || "",
-      });
+        setResult({
+          theme: data.theme || currentTheme,
+          sections: optimizedSections,
+          seoTitle: data.seoTitle || "",
+          seoDescription: data.seoDescription || "",
+        });
+      }
       setStep("preview");
     } catch (e: any) {
       console.error(e);
@@ -91,10 +103,11 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
     if (!result) return;
     onApply(result.sections, result.theme, result.seoTitle, result.seoDescription);
     onOpenChange(false);
-    toast.success("Design appliqué avec succès !");
+    toast.success(themeOnly ? "Thème appliqué avec succès !" : "Design appliqué avec succès !");
     setStep("prompt");
     setResult(null);
     setPrompt("");
+    setThemeOnly(false);
   };
 
   const handleClose = (v: boolean) => {
@@ -148,8 +161,15 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
                       {s.label}
                     </button>
                   ))}
-                </div>
               </div>
+
+              <div className="flex items-center gap-2 pt-1 border-t border-border">
+                <Switch checked={themeOnly} onCheckedChange={setThemeOnly} id="theme-only" />
+                <Label htmlFor="theme-only" className="text-xs cursor-pointer">
+                  Thème seul <span className="text-muted-foreground">(couleurs & polices uniquement, contenu inchangé)</span>
+                </Label>
+              </div>
+            </div>
             </div>
 
             <DialogFooter>
@@ -169,10 +189,10 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Wand2 className="w-5 h-5 text-primary" />
-                Aperçu du nouveau design
+                {themeOnly ? "Aperçu du nouveau thème" : "Aperçu du nouveau design"}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                « {prompt} »
+                « {prompt} » {themeOnly && <Badge variant="secondary" className="text-[9px] ml-1">Thème seul</Badge>}
               </DialogDescription>
             </DialogHeader>
 
@@ -212,7 +232,8 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
                   </div>
                 </div>
 
-                {/* Sections summary */}
+                {/* Sections summary — hidden in themeOnly mode */}
+                {!themeOnly && (
                 <div className="rounded-xl border border-border p-4 space-y-2">
                   <div className="flex items-center gap-2 mb-2">
                     <Layers className="w-4 h-4 text-primary" />
@@ -230,6 +251,7 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* SEO */}
                 {(result.seoTitle || result.seoDescription) && (

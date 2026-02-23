@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { sections, prompt, storeName, productName, currentTheme } = await req.json();
+    const { sections, prompt, storeName, productName, currentTheme, themeOnly } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -30,7 +30,36 @@ serve(async (req) => {
       "whatsapp-button", "sticky-cta", "before-after", "gallery",
     ];
 
-    const systemPrompt = `Tu es un designer expert en landing pages e-commerce, spécialisé dans la création de designs uniques et impactants pour le marché africain francophone.
+    const systemPrompt = themeOnly
+      ? `Tu es un designer expert en landing pages e-commerce pour le marché africain francophone.
+
+CONTEXTE:
+- Boutique: ${storeName || "N/A"}
+- Produit principal: ${productName || "N/A"}
+- Thème actuel: ${JSON.stringify(currentTheme || {})}
+
+TA MISSION:
+L'utilisateur va te donner une description du style visuel qu'il souhaite. Tu dois UNIQUEMENT générer un nouveau thème (couleurs et polices), SANS modifier les sections ni le contenu.
+
+GÉNÈRE UN THÈME COMPLET:
+- primaryColor: couleur HEX principale
+- bgColor: couleur HEX de fond
+- textColor: couleur HEX du texte
+- radius: border-radius CSS (ex: "0.75rem", "0", "1.5rem")
+- fontHeading: nom de police Google Fonts pour les titres
+- fontBody: nom de police Google Fonts pour le corps
+
+RÈGLES:
+- Choisis des polices Google Fonts RÉELLES
+- Les couleurs doivent être harmonieuses et adaptées au style demandé
+- Assure un bon contraste texte/fond
+- Renvoie UNIQUEMENT du JSON valide
+
+FORMAT DE RÉPONSE (JSON uniquement):
+{
+  "theme": { "primaryColor": "...", "bgColor": "...", "textColor": "...", "radius": "...", "fontHeading": "...", "fontBody": "..." }
+}`
+      : `Tu es un designer expert en landing pages e-commerce, spécialisé dans la création de designs uniques et impactants pour le marché africain francophone.
 
 CONTEXTE:
 - Boutique: ${storeName || "N/A"}
@@ -104,7 +133,9 @@ FORMAT DE RÉPONSE (JSON uniquement):
   "seoDescription": "..."
 }`;
 
-    const userPrompt = `PROMPT DU VENDEUR: "${prompt}"
+    const userPrompt = themeOnly
+      ? `PROMPT DU VENDEUR: "${prompt}"\n\nGénère uniquement un nouveau thème visuel (couleurs, polices, radius) correspondant au style demandé. Ne touche pas aux sections.`
+      : `PROMPT DU VENDEUR: "${prompt}"
 
 Sections actuelles de la landing page:
 ${JSON.stringify(sections, null, 2)}
