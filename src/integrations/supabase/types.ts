@@ -1532,6 +1532,7 @@ export type Database = {
           slug: string
           theme: Json | null
           updated_at: string
+          workspace_id: string | null
         }
         Insert: {
           ban_reason?: string | null
@@ -1553,6 +1554,7 @@ export type Database = {
           slug: string
           theme?: Json | null
           updated_at?: string
+          workspace_id?: string | null
         }
         Update: {
           ban_reason?: string | null
@@ -1574,8 +1576,17 @@ export type Database = {
           slug?: string
           theme?: Json | null
           updated_at?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stores_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_tickets: {
         Row: {
@@ -1997,6 +2008,65 @@ export type Database = {
           },
         ]
       }
+      workspace_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+          plan_limit_stores: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_user_id: string
+          plan_limit_stores?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+          plan_limit_stores?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2045,6 +2115,14 @@ export type Database = {
       }
       is_store_member: {
         Args: { _store_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_workspace_admin_or_owner: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      is_workspace_member: {
+        Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
       release_escrow: { Args: { _escrow_id: string }; Returns: boolean }
