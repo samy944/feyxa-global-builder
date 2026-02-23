@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSeoHead } from "@/hooks/useSeoHead";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
+import { getThemeById, type StorefrontTheme } from "@/lib/storefront-themes";
 
 interface StoreData {
   id: string;
@@ -119,6 +120,28 @@ export default function OneProductLanding() {
     ? Math.round((1 - product.price / product.compare_at_price) * 100)
     : null;
 
+  // Resolve storefront theme
+  const sfTheme: StorefrontTheme = useMemo(() => {
+    const themeObj = store?.theme as Record<string, any> | null;
+    const themeId = themeObj?.storefront_theme_id || "classic";
+    return getThemeById(themeId);
+  }, [store?.theme]);
+
+  // Load theme fonts
+  useEffect(() => {
+    if (!sfTheme) return;
+    const fonts = [sfTheme.fonts.heading, sfTheme.fonts.body].filter(
+      (f, i, arr) => arr.indexOf(f) === i
+    );
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = `https://fonts.googleapis.com/css2?${fonts.map((f) => `family=${f.replace(/ /g, "+")}:wght@400;500;600;700`).join("&")}&display=swap`;
+    document.head.appendChild(link);
+    return () => { document.head.removeChild(link); };
+  }, [sfTheme]);
+
+  const t = sfTheme; // short alias
+
   const handleAddToCart = () => {
     if (!product || !store) return;
     addItem({
@@ -165,7 +188,15 @@ export default function OneProductLanding() {
     );
   }
 
-  const primaryColor = store.theme?.primary || "hsl(106, 75%, 47%)";
+  const primaryColor = `hsl(${t.colors.primary})`;
+  const primaryFg = `hsl(${t.colors.primaryForeground})`;
+  const bgColor = `hsl(${t.colors.background})`;
+  const fgColor = `hsl(${t.colors.foreground})`;
+  const cardBg = `hsl(${t.colors.card})`;
+  const cardFg = `hsl(${t.colors.cardForeground})`;
+  const borderColor = `hsl(${t.colors.border})`;
+  const mutedFg = `hsl(${t.colors.mutedForeground})`;
+  const mutedBg = `hsl(${t.colors.muted})`;
 
   // Read custom config from store settings, fallback to defaults
   const lc = store.settings?.landing_config || {};
@@ -211,28 +242,44 @@ export default function OneProductLanding() {
   const faqs: { q: string; a: string }[] = lc.faqs?.length > 0 ? lc.faqs : defaultFaqs;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="min-h-screen"
+      style={{
+        backgroundColor: bgColor,
+        color: fgColor,
+        fontFamily: `"${t.fonts.body}", system-ui, sans-serif`,
+      }}
+    >
       {/* ── Minimal Header ── */}
-      <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-lg">
+      <header
+        className="sticky top-0 z-50 border-b backdrop-blur-lg"
+        style={{ backgroundColor: `hsl(${t.colors.card} / 0.85)`, borderColor }}
+      >
         <div className="container flex h-14 items-center justify-between">
           <Link to={`/store/${store.slug}`} className="flex items-center gap-2">
             <div
-              className="h-8 w-8 rounded-lg flex items-center justify-center text-primary-foreground font-bold text-sm"
-              style={{ backgroundColor: primaryColor }}
+              className={`h-8 w-8 ${t.style.borderRadius} flex items-center justify-center font-bold text-sm`}
+              style={{ backgroundColor: primaryColor, color: primaryFg }}
             >
               {store.name[0]}
             </div>
-            <span className="font-semibold text-foreground text-sm">{store.name}</span>
+            <span className="font-semibold text-sm" style={{ color: fgColor, fontFamily: `"${t.fonts.heading}", sans-serif` }}>
+              {store.name}
+            </span>
           </Link>
-          <Button size="sm" variant="hero" onClick={handleAddToCart}>
+          <button
+            className={`px-4 py-2 text-sm font-medium ${t.style.borderRadius}`}
+            style={{ backgroundColor: primaryColor, color: primaryFg }}
+            onClick={handleAddToCart}
+          >
             Commander
-          </Button>
+          </button>
         </div>
       </header>
 
       {/* ── HERO ── */}
-      <section className="relative overflow-hidden bg-hero">
-        <div className="absolute inset-0 grid-pattern opacity-40" />
+      <section className="relative overflow-hidden" style={{ background: `linear-gradient(160deg, hsl(${t.colors.foreground}) 0%, hsl(${t.colors.foreground} / 0.9) 100%)` }}>
+        <div className="absolute inset-0 grid-pattern opacity-20" />
         <div className="container relative py-16 md:py-24">
           <div className="grid md:grid-cols-2 gap-10 items-center">
             {/* Product Image */}
@@ -282,10 +329,10 @@ export default function OneProductLanding() {
               className="order-2 md:order-1 text-primary-foreground"
               initial="hidden" animate="visible"
             >
-              <motion.p variants={fadeUp} custom={0} className="text-primary font-semibold text-sm uppercase tracking-widest mb-3">
+              <motion.p variants={fadeUp} custom={0} className="font-semibold text-sm uppercase tracking-widest mb-3" style={{ color: primaryColor }}>
                 {store.name}
               </motion.p>
-              <motion.h1 variants={fadeUp} custom={1} className="font-heading text-3xl md:text-5xl lg:text-6xl leading-tight mb-4">
+              <motion.h1 variants={fadeUp} custom={1} className="text-3xl md:text-5xl lg:text-6xl leading-tight mb-4 font-bold" style={{ color: bgColor, fontFamily: `"${t.fonts.heading}", sans-serif` }}>
                 {product.name}
               </motion.h1>
               {product.description && (
@@ -300,9 +347,13 @@ export default function OneProductLanding() {
                 )}
               </motion.div>
               <motion.div variants={fadeUp} custom={4} className="flex flex-col sm:flex-row gap-3">
-                <Button size="lg" variant="hero" className="text-base px-10 py-6" onClick={handleAddToCart}>
-                  Commander maintenant <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
+                <button
+                  className={`text-base px-10 py-4 font-semibold ${t.style.borderRadius} flex items-center gap-2`}
+                  style={{ backgroundColor: primaryColor, color: primaryFg }}
+                  onClick={handleAddToCart}
+                >
+                  Commander maintenant <ArrowRight className="h-5 w-5" />
+                </button>
               </motion.div>
               <motion.div variants={fadeUp} custom={5} className="flex items-center gap-6 mt-6 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><Truck size={14} /> Livraison rapide</span>
@@ -315,17 +366,17 @@ export default function OneProductLanding() {
       </section>
 
       {/* ── BENEFITS ── */}
-      <section className="py-16 md:py-24 bg-background">
+      <section className="py-16 md:py-24" style={{ backgroundColor: bgColor }}>
         <div className="container">
           <motion.div
             className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }} transition={{ duration: 0.5 }}
           >
-            <h2 className="font-heading text-2xl md:text-4xl text-foreground mb-3">
+            <h2 className="text-2xl md:text-4xl font-bold mb-3" style={{ color: fgColor, fontFamily: `"${t.fonts.heading}", sans-serif` }}>
               {benefitsTitle}
             </h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
+            <p style={{ color: mutedFg }} className="max-w-md mx-auto">
               {benefitsSubtitle}
             </p>
           </motion.div>
@@ -339,13 +390,14 @@ export default function OneProductLanding() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08, duration: 0.5 }}
-                className="rounded-xl border border-border bg-card p-6 shadow-card hover:shadow-elevated transition-shadow"
+                className={`${t.style.borderRadius} border p-6 transition-shadow`}
+                style={{ backgroundColor: cardBg, borderColor, boxShadow: t.style.cardShadow }}
               >
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <Icon size={20} className="text-primary" />
+                <div className={`h-10 w-10 ${t.style.borderRadius} flex items-center justify-center mb-4`} style={{ backgroundColor: `hsl(${t.colors.primary} / 0.1)` }}>
+                  <Icon size={20} style={{ color: primaryColor }} />
                 </div>
-                <h3 className="font-semibold text-foreground mb-1">{b.title}</h3>
-                <p className="text-sm text-muted-foreground">{b.desc}</p>
+                <h3 className="font-semibold mb-1" style={{ color: cardFg }}>{b.title}</h3>
+                <p className="text-sm" style={{ color: mutedFg }}>{b.desc}</p>
               </motion.div>
               );
             })}
@@ -354,23 +406,23 @@ export default function OneProductLanding() {
       </section>
 
       {/* ── SOCIAL PROOF ── */}
-      <section className="py-16 md:py-24 bg-secondary/30">
+      <section className="py-16 md:py-24" style={{ backgroundColor: mutedBg }}>
         <div className="container">
           <motion.div
             className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }} transition={{ duration: 0.5 }}
           >
-            <h2 className="font-heading text-2xl md:text-4xl text-foreground mb-3">
+            <h2 className="text-2xl md:text-4xl font-bold mb-3" style={{ color: fgColor, fontFamily: `"${t.fonts.heading}", sans-serif` }}>
               {testimonialsTitle}
             </h2>
             <div className="flex items-center justify-center gap-2">
               <div className="flex">
                 {[1, 2, 3, 4, 5].map((s) => (
-                  <Star key={s} size={18} className="text-primary fill-primary" />
+                  <Star key={s} size={18} style={{ color: primaryColor, fill: primaryColor }} />
                 ))}
               </div>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm" style={{ color: mutedFg }}>
                 {product.review_count || 0} avis vérifiés
               </span>
             </div>
@@ -384,22 +436,23 @@ export default function OneProductLanding() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
-                className="rounded-xl border border-border bg-card p-6 shadow-card"
+                className={`${t.style.borderRadius} border p-6`}
+                style={{ backgroundColor: cardBg, borderColor, boxShadow: t.style.cardShadow }}
               >
                 <div className="flex gap-0.5 mb-3">
                   {Array.from({ length: review.rating }).map((_, j) => (
-                    <Star key={j} size={14} className="text-primary fill-primary" />
+                    <Star key={j} size={14} style={{ color: primaryColor, fill: primaryColor }} />
                   ))}
                 </div>
-                <p className="text-sm text-foreground mb-3">"{review.text}"</p>
+                <p className="text-sm mb-3" style={{ color: cardFg }}>"{review.text}"</p>
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                  <div className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs" style={{ backgroundColor: `hsl(${t.colors.primary} / 0.1)`, color: primaryColor }}>
                     {review.name[0]}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">{review.name}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <CheckCircle2 size={10} className="text-primary" /> Achat vérifié
+                    <p className="text-sm font-medium" style={{ color: cardFg }}>{review.name}</p>
+                    <p className="text-xs flex items-center gap-1" style={{ color: mutedFg }}>
+                      <CheckCircle2 size={10} style={{ color: primaryColor }} /> Achat vérifié
                     </p>
                   </div>
                 </div>
@@ -412,54 +465,55 @@ export default function OneProductLanding() {
             initial={{ opacity: 0 }} whileInView={{ opacity: 1 }}
             viewport={{ once: true }} transition={{ delay: 0.3 }}
           >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users size={16} className="text-primary" />
-              <span><strong className="text-foreground">{socialProofCount}</strong> clients satisfaits</span>
+            <div className="flex items-center gap-2 text-sm" style={{ color: mutedFg }}>
+              <Users size={16} style={{ color: primaryColor }} />
+              <span><strong style={{ color: fgColor }}>{socialProofCount}</strong> clients satisfaits</span>
             </div>
           </motion.div>
         </div>
       </section>
 
       {/* ── GARANTIE ── */}
-      <section className="py-16 md:py-24 bg-background">
+      <section className="py-16 md:py-24" style={{ backgroundColor: bgColor }}>
         <div className="container max-w-3xl">
           <motion.div
-            className="rounded-2xl border border-primary/20 bg-primary/5 p-8 md:p-12 text-center"
+            className={`${t.style.borderRadius} border p-8 md:p-12 text-center`}
+            style={{ borderColor: `hsl(${t.colors.primary} / 0.2)`, backgroundColor: `hsl(${t.colors.primary} / 0.05)` }}
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-              <Shield size={32} className="text-primary" />
+            <div className="h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: `hsl(${t.colors.primary} / 0.1)` }}>
+              <Shield size={32} style={{ color: primaryColor }} />
             </div>
-            <h2 className="font-heading text-2xl md:text-3xl text-foreground mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: fgColor, fontFamily: `"${t.fonts.heading}", sans-serif` }}>
               {guaranteeTitle}
             </h2>
-            <p className="text-muted-foreground max-w-lg mx-auto mb-6 leading-relaxed">
+            <p className="max-w-lg mx-auto mb-6 leading-relaxed" style={{ color: mutedFg }}>
               {guaranteeText}
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><RotateCcw size={14} className="text-primary" /> Retour gratuit</span>
-              <span className="flex items-center gap-1.5"><Shield size={14} className="text-primary" /> Remboursement intégral</span>
-              <span className="flex items-center gap-1.5"><Clock size={14} className="text-primary" /> Sous 48h</span>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm" style={{ color: mutedFg }}>
+              <span className="flex items-center gap-1.5"><RotateCcw size={14} style={{ color: primaryColor }} /> Retour gratuit</span>
+              <span className="flex items-center gap-1.5"><Shield size={14} style={{ color: primaryColor }} /> Remboursement intégral</span>
+              <span className="flex items-center gap-1.5"><Clock size={14} style={{ color: primaryColor }} /> Sous 48h</span>
             </div>
           </motion.div>
         </div>
       </section>
 
       {/* ── FAQ ── */}
-      <section className="py-16 md:py-24 bg-secondary/30">
+      <section className="py-16 md:py-24" style={{ backgroundColor: mutedBg }}>
         <div className="container max-w-2xl">
           <motion.div
             className="text-center mb-10"
             initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }} transition={{ duration: 0.5 }}
           >
-            <h2 className="font-heading text-2xl md:text-4xl text-foreground mb-3">
+            <h2 className="text-2xl md:text-4xl font-bold mb-3" style={{ color: fgColor, fontFamily: `"${t.fonts.heading}", sans-serif` }}>
               {faqTitle}
             </h2>
-            <p className="text-muted-foreground">
+            <p style={{ color: mutedFg }}>
               {faqSubtitle}
             </p>
           </motion.div>
@@ -475,12 +529,13 @@ export default function OneProductLanding() {
                 <AccordionItem
                   key={i}
                   value={`faq-${i}`}
-                  className="rounded-xl border border-border bg-card px-6 shadow-card"
+                  className={`${t.style.borderRadius} border px-6`}
+                  style={{ backgroundColor: cardBg, borderColor, boxShadow: t.style.cardShadow }}
                 >
-                  <AccordionTrigger className="text-left text-sm font-medium text-foreground hover:no-underline">
+                  <AccordionTrigger className="text-left text-sm font-medium hover:no-underline" style={{ color: cardFg }}>
                     {faq.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground">
+                  <AccordionContent className="text-sm" style={{ color: mutedFg }}>
                     {faq.a}
                   </AccordionContent>
                 </AccordionItem>
@@ -491,27 +546,31 @@ export default function OneProductLanding() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-border bg-card py-6">
+      <footer className="border-t py-6" style={{ backgroundColor: cardBg, borderColor }}>
         <div className="container text-center">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs" style={{ color: mutedFg }}>
             Boutique propulsée par{" "}
-            <Link to="/" className="text-primary hover:underline">Feyxa</Link>
+            <Link to="/" className="hover:underline" style={{ color: primaryColor }}>Feyxa</Link>
           </p>
         </div>
       </footer>
 
       {/* ── CTA STICKY ── */}
-      <div className="fixed bottom-0 inset-x-0 z-50 border-t border-border bg-card/95 backdrop-blur-lg p-3 md:p-4">
+      <div className="fixed bottom-0 inset-x-0 z-50 border-t backdrop-blur-lg p-3 md:p-4" style={{ backgroundColor: `hsl(${t.colors.card} / 0.95)`, borderColor }}>
         <div className="container flex items-center justify-between gap-4">
           <div className="flex items-baseline gap-2 min-w-0">
-            <span className="text-lg font-bold text-foreground truncate">{formatPrice(product.price)}</span>
+            <span className="text-lg font-bold truncate" style={{ color: fgColor }}>{formatPrice(product.price)}</span>
             {product.compare_at_price && product.compare_at_price > product.price && (
-              <span className="text-sm text-muted-foreground line-through hidden sm:inline">{formatPrice(product.compare_at_price)}</span>
+              <span className="text-sm line-through hidden sm:inline" style={{ color: mutedFg }}>{formatPrice(product.compare_at_price)}</span>
             )}
           </div>
-          <Button variant="hero" size="lg" className="shrink-0 px-8" onClick={handleAddToCart}>
-            <ShoppingBag className="mr-2 h-4 w-4" /> Commander
-          </Button>
+          <button
+            className={`shrink-0 px-8 py-3 font-medium ${t.style.borderRadius} flex items-center gap-2`}
+            style={{ backgroundColor: primaryColor, color: primaryFg }}
+            onClick={handleAddToCart}
+          >
+            <ShoppingBag className="h-4 w-4" /> Commander
+          </button>
         </div>
       </div>
 
