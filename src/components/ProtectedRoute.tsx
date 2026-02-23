@@ -24,7 +24,7 @@ export function AuthRoute({ children }: { children: React.ReactNode }) {
 export function VendorRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { hasStore, loading: storeLoading } = useStore();
-  const { role, loading: roleLoading } = useUserRole();
+  const { role, loading: roleLoading, isVendor } = useUserRole();
   const location = useLocation();
 
   if (authLoading || storeLoading || roleLoading) {
@@ -37,8 +37,8 @@ export function VendorRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  // If user is a client (not vendor), redirect to marketplace
-  if (role === "client") return <Navigate to="/market" replace />;
+  // If user is a client-only (not vendor), redirect to marketplace
+  if (!isVendor) return <Navigate to="/market" replace />;
 
   // If vendor has no store and isn't on onboarding, redirect there
   const isOnboarding = location.pathname === "/onboarding";

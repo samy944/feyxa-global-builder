@@ -52,6 +52,8 @@ import ConfirmDelivery from "./pages/ConfirmDelivery";
 import ClientDashboard from "./pages/ClientDashboard";
 import ClientOrders from "./pages/ClientOrders";
 import ClientProfile from "./pages/ClientProfile";
+import ClientWishlist from "./pages/ClientWishlist";
+import ClientOverview from "./pages/ClientOverview";
 
 const queryClient = new QueryClient();
 
@@ -126,7 +128,9 @@ const App = () => (
             <Route path="/account" element={
               <AuthRoute><ClientDashboard /></AuthRoute>
             }>
-              <Route index element={<ClientOrders />} />
+              <Route index element={<ClientOverview />} />
+              <Route path="orders" element={<ClientOrders />} />
+              <Route path="wishlist" element={<ClientWishlist />} />
               <Route path="profile" element={<ClientProfile />} />
             </Route>
             <Route path="*" element={<NotFound />} />
