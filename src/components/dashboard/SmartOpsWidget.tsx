@@ -18,16 +18,10 @@ const iconMap: Record<string, React.ElementType> = {
   star: Star,
 };
 
-const priorityStyles: Record<string, string> = {
-  high: "border-destructive/30 bg-destructive/5",
-  medium: "border-primary/30 bg-primary/5",
-  low: "border-border bg-secondary/30",
-};
-
-const priorityBadge: Record<string, { label: string; className: string }> = {
-  high: { label: "Urgent", className: "bg-destructive/10 text-destructive" },
-  medium: { label: "Important", className: "bg-primary/10 text-primary" },
-  low: { label: "À planifier", className: "bg-muted text-muted-foreground" },
+const priorityAccent: Record<string, string> = {
+  high: "bg-red-400",
+  medium: "bg-white/60",
+  low: "bg-white/20",
 };
 
 interface SmartOpsData {
@@ -177,40 +171,43 @@ export default function SmartOpsWidget() {
                     </div>
                   </div>
 
-                  {/* Priority actions */}
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Actions prioritaires
-                    </h3>
-                    {data.ai.actions.map((action, i) => {
-                      const Icon = iconMap[action.icon] || Star;
-                      const badge = priorityBadge[action.priority] || priorityBadge.low;
-                      return (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.1 }}
-                          className={`rounded-lg border p-4 ${priorityStyles[action.priority] || priorityStyles.low}`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="h-8 w-8 rounded-lg bg-card flex items-center justify-center shrink-0 mt-0.5">
-                              <Icon size={14} className="text-foreground" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-sm font-medium text-foreground">{action.title}</span>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${badge.className}`}>
-                                  {badge.label}
-                                </span>
+                  {/* Command Center */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground tracking-tight">
+                        Command Center
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Vos leviers stratégiques du jour.
+                      </p>
+                    </div>
+                    <div className="space-y-2.5">
+                      {data.ai.actions.map((action, i) => {
+                        const Icon = iconMap[action.icon] || Star;
+                        const accent = priorityAccent[action.priority] || priorityAccent.low;
+                        return (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: i * 0.08, duration: 0.2 }}
+                            className="group flex items-stretch gap-0 rounded-lg bg-[#141419] hover:bg-[#1a1a21] transition-colors duration-200 overflow-hidden"
+                          >
+                            <div className={`w-[3px] shrink-0 ${accent}`} />
+                            <div className="flex items-center gap-3 px-4 py-3.5 flex-1 min-w-0">
+                              <div className="h-8 w-8 rounded-md bg-white/[0.04] flex items-center justify-center shrink-0">
+                                <Icon size={15} className="text-[#9CA3AF]" />
                               </div>
-                              <p className="text-xs text-muted-foreground leading-relaxed">{action.description}</p>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-foreground leading-snug">{action.title}</p>
+                                <p className="text-xs font-normal text-[#9CA3AF] mt-0.5 leading-relaxed">{action.description}</p>
+                              </div>
+                              <ChevronRight size={14} className="text-[#9CA3AF]/40 group-hover:text-[#9CA3AF] transition-colors shrink-0" />
                             </div>
-                            <ChevronRight size={14} className="text-muted-foreground shrink-0 mt-1" />
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </>
               )}
