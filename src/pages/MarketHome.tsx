@@ -3,8 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
 import { MarketSearch } from "@/components/market/MarketSearch";
-import { MarketProductCard } from "@/components/market/MarketProductCard";
 import { MarketCategoryCard } from "@/components/market/MarketCategoryCard";
+import { MarketProductCard } from "@/components/market/MarketProductCard";
 import { Loader2 } from "lucide-react";
 
 interface MarketProduct {
@@ -60,22 +60,7 @@ export default function MarketHome() {
       .select("id, name, slug, image_url")
       .order("sort_order");
     if (!data) return;
-
-    const { data: countData } = await supabase
-      .from("products")
-      .select("marketplace_category_id")
-      .eq("is_published", true)
-      .eq("is_marketplace_published", true)
-      .gt("stock_quantity", 0);
-
-    const counts: Record<string, number> = {};
-    countData?.forEach((p) => {
-      if (p.marketplace_category_id) {
-        counts[p.marketplace_category_id] = (counts[p.marketplace_category_id] || 0) + 1;
-      }
-    });
-
-    setCategories(data.map((cat) => ({ ...cat, productCount: counts[cat.id] || 0 })));
+    setCategories(data);
   };
 
   const fetchProducts = async (offset = 0) => {
@@ -113,49 +98,63 @@ export default function MarketHome() {
 
   return (
     <MarketLayout>
-      {/* Hero — Apple minimal */}
+      {/* Hero */}
       <section
         className="relative flex flex-col items-center justify-center text-center"
         style={{
-          background: "#111114",
-          paddingTop: "clamp(5rem, 12vh, 9rem)",
-          paddingBottom: "clamp(4rem, 10vh, 7rem)",
+          background: "#0E0E11",
+          paddingTop: "clamp(6rem, 14vh, 10rem)",
+          paddingBottom: "clamp(5rem, 12vh, 8rem)",
         }}
       >
         <h1
-          className="font-heading text-foreground"
           style={{
-            fontSize: "clamp(3rem, 6vw + 1rem, 4.5rem)",
+            color: "#FFFFFF",
+            fontSize: "clamp(2.75rem, 6vw + 0.5rem, 4.5rem)",
             fontWeight: 600,
             letterSpacing: "-0.02em",
             lineHeight: 1.05,
           }}
         >
-          Feyxa Market
+          Commerce nouvelle génération.
         </h1>
         <p
-          className="mt-4 max-w-md mx-auto"
-          style={{ color: "#9CA3AF", fontSize: "1.05rem", fontWeight: 400, lineHeight: 1.6 }}
+          className="mt-5 mx-auto"
+          style={{
+            color: "#9CA3AF",
+            fontSize: "1.125rem",
+            fontWeight: 400,
+            lineHeight: 1.6,
+            maxWidth: "420px",
+          }}
         >
-          Découvrez l'essentiel.
+          Découvrez des produits d'exception.
         </p>
 
-        <div className="mt-10 w-full" style={{ maxWidth: "min(70%, 640px)", margin: "2.5rem auto 0" }}>
+        <div
+          className="mt-12 w-full px-4"
+          style={{ maxWidth: "min(70%, 600px)", margin: "3rem auto 0" }}
+        >
           <MarketSearch />
         </div>
       </section>
 
       {/* Categories */}
       {!query && (
-        <section className="py-20" style={{ background: "#111114" }}>
+        <section style={{ background: "#0E0E11", paddingTop: "4rem", paddingBottom: "5rem" }}>
           <div className="container">
             <h2
-              className="font-heading text-foreground mb-12 text-center"
-              style={{ fontSize: "1.5rem", fontWeight: 600, letterSpacing: "-0.01em" }}
+              className="text-center mb-14"
+              style={{
+                color: "#FFFFFF",
+                fontSize: "1.375rem",
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+              }}
             >
               Catégories
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-6 max-w-3xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 max-w-3xl mx-auto">
               {categories.map((cat, i) => (
                 <MarketCategoryCard key={cat.id} {...cat} index={i} />
               ))}
@@ -165,28 +164,31 @@ export default function MarketHome() {
       )}
 
       {/* Products */}
-      <section className="py-20" style={{ background: "#111114" }}>
+      <section style={{ background: "#0E0E11", paddingTop: "4rem", paddingBottom: "6rem" }}>
         <div className="container">
-          <div className="flex items-center justify-between mb-10">
-            <h2
-              className="font-heading text-foreground"
-              style={{ fontSize: "1.5rem", fontWeight: 600, letterSpacing: "-0.01em" }}
-            >
-              {query ? `Résultats pour « ${query} »` : "Produits récents"}
-            </h2>
-          </div>
+          <h2
+            className="mb-12"
+            style={{
+              color: "#FFFFFF",
+              fontSize: "1.375rem",
+              fontWeight: 600,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {query ? `Résultats pour « ${query} »` : "Produits récents"}
+          </h2>
 
           {loading ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 size={22} className="animate-spin" style={{ color: "#9CA3AF" }} />
+            <div className="flex items-center justify-center py-28">
+              <Loader2 size={20} className="animate-spin" style={{ color: "#6B7280" }} />
             </div>
           ) : products.length === 0 ? (
-            <div className="text-center py-24">
-              <p style={{ color: "#9CA3AF" }}>Aucun produit trouvé.</p>
+            <div className="text-center py-28">
+              <p style={{ color: "#6B7280", fontSize: "0.9375rem" }}>Aucun produit trouvé.</p>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
                 {products.map((p, i) => (
                   <MarketProductCard
                     key={p.id}
@@ -205,20 +207,20 @@ export default function MarketHome() {
                 ))}
               </div>
               {hasMore && (
-                <div className="flex justify-center mt-14">
+                <div className="flex justify-center mt-16">
                   <button
                     onClick={() => fetchProducts(products.length)}
                     disabled={loadingMore}
-                    className="inline-flex items-center gap-2 px-8 py-3 text-sm font-medium text-foreground transition-colors duration-200 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-8 py-3 text-sm transition-opacity duration-200 hover:opacity-80 disabled:opacity-50"
                     style={{
                       borderRadius: "0.5rem",
-                      border: "1px solid rgba(255,255,255,0.1)",
+                      border: "1px solid rgba(255,255,255,0.08)",
                       background: "transparent",
+                      color: "#FFFFFF",
+                      fontWeight: 500,
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
-                    {loadingMore && <Loader2 size={16} className="animate-spin" />}
+                    {loadingMore && <Loader2 size={15} className="animate-spin" />}
                     {loadingMore ? "Chargement…" : "Voir plus"}
                   </button>
                 </div>

@@ -28,31 +28,36 @@ interface MarketCategoryCardProps {
   index?: number;
 }
 
-export function MarketCategoryCard({ name, slug, image_url, index = 0 }: MarketCategoryCardProps) {
+export function MarketCategoryCard({ name, slug, image_url }: MarketCategoryCardProps) {
   const imgSrc = image_url || categoryImages[slug];
 
   return (
     <Link
       to={`/market/category/${slug}`}
-      className="group flex flex-col items-center gap-3 py-4 px-2 rounded-xl transition-colors duration-200"
-      style={{ background: "transparent" }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+      className="group flex flex-col items-center gap-3.5 py-5 px-2 transition-opacity duration-200 hover:opacity-80"
     >
-      <div className="h-20 w-20 rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+      <div
+        className="h-20 w-20 overflow-hidden"
+        style={{ borderRadius: "1.25rem", background: "#1A1A1F" }}
+      >
         {imgSrc ? (
           <img
             src={imgSrc}
             alt={name}
-            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center">
-            <span className="font-heading text-xl text-foreground">{name.charAt(0)}</span>
+            <span style={{ color: "#FFFFFF", fontWeight: 600, fontSize: "1.25rem" }}>
+              {name.charAt(0)}
+            </span>
           </div>
         )}
       </div>
-      <span className="text-sm text-center" style={{ color: "#E5E7EB", fontWeight: 500 }}>
+      <span
+        className="text-sm text-center"
+        style={{ color: "#C5CED6", fontWeight: 500 }}
+      >
         {name}
       </span>
     </Link>

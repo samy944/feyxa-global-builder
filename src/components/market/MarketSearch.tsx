@@ -21,19 +21,23 @@ export function MarketSearch({ placeholder = "Rechercher un produit, une marqueâ
 
   return (
     <form onSubmit={handleSubmit} className={`relative ${className}`}>
-      <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "#6B7280" }} />
+      <Search
+        size={16}
+        className="absolute left-4 top-1/2 -translate-y-1/2"
+        style={{ color: "#6B7280" }}
+      />
       <input
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-12 pl-11 pr-5 text-sm text-foreground transition-colors duration-200 focus:outline-none"
+        className="w-full h-12 pl-11 pr-5 text-sm transition-colors duration-200 focus:outline-none"
         style={{
-          background: "rgba(255,255,255,0.04)",
+          background: "rgba(255,255,255,0.03)",
           border: "1px solid rgba(255,255,255,0.08)",
           borderRadius: "0.625rem",
+          color: "#FFFFFF",
           fontWeight: 400,
-          color: "#F8FAFC",
         }}
         onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)"; }}
         onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
