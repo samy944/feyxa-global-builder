@@ -7,7 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { CartDrawer } from "@/components/market/CartDrawer";
 import { ThemeProvider } from "@/hooks/useTheme";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { VendorRoute, AuthRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -66,10 +66,10 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/onboarding" element={
-              <ProtectedRoute><Onboarding /></ProtectedRoute>
+              <VendorRoute><Onboarding /></VendorRoute>
             } />
             <Route path="/dashboard" element={
-              <ProtectedRoute><DashboardLayout /></ProtectedRoute>
+              <VendorRoute><DashboardLayout /></VendorRoute>
             }>
               <Route index element={<DashboardOverview />} />
               <Route path="products" element={<DashboardProducts />} />
@@ -105,19 +105,19 @@ const App = () => (
             <Route path="/track/:orderNumber" element={<TrackOrder />} />
             <Route path="/confirm-delivery/:token" element={<ConfirmDelivery />} />
             <Route path="/admin/payouts" element={
-              <ProtectedRoute><AdminPayouts /></ProtectedRoute>
+              <VendorRoute><AdminPayouts /></VendorRoute>
             } />
             <Route path="/admin/reviews" element={
-              <ProtectedRoute><AdminReviews /></ProtectedRoute>
+              <VendorRoute><AdminReviews /></VendorRoute>
             } />
             <Route path="/admin/tickets" element={
-              <ProtectedRoute><AdminTickets /></ProtectedRoute>
+              <VendorRoute><AdminTickets /></VendorRoute>
             } />
             <Route path="/admin/returns" element={
-              <ProtectedRoute><AdminReturns /></ProtectedRoute>
+              <VendorRoute><AdminReturns /></VendorRoute>
             } />
             <Route path="/my-orders" element={
-              <ProtectedRoute><MyOrders /></ProtectedRoute>
+              <AuthRoute><MyOrders /></AuthRoute>
             } />
             <Route path="*" element={<NotFound />} />
           </Routes>
