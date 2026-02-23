@@ -1,21 +1,23 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useSeoHead } from "@/hooks/useSeoHead";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
 import { ProductReviews } from "@/components/market/ProductReviews";
 import { VariantSelector } from "@/components/market/VariantSelector";
 import { SimilarProducts } from "@/components/market/SimilarProducts";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import {
   Loader2, ChevronRight, Store, MapPin, Truck, RotateCcw, Shield,
   ShoppingBag, Star, Heart, Share2, Minus, Plus, Check, Package,
-  Clock, Eye, ChevronLeft, ZoomIn, X, BadgePercent, Award
+  ChevronLeft, ZoomIn, X, BadgePercent, Award, Eye, Zap, Clock,
+  Users, ThumbsUp, ArrowRight, ShoppingCart, Flame, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 import { initStoreTracking, trackViewContent, trackAddToCart } from "@/lib/tracking";
@@ -59,20 +61,193 @@ interface ProductDetail {
   };
 }
 
+/* ── Fake social proof for engagement ── */
+function useFakeSocialProof() {
+  const [viewers, setViewers] = useState(0);
+  const [recentBuyers, setRecentBuyers] = useState(0);
+  useEffect(() => {
+    setViewers(Math.floor(Math.random() * 18) + 5);
+    setRecentBuyers(Math.floor(Math.random() * 40) + 12);
+    const interval = setInterval(() => {
+      setViewers(v => Math.max(3, v + (Math.random() > 0.5 ? 1 : -1)));
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+  return { viewers, recentBuyers };
+}
+
+/* ── Image gallery with vertical thumbnails ── */
+function ProductGallery({
+  images, name, discountPercent, isNew, selectedImage, setSelectedImage, setShowFullscreen
+}: {
+  images: string[];
+  name: string;
+  discountPercent: number;
+  isNew: boolean;
+  selectedImage: number;
+  setSelectedImage: (i: number) => void;
+  setShowFullscreen: (v: boolean) => void;
+}) {
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  const imgRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!imgRef.current) return;
+    const rect = imgRef.current.getBoundingClientRect();
+    setZoomPos({
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    });
+  };
+
+  return (
+    <div className="flex gap-3">
+      {/* Vertical thumbnails (desktop) */}
+      {images.length > 1 && (
+        <div className="hidden lg:flex flex-col gap-2 w-20 shrink-0">
+          {images.map((img, i) => (
+            <motion.button
+              key={i}
+              onClick={() => setSelectedImage(i)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`aspect-square rounded-xl border-2 overflow-hidden transition-all ${
+                i === selectedImage
+                  ? "border-primary ring-2 ring-primary/20"
+                  : "border-border hover:border-muted-foreground/40"
+              }`}
+            >
+              <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+            </motion.button>
+          ))}
+        </div>
+      )}
+
+      {/* Main image */}
+      <div className="flex-1 space-y-3">
+        <div
+          ref={imgRef}
+          className="relative aspect-square rounded-2xl border border-border bg-secondary overflow-hidden cursor-crosshair group"
+          onMouseEnter={() => setIsZoomed(true)}
+          onMouseLeave={() => setIsZoomed(false)}
+          onMouseMove={handleMouseMove}
+          onClick={() => images.length > 0 && setShowFullscreen(true)}
+        >
+          {images.length > 0 ? (
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={selectedImage}
+                src={images[selectedImage]}
+                alt={name}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="w-full h-full object-cover"
+                style={isZoomed ? {
+                  transform: "scale(2.5)",
+                  transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+                  transition: "transform-origin 0.1s ease"
+                } : { transition: "transform 0.3s ease" }}
+              />
+            </AnimatePresence>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground/20">
+              <Package size={100} />
+            </div>
+          )}
+
+          {/* Zoom hint */}
+          <div className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <ZoomIn size={12} /> Survolez pour zoomer
+          </div>
+
+          {/* Badges */}
+          <div className="absolute top-3 left-3 flex flex-col gap-2 pointer-events-none">
+            {discountPercent > 0 && (
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", bounce: 0.5 }}>
+                <Badge className="bg-destructive text-destructive-foreground font-bold text-sm px-3 py-1.5 shadow-lg">
+                  <Flame size={14} className="mr-1" /> -{discountPercent}%
+                </Badge>
+              </motion.div>
+            )}
+            {isNew && (
+              <Badge className="bg-primary text-primary-foreground font-semibold text-xs px-3 py-1">
+                ✨ NOUVEAU
+              </Badge>
+            )}
+          </div>
+
+          {/* Navigation arrows on hover */}
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); setSelectedImage(Math.max(0, selectedImage - 1)); }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background disabled:opacity-0"
+                disabled={selectedImage === 0}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setSelectedImage(Math.min(images.length - 1, selectedImage + 1)); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background disabled:opacity-0"
+                disabled={selectedImage === images.length - 1}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </>
+          )}
+
+          {/* Image counter */}
+          {images.length > 1 && (
+            <div className="absolute bottom-3 left-3 bg-background/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground font-medium pointer-events-none">
+              {selectedImage + 1} / {images.length}
+            </div>
+          )}
+        </div>
+
+        {/* Horizontal thumbnails (mobile) */}
+        {images.length > 1 && (
+          <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
+            {images.map((img, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedImage(i)}
+                className={`h-16 w-16 rounded-xl border-2 overflow-hidden shrink-0 transition-all ${
+                  i === selectedImage ? "border-primary" : "border-border"
+                }`}
+              >
+                <img src={img} alt="" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════ */
+/* ═══════════════ MAIN COMPONENT ═══════════════ */
+/* ═══════════════════════════════════════════════ */
+
 export default function MarketProduct() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [variants, setVariants] = useState<VariantData[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<VariantData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
   const [showFullscreen, setShowFullscreen] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
+  const [showStickyBar, setShowStickyBar] = useState(false);
   const { addItem } = useCart();
   const { toggle, isInWishlist } = useWishlist();
-  const imageRef = useRef<HTMLDivElement>(null);
+  const { viewers, recentBuyers } = useFakeSocialProof();
+  const ctaRef = useRef<HTMLDivElement>(null);
 
   const images: string[] = Array.isArray(product?.images) ? product.images : [];
   const pageUrl = typeof window !== "undefined" ? window.location.href : "";
@@ -88,6 +263,16 @@ export default function MarketProduct() {
     availability: product && product.stock_quantity > 0 ? "InStock" : "OutOfStock",
     brand: product?.stores?.name,
   });
+
+  // Sticky bar on scroll past CTA
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    if (ctaRef.current) observer.observe(ctaRef.current);
+    return () => observer.disconnect();
+  }, [product]);
 
   useEffect(() => {
     if (!slug) return;
@@ -125,6 +310,7 @@ export default function MarketProduct() {
   const handleVariantChange = useCallback((v: VariantData | null) => {
     setSelectedVariant(v);
     setQuantity(1);
+    setAddedToCart(false);
   }, []);
 
   const activePrice = selectedVariant ? selectedVariant.price : product?.price ?? 0;
@@ -139,14 +325,6 @@ export default function MarketProduct() {
     if (!product) return "";
     if (product.stores.currency === "XOF") return `${p.toLocaleString("fr-FR")} FCFA`;
     return `€${p.toFixed(2)}`;
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!imageRef.current) return;
-    const rect = imageRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setZoomPosition({ x, y });
   };
 
   const handleAddToCart = () => {
@@ -165,6 +343,13 @@ export default function MarketProduct() {
       maxStock: activeStock,
     }, quantity);
     trackAddToCart({ id: product.id, name: itemName, price: activePrice, currency: product.stores.currency, quantity });
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 3000);
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    navigate("/checkout");
   };
 
   const handleShare = async () => {
@@ -180,11 +365,19 @@ export default function MarketProduct() {
     ? (Date.now() - new Date(product.created_at).getTime()) < 14 * 24 * 60 * 60 * 1000
     : false;
 
+  // Stock percentage for progress bar
+  const stockPercent = useMemo(() => {
+    if (activeStock <= 0) return 0;
+    if (activeStock >= 50) return 100;
+    return Math.max(5, (activeStock / 50) * 100);
+  }, [activeStock]);
+
   if (loading) {
     return (
       <MarketLayout>
-        <div className="flex items-center justify-center py-40">
-          <Loader2 size={24} className="animate-spin text-primary" />
+        <div className="flex flex-col items-center justify-center py-40 gap-3">
+          <Loader2 size={28} className="animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Chargement du produit…</p>
         </div>
       </MarketLayout>
     );
@@ -193,9 +386,12 @@ export default function MarketProduct() {
   if (!product) {
     return (
       <MarketLayout>
-        <div className="text-center py-40">
+        <div className="text-center py-40 space-y-3">
+          <Package size={48} className="mx-auto text-muted-foreground/30" />
           <p className="text-muted-foreground">Produit introuvable.</p>
-          <Link to="/market" className="text-primary text-sm mt-2 inline-block">← Retour au Market</Link>
+          <Button variant="outline" asChild>
+            <Link to="/market">← Retour au Market</Link>
+          </Button>
         </div>
       </MarketLayout>
     );
@@ -203,63 +399,81 @@ export default function MarketProduct() {
 
   return (
     <MarketLayout>
-      {/* Fullscreen image viewer */}
+      {/* ═══ Fullscreen Lightbox ═══ */}
       <AnimatePresence>
         {showFullscreen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center"
+            className="fixed inset-0 z-50 bg-background/95 backdrop-blur-md flex items-center justify-center"
             onClick={() => setShowFullscreen(false)}
           >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-4 right-4 z-10"
-              onClick={() => setShowFullscreen(false)}
-            >
+            <Button variant="ghost" size="icon" className="absolute top-4 right-4 z-10 h-12 w-12" onClick={() => setShowFullscreen(false)}>
               <X size={24} />
             </Button>
-            <div className="flex items-center gap-4 max-w-4xl w-full px-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                onClick={(e) => { e.stopPropagation(); setSelectedImage(i => Math.max(0, i - 1)); }}
-                disabled={selectedImage === 0}
-              >
-                <ChevronLeft size={24} />
+            <div className="flex items-center gap-4 max-w-5xl w-full px-4">
+              <Button variant="ghost" size="icon" className="shrink-0 h-12 w-12" onClick={(e) => { e.stopPropagation(); setSelectedImage(i => Math.max(0, i - 1)); }} disabled={selectedImage === 0}>
+                <ChevronLeft size={28} />
               </Button>
-              <img
+              <motion.img
+                key={selectedImage}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
                 src={images[selectedImage]}
                 alt={product.name}
-                className="max-h-[80vh] w-full object-contain rounded-xl"
+                className="max-h-[85vh] w-full object-contain rounded-xl"
                 onClick={(e) => e.stopPropagation()}
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                onClick={(e) => { e.stopPropagation(); setSelectedImage(i => Math.min(images.length - 1, i + 1)); }}
-                disabled={selectedImage === images.length - 1}
-              >
-                <ChevronRight size={24} />
+              <Button variant="ghost" size="icon" className="shrink-0 h-12 w-12" onClick={(e) => { e.stopPropagation(); setSelectedImage(i => Math.min(images.length - 1, i + 1)); }} disabled={selectedImage === images.length - 1}>
+                <ChevronRight size={28} />
               </Button>
             </div>
-            {/* Thumbnails */}
-            <div className="absolute bottom-6 flex gap-2">
+            <div className="absolute bottom-8 flex gap-2.5">
               {images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={(e) => { e.stopPropagation(); setSelectedImage(i); }}
-                  className={`h-14 w-14 rounded-lg border-2 overflow-hidden transition-all ${
-                    i === selectedImage ? "border-primary scale-110" : "border-border/50 opacity-60 hover:opacity-100"
-                  }`}
-                >
+                <button key={i} onClick={(e) => { e.stopPropagation(); setSelectedImage(i); }}
+                  className={`h-16 w-16 rounded-xl border-2 overflow-hidden transition-all ${i === selectedImage ? "border-primary scale-110 shadow-glow" : "border-border/50 opacity-50 hover:opacity-100"}`}>
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ Desktop Sticky Top Bar ═══ */}
+      <AnimatePresence>
+        {showStickyBar && (
+          <motion.div
+            initial={{ y: -80 }}
+            animate={{ y: 0 }}
+            exit={{ y: -80 }}
+            transition={{ type: "spring", damping: 25 }}
+            className="fixed top-0 left-0 right-0 z-40 hidden lg:block bg-background/95 backdrop-blur-md border-b border-border shadow-card"
+          >
+            <div className="container max-w-7xl flex items-center justify-between py-2.5">
+              <div className="flex items-center gap-4 min-w-0">
+                {images[0] && <img src={images[0]} alt="" className="h-10 w-10 rounded-lg object-cover border border-border shrink-0" />}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{product.name}</p>
+                  <p className="text-xs text-muted-foreground">{product.stores.name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                {product.review_count > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Star size={12} className="fill-primary text-primary" />
+                    <span className="text-xs font-medium">{product.avg_rating.toFixed(1)}</span>
+                  </div>
+                )}
+                <span className="text-lg font-bold text-foreground">{formatPrice(activePrice)}</span>
+                {discountPercent > 0 && (
+                  <Badge variant="destructive" className="text-xs">-{discountPercent}%</Badge>
+                )}
+                <Button variant="hero" size="sm" onClick={handleAddToCart} disabled={activeStock <= 0 || (hasVariants && !selectedVariant)}>
+                  <ShoppingBag size={14} /> Ajouter
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -271,112 +485,56 @@ export default function MarketProduct() {
           <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6">
             <Link to="/market" className="hover:text-foreground transition-colors">Market</Link>
             <ChevronRight size={14} />
-            <span className="text-foreground line-clamp-1">{product.name}</span>
+            <span className="text-foreground font-medium line-clamp-1">{product.name}</span>
           </nav>
 
-          <div className="grid lg:grid-cols-12 gap-8 lg:gap-12">
-            {/* ═══════════════════ LEFT: Images ═══════════════════ */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-7 space-y-3"
-            >
-              {/* Main Image with zoom */}
-              <div
-                ref={imageRef}
-                className="relative aspect-square rounded-2xl border border-border bg-secondary overflow-hidden cursor-crosshair group"
-                onMouseEnter={() => setIsZoomed(true)}
-                onMouseLeave={() => setIsZoomed(false)}
-                onMouseMove={handleMouseMove}
-                onClick={() => images.length > 0 && setShowFullscreen(true)}
-              >
-                {images.length > 0 ? (
-                  <>
-                    <img
-                      src={images[selectedImage]}
-                      alt={product.name}
-                      className="w-full h-full object-cover transition-transform duration-200"
-                      style={isZoomed ? {
-                        transform: "scale(2)",
-                        transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`
-                      } : undefined}
-                    />
-                    <div className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ZoomIn size={12} />
-                      Cliquez pour agrandir
-                    </div>
-                  </>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground/30">
-                    <Package size={80} />
-                  </div>
-                )}
-
-                {/* Badges */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
-                  {discountPercent > 0 && (
-                    <Badge className="bg-destructive text-destructive-foreground font-bold text-sm px-3 py-1 shadow-lg">
-                      <BadgePercent size={14} className="mr-1" />
-                      -{discountPercent}%
-                    </Badge>
-                  )}
-                  {isNew && (
-                    <Badge className="bg-primary text-primary-foreground font-semibold text-xs px-3 py-1">
-                      NOUVEAU
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Image counter */}
-                {images.length > 1 && (
-                  <div className="absolute bottom-3 left-3 bg-background/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground">
-                    {selectedImage + 1} / {images.length}
-                  </div>
-                )}
-              </div>
-
-              {/* Thumbnails grid */}
-              {images.length > 1 && (
-                <div className="grid grid-cols-6 gap-2">
-                  {images.map((img, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setSelectedImage(i)}
-                      className={`aspect-square rounded-xl border-2 overflow-hidden transition-all ${
-                        i === selectedImage
-                          ? "border-primary ring-2 ring-primary/20 scale-[1.02]"
-                          : "border-border hover:border-muted-foreground/30"
-                      }`}
-                    >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
+          <div className="grid lg:grid-cols-12 gap-8 lg:gap-10">
+            {/* ═══ LEFT: Gallery ═══ */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="lg:col-span-7">
+              <ProductGallery
+                images={images}
+                name={product.name}
+                discountPercent={discountPercent}
+                isNew={isNew}
+                selectedImage={selectedImage}
+                setSelectedImage={setSelectedImage}
+                setShowFullscreen={setShowFullscreen}
+              />
             </motion.div>
 
-            {/* ═══════════════════ RIGHT: Details ═══════════════════ */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-5 space-y-5"
-            >
+            {/* ═══ RIGHT: Product Info ═══ */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="lg:col-span-5 space-y-5">
+              
+              {/* Social proof bar */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="flex items-center gap-4 text-xs text-muted-foreground"
+              >
+                <span className="flex items-center gap-1">
+                  <Eye size={12} className="text-primary" />
+                  <strong className="text-foreground">{viewers}</strong> personnes regardent
+                </span>
+                <span className="flex items-center gap-1">
+                  <ShoppingCart size={12} className="text-primary" />
+                  <strong className="text-foreground">{recentBuyers}</strong> ventes récentes
+                </span>
+              </motion.div>
+
               {/* Title */}
               <div>
-                <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl text-foreground leading-tight">
+                <h1 className="font-heading text-2xl sm:text-3xl lg:text-[2.1rem] text-foreground leading-tight">
                   {product.name}
                 </h1>
 
                 {/* Store info */}
-                <Link
-                  to={`/market/vendor/${product.stores.slug}`}
-                  className="inline-flex items-center gap-2 mt-3 group/store"
-                >
+                <Link to={`/market/vendor/${product.stores.slug}`} className="inline-flex items-center gap-2 mt-3 group/store">
                   {product.stores.logo_url ? (
-                    <img src={product.stores.logo_url} alt="" className="h-6 w-6 rounded-full object-cover border border-border" />
+                    <img src={product.stores.logo_url} alt="" className="h-7 w-7 rounded-full object-cover border border-border" />
                   ) : (
-                    <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center">
-                      <Store size={12} className="text-muted-foreground" />
+                    <div className="h-7 w-7 rounded-full bg-secondary flex items-center justify-center">
+                      <Store size={13} className="text-muted-foreground" />
                     </div>
                   )}
                   <span className="text-sm text-muted-foreground group-hover/store:text-foreground transition-colors font-medium">
@@ -390,45 +548,46 @@ export default function MarketProduct() {
                 </Link>
 
                 {/* Rating */}
-                {product.review_count > 0 && (
-                  <div className="flex items-center gap-3 mt-3">
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <Star
-                          key={i}
-                          size={16}
-                          className={i < Math.round(product.avg_rating)
-                            ? "fill-primary text-primary"
-                            : "text-muted-foreground/20"
-                          }
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm font-medium text-foreground">{product.avg_rating.toFixed(1)}</span>
-                    <a href="#reviews" className="text-sm text-primary hover:underline">
-                      {product.review_count} avis
-                    </a>
+                <div className="flex items-center gap-3 mt-3">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} size={16} className={i < Math.round(product.avg_rating || 0) ? "fill-primary text-primary" : "text-muted-foreground/20"} />
+                    ))}
                   </div>
-                )}
+                  {product.review_count > 0 ? (
+                    <>
+                      <span className="text-sm font-semibold text-foreground">{product.avg_rating.toFixed(1)}</span>
+                      <a href="#reviews" className="text-sm text-primary hover:underline">
+                        {product.review_count} avis vérifiés
+                      </a>
+                    </>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Aucun avis encore</span>
+                  )}
+                </div>
               </div>
 
               <Separator />
 
               {/* Price block */}
-              <div className="space-y-1">
-                <div className="flex items-baseline gap-3">
-                  <span className="text-4xl font-bold text-foreground tracking-tight">
+              <div className="rounded-xl bg-card-gradient border border-border p-4 space-y-2">
+                <div className="flex items-end gap-3">
+                  <span className="text-4xl font-bold text-foreground tracking-tight leading-none">
                     {formatPrice(activePrice)}
                   </span>
                   {!selectedVariant && product.compare_at_price && product.compare_at_price > product.price && (
-                    <span className="text-lg text-muted-foreground line-through">
+                    <span className="text-base text-muted-foreground line-through pb-0.5">
                       {formatPrice(product.compare_at_price)}
                     </span>
                   )}
+                  {discountPercent > 0 && !selectedVariant && (
+                    <Badge variant="destructive" className="text-xs mb-0.5">-{discountPercent}%</Badge>
+                  )}
                 </div>
                 {discountPercent > 0 && !selectedVariant && (
-                  <p className="text-sm text-destructive font-medium">
-                    Vous économisez {formatPrice(product.compare_at_price! - activePrice)} ({discountPercent}%)
+                  <p className="text-sm text-destructive font-medium flex items-center gap-1">
+                    <Zap size={13} />
+                    Vous économisez {formatPrice(product.compare_at_price! - activePrice)}
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">TVA incluse · Livraison calculée au checkout</p>
@@ -436,178 +595,178 @@ export default function MarketProduct() {
 
               {/* Variant selector */}
               {hasVariants && (
-                <div className="pt-1">
-                  <VariantSelector variants={variants} onVariantChange={handleVariantChange} />
-                </div>
+                <VariantSelector variants={variants} onVariantChange={handleVariantChange} />
               )}
 
-              {/* Stock indicator */}
-              <div className="flex items-center gap-2">
-                {activeStock > 10 ? (
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
-                    <span className="text-primary font-medium">En stock</span>
-                  </div>
-                ) : activeStock > 0 ? (
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <div className="h-2.5 w-2.5 rounded-full bg-[hsl(38,92%,50%)] animate-pulse" />
-                    <span className="text-[hsl(38,92%,40%)] dark:text-[hsl(38,92%,60%)] font-medium">
-                      Plus que {activeStock} en stock — Commandez vite !
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <div className="h-2.5 w-2.5 rounded-full bg-destructive" />
-                    <span className="text-destructive font-medium">Rupture de stock</span>
+              {/* Stock indicator with progress bar */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  {activeStock > 10 ? (
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
+                      <span className="text-primary font-semibold">En stock</span>
+                      <span className="text-muted-foreground">— Prêt à expédier</span>
+                    </div>
+                  ) : activeStock > 0 ? (
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <Flame size={14} className="text-destructive" />
+                      <span className="text-destructive font-semibold">
+                        Plus que {activeStock} en stock !
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <div className="h-2.5 w-2.5 rounded-full bg-destructive" />
+                      <span className="text-destructive font-medium">Rupture de stock</span>
+                    </div>
+                  )}
+                </div>
+                {activeStock > 0 && activeStock <= 20 && (
+                  <div className="space-y-1">
+                    <Progress value={stockPercent} className="h-2" />
+                    <p className="text-xs text-muted-foreground">Stock limité — commandez maintenant</p>
                   </div>
                 )}
               </div>
 
-              {/* Quantity + Add to cart */}
-              <div className="space-y-3 pt-2">
-                {/* Quantity selector */}
+              {/* Quantity + CTA */}
+              <div ref={ctaRef} className="space-y-3 pt-1">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium text-foreground">Quantité</span>
-                  <div className="flex items-center border border-border rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                      disabled={quantity <= 1}
-                      className="h-10 w-10 flex items-center justify-center hover:bg-secondary transition-colors disabled:opacity-30"
-                    >
+                  <div className="flex items-center border border-border rounded-xl overflow-hidden bg-secondary/30">
+                    <button onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={quantity <= 1}
+                      className="h-11 w-11 flex items-center justify-center hover:bg-secondary transition-colors disabled:opacity-30">
                       <Minus size={14} />
                     </button>
-                    <span className="h-10 w-12 flex items-center justify-center text-sm font-semibold border-x border-border">
+                    <span className="h-11 w-14 flex items-center justify-center text-sm font-bold border-x border-border">
                       {quantity}
                     </span>
-                    <button
-                      onClick={() => setQuantity(q => Math.min(activeStock, q + 1))}
-                      disabled={quantity >= activeStock}
-                      className="h-10 w-10 flex items-center justify-center hover:bg-secondary transition-colors disabled:opacity-30"
-                    >
+                    <button onClick={() => setQuantity(q => Math.min(activeStock, q + 1))} disabled={quantity >= activeStock}
+                      className="h-11 w-11 flex items-center justify-center hover:bg-secondary transition-colors disabled:opacity-30">
                       <Plus size={14} />
                     </button>
                   </div>
                   {quantity > 1 && (
-                    <span className="text-sm text-muted-foreground">
-                      Total : <strong className="text-foreground">{formatPrice(activePrice * quantity)}</strong>
-                    </span>
+                    <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="text-sm text-muted-foreground">
+                      = <strong className="text-foreground">{formatPrice(activePrice * quantity)}</strong>
+                    </motion.span>
                   )}
                 </div>
 
                 {/* CTA Buttons */}
-                <div className="flex gap-3">
+                <div className="space-y-2">
                   <Button
                     variant="hero"
                     size="lg"
-                    className="flex-1 font-heading text-base tracking-wide h-13"
+                    className="w-full font-heading text-base tracking-wide h-14 relative overflow-hidden"
                     disabled={activeStock <= 0 || (hasVariants && !selectedVariant)}
                     onClick={handleAddToCart}
                   >
-                    <ShoppingBag size={18} />
-                    AJOUTER AU PANIER
+                    <AnimatePresence mode="wait">
+                      {addedToCart ? (
+                        <motion.span key="added" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }}
+                          className="flex items-center gap-2">
+                          <Check size={18} /> AJOUTÉ AU PANIER ✓
+                        </motion.span>
+                      ) : (
+                        <motion.span key="add" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }}
+                          className="flex items-center gap-2">
+                          <ShoppingBag size={18} /> AJOUTER AU PANIER
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
                   </Button>
+
                   <Button
                     variant="outline"
                     size="lg"
-                    className="h-13 px-4"
-                    onClick={() => toggle(product.id)}
+                    className="w-full font-semibold h-12 border-primary/30 text-foreground hover:bg-primary/5"
+                    disabled={activeStock <= 0 || (hasVariants && !selectedVariant)}
+                    onClick={handleBuyNow}
                   >
-                    <Heart
-                      size={20}
-                      className={isInWishlist(product.id) ? "fill-destructive text-destructive" : ""}
-                    />
+                    <Zap size={16} className="text-primary" />
+                    ACHETER MAINTENANT
+                    <ArrowRight size={14} />
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="h-13 px-4"
-                    onClick={handleShare}
-                  >
-                    <Share2 size={18} />
+                </div>
+
+                {/* Action row */}
+                <div className="flex items-center gap-2 pt-1">
+                  <Button variant="ghost" size="sm" className="flex-1 text-xs" onClick={() => toggle(product.id)}>
+                    <Heart size={15} className={isInWishlist(product.id) ? "fill-destructive text-destructive" : ""} />
+                    {isInWishlist(product.id) ? "Dans vos favoris" : "Ajouter aux favoris"}
+                  </Button>
+                  <Button variant="ghost" size="sm" className="flex-1 text-xs" onClick={handleShare}>
+                    <Share2 size={15} />
+                    Partager
                   </Button>
                 </div>
               </div>
 
               {/* Trust badges */}
-              <div className="grid grid-cols-2 gap-3 pt-4">
-                <div className="flex items-center gap-3 rounded-xl bg-secondary/60 p-3">
-                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Truck size={16} className="text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">Livraison</p>
-                    <p className="text-xs text-muted-foreground">{product.stores.delivery_delay || "2-5 jours"}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl bg-secondary/60 p-3">
-                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <RotateCcw size={16} className="text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">Retours</p>
-                    <p className="text-xs text-muted-foreground">{product.stores.return_policy || "Retours sous 7j"}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl bg-secondary/60 p-3">
-                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Shield size={16} className="text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">Paiement sécurisé</p>
-                    <p className="text-xs text-muted-foreground">Escrow protégé</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl bg-secondary/60 p-3">
-                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Award size={16} className="text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">Qualité garantie</p>
-                    <p className="text-xs text-muted-foreground">Vérifié par Feyxa</p>
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 gap-2.5 pt-3">
+                {[
+                  { icon: Truck, title: "Livraison rapide", desc: product.stores.delivery_delay || "2-5 jours" },
+                  { icon: RotateCcw, title: "Retours faciles", desc: product.stores.return_policy || "Retours sous 7j" },
+                  { icon: Shield, title: "Paiement sécurisé", desc: "Escrow protégé" },
+                  { icon: Award, title: "Qualité garantie", desc: "Vérifié par Feyxa" },
+                ].map(({ icon: Icon, title, desc }, i) => (
+                  <motion.div
+                    key={title}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 + i * 0.08 }}
+                    className="flex items-center gap-2.5 rounded-xl bg-secondary/50 p-3 border border-border/50"
+                  >
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Icon size={15} className="text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground leading-tight">{title}</p>
+                      <p className="text-[11px] text-muted-foreground leading-tight truncate">{desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
+
+              {/* Quick description preview */}
+              {product.description && (
+                <div className="pt-2">
+                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                    {product.description}
+                  </p>
+                  <a href="#product-details" className="text-xs text-primary hover:underline mt-1 inline-flex items-center gap-1">
+                    Lire la description complète <ChevronDown size={12} />
+                  </a>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* ═══════════════════ TABS: Description / Specs / Reviews ═══════════════════ */}
-      <section className="py-10 border-t border-border">
+      {/* ═══ TABS Section ═══ */}
+      <section className="py-10 border-t border-border" id="product-details">
         <div className="container max-w-7xl">
           <Tabs defaultValue="description" className="w-full">
-            <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none gap-0 h-auto p-0">
-              <TabsTrigger
-                value="description"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3 font-semibold"
-              >
-                Description
-              </TabsTrigger>
-              <TabsTrigger
-                value="specs"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3 font-semibold"
-              >
-                Caractéristiques
-              </TabsTrigger>
-              <TabsTrigger
-                value="reviews"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3 font-semibold"
-              >
-                Avis ({product.review_count || 0})
-              </TabsTrigger>
-              <TabsTrigger
-                value="store"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3 font-semibold"
-              >
-                Vendeur
-              </TabsTrigger>
+            <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none gap-0 h-auto p-0 overflow-x-auto">
+              {[
+                { value: "description", label: "Description" },
+                { value: "specs", label: "Caractéristiques" },
+                { value: "reviews", label: `Avis (${product.review_count || 0})` },
+                { value: "store", label: "À propos du vendeur" },
+              ].map(({ value, label }) => (
+                <TabsTrigger key={value} value={value}
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3.5 font-semibold text-sm whitespace-nowrap">
+                  {label}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
-            {/* Description Tab */}
             <TabsContent value="description" className="pt-8">
-              <div className="max-w-3xl">
+              <div className="max-w-3xl space-y-6">
                 {product.description ? (
-                  <div className="prose prose-sm max-w-none text-muted-foreground leading-relaxed space-y-4">
+                  <div className="text-muted-foreground leading-relaxed space-y-4 text-[15px]">
                     {product.description.split("\n").map((para, i) => (
                       <p key={i}>{para}</p>
                     ))}
@@ -616,136 +775,97 @@ export default function MarketProduct() {
                   <p className="text-muted-foreground text-sm">Aucune description disponible.</p>
                 )}
 
-                {/* Tags */}
                 {product.tags && product.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-6">
+                  <div className="flex flex-wrap gap-2">
                     {product.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
+                      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
                     ))}
                   </div>
                 )}
               </div>
             </TabsContent>
 
-            {/* Specs Tab */}
             <TabsContent value="specs" className="pt-8">
               <div className="max-w-2xl">
-                <div className="rounded-xl border border-border overflow-hidden">
-                  <table className="w-full text-sm">
-                    <tbody>
-                      {product.sku && (
-                        <tr className="border-b border-border">
-                          <td className="py-3 px-4 font-medium text-foreground bg-secondary/40 w-1/3">Référence (SKU)</td>
-                          <td className="py-3 px-4 text-muted-foreground">{product.sku}</td>
-                        </tr>
-                      )}
-                      {product.barcode && (
-                        <tr className="border-b border-border">
-                          <td className="py-3 px-4 font-medium text-foreground bg-secondary/40">Code-barres</td>
-                          <td className="py-3 px-4 text-muted-foreground">{product.barcode}</td>
-                        </tr>
-                      )}
-                      {product.weight_grams && (
-                        <tr className="border-b border-border">
-                          <td className="py-3 px-4 font-medium text-foreground bg-secondary/40">Poids</td>
-                          <td className="py-3 px-4 text-muted-foreground">
-                            {product.weight_grams >= 1000
-                              ? `${(product.weight_grams / 1000).toFixed(1)} kg`
-                              : `${product.weight_grams} g`
-                            }
-                          </td>
-                        </tr>
-                      )}
-                      <tr className="border-b border-border">
-                        <td className="py-3 px-4 font-medium text-foreground bg-secondary/40">Disponibilité</td>
-                        <td className="py-3 px-4">
-                          {activeStock > 0 ? (
-                            <span className="inline-flex items-center gap-1.5 text-primary font-medium">
-                              <Check size={14} /> En stock
-                            </span>
-                          ) : (
-                            <span className="text-destructive font-medium">Rupture de stock</span>
-                          )}
-                        </td>
-                      </tr>
-                      {hasVariants && (
-                        <tr className="border-b border-border">
-                          <td className="py-3 px-4 font-medium text-foreground bg-secondary/40">Variantes</td>
-                          <td className="py-3 px-4 text-muted-foreground">{variants.length} option(s)</td>
-                        </tr>
-                      )}
-                      <tr className="border-b border-border">
-                        <td className="py-3 px-4 font-medium text-foreground bg-secondary/40">Vendeur</td>
-                        <td className="py-3 px-4">
-                          <Link to={`/market/vendor/${product.stores.slug}`} className="text-primary hover:underline">
-                            {product.stores.name}
-                          </Link>
-                        </td>
-                      </tr>
-                      {product.stores.city && (
-                        <tr className="border-b border-border last:border-0">
-                          <td className="py-3 px-4 font-medium text-foreground bg-secondary/40">Expédié depuis</td>
-                          <td className="py-3 px-4 text-muted-foreground">{product.stores.city}</td>
-                        </tr>
-                      )}
-                      <tr>
-                        <td className="py-3 px-4 font-medium text-foreground bg-secondary/40">Livraison</td>
-                        <td className="py-3 px-4 text-muted-foreground">{product.stores.delivery_delay || "2-5 jours"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+                  {[
+                    product.sku && { label: "Référence (SKU)", value: product.sku },
+                    product.barcode && { label: "Code-barres", value: product.barcode },
+                    product.weight_grams && {
+                      label: "Poids",
+                      value: product.weight_grams >= 1000 ? `${(product.weight_grams / 1000).toFixed(1)} kg` : `${product.weight_grams} g`
+                    },
+                    { label: "Disponibilité", value: activeStock > 0 ? "En stock" : "Rupture", isStock: true },
+                    hasVariants && { label: "Variantes", value: `${variants.length} option(s) disponible(s)` },
+                    { label: "Vendeur", value: product.stores.name, isLink: true },
+                    product.stores.city && { label: "Expédié depuis", value: product.stores.city },
+                    { label: "Délai de livraison", value: product.stores.delivery_delay || "2-5 jours" },
+                    { label: "Politique de retour", value: product.stores.return_policy || "Retours sous 7 jours" },
+                  ].filter(Boolean).map((row: any, i) => (
+                    <div key={i} className="flex">
+                      <div className="py-3.5 px-4 font-medium text-foreground bg-secondary/40 w-2/5 text-sm">{row.label}</div>
+                      <div className="py-3.5 px-4 text-sm text-muted-foreground flex-1">
+                        {row.isStock ? (
+                          <span className={`inline-flex items-center gap-1.5 font-medium ${activeStock > 0 ? "text-primary" : "text-destructive"}`}>
+                            {activeStock > 0 && <Check size={14} />} {row.value}
+                          </span>
+                        ) : row.isLink ? (
+                          <Link to={`/market/vendor/${product.stores.slug}`} className="text-primary hover:underline">{row.value}</Link>
+                        ) : (
+                          row.value
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </TabsContent>
 
-            {/* Reviews Tab */}
             <TabsContent value="reviews" className="pt-8" id="reviews">
-              <ProductReviews
-                productId={product.id}
-                avgRating={product.avg_rating || 0}
-                reviewCount={product.review_count || 0}
-              />
+              <ProductReviews productId={product.id} avgRating={product.avg_rating || 0} reviewCount={product.review_count || 0} />
             </TabsContent>
 
-            {/* Store Tab */}
             <TabsContent value="store" className="pt-8">
               <div className="max-w-lg">
-                <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+                <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
                   <div className="flex items-center gap-4">
                     {product.stores.logo_url ? (
-                      <img src={product.stores.logo_url} alt="" className="h-14 w-14 rounded-xl object-cover border border-border" />
+                      <img src={product.stores.logo_url} alt="" className="h-16 w-16 rounded-2xl object-cover border border-border shadow-card" />
                     ) : (
-                      <div className="h-14 w-14 rounded-xl bg-secondary flex items-center justify-center">
-                        <Store size={24} className="text-muted-foreground" />
+                      <div className="h-16 w-16 rounded-2xl bg-secondary flex items-center justify-center">
+                        <Store size={28} className="text-muted-foreground" />
                       </div>
                     )}
                     <div>
-                      <h3 className="font-heading text-lg text-foreground">{product.stores.name}</h3>
+                      <h3 className="font-heading text-xl text-foreground">{product.stores.name}</h3>
                       {product.stores.city && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
                           <MapPin size={12} /> {product.stores.city}
                         </p>
                       )}
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <Badge variant="secondary" className="text-[10px]">
+                          <Shield size={10} className="mr-0.5" /> Vendeur vérifié
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg bg-secondary/60 p-3 text-center">
-                      <Truck size={16} className="mx-auto text-primary mb-1" />
-                      <p className="text-xs font-medium text-foreground">Livraison</p>
+                    <div className="rounded-xl bg-secondary/60 p-3.5 text-center space-y-1">
+                      <Truck size={18} className="mx-auto text-primary" />
+                      <p className="text-xs font-semibold text-foreground">Livraison</p>
                       <p className="text-xs text-muted-foreground">{product.stores.delivery_delay || "2-5 jours"}</p>
                     </div>
-                    <div className="rounded-lg bg-secondary/60 p-3 text-center">
-                      <RotateCcw size={16} className="mx-auto text-primary mb-1" />
-                      <p className="text-xs font-medium text-foreground">Retours</p>
+                    <div className="rounded-xl bg-secondary/60 p-3.5 text-center space-y-1">
+                      <RotateCcw size={18} className="mx-auto text-primary" />
+                      <p className="text-xs font-semibold text-foreground">Retours</p>
                       <p className="text-xs text-muted-foreground">{product.stores.return_policy || "Sous 7 jours"}</p>
                     </div>
                   </div>
                   <Button variant="outline" className="w-full" asChild>
                     <Link to={`/market/vendor/${product.stores.slug}`}>
-                      Voir la boutique
-                      <ChevronRight size={14} />
+                      Voir tous les produits du vendeur
+                      <ArrowRight size={14} />
                     </Link>
                   </Button>
                 </div>
@@ -756,38 +876,30 @@ export default function MarketProduct() {
       </section>
 
       {/* Similar products */}
-      <SimilarProducts
-        productId={product.id}
-        storeId={product.store_id}
-        categoryId={product.marketplace_category_id}
-        tags={product.tags}
-      />
+      <SimilarProducts productId={product.id} storeId={product.store_id} categoryId={product.marketplace_category_id} tags={product.tags} />
 
-      {/* Sticky mobile bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-background/95 backdrop-blur-md border-t border-border p-3">
-        <div className="flex items-center gap-3">
-          <div className="shrink-0">
-            <p className="text-lg font-bold text-foreground">{formatPrice(activePrice)}</p>
-            {activeStock > 0 && activeStock <= 10 && (
-              <p className="text-xs text-[hsl(38,92%,40%)]">Plus que {activeStock} !</p>
+      {/* ═══ Mobile Sticky Bottom Bar ═══ */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-background/95 backdrop-blur-md border-t border-border px-3 py-2.5 safe-area-bottom">
+        <div className="flex items-center gap-2.5">
+          <div className="shrink-0 min-w-0">
+            <p className="text-base font-bold text-foreground leading-tight">{formatPrice(activePrice)}</p>
+            {discountPercent > 0 && (
+              <p className="text-[10px] text-destructive font-semibold">-{discountPercent}% de réduction</p>
             )}
           </div>
           <Button
             variant="hero"
-            className="flex-1 font-heading tracking-wide"
+            className="flex-1 font-heading tracking-wide h-11"
             disabled={activeStock <= 0 || (hasVariants && !selectedVariant)}
             onClick={handleAddToCart}
           >
-            <ShoppingBag size={16} />
-            AJOUTER AU PANIER
+            {addedToCart ? <><Check size={15} /> Ajouté ✓</> : <><ShoppingBag size={15} /> AJOUTER</>}
           </Button>
-          <Button variant="outline" size="icon" onClick={() => toggle(product.id)}>
-            <Heart size={18} className={isInWishlist(product.id) ? "fill-destructive text-destructive" : ""} />
+          <Button variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={() => toggle(product.id)}>
+            <Heart size={17} className={isInWishlist(product.id) ? "fill-destructive text-destructive" : ""} />
           </Button>
         </div>
       </div>
-
-      {/* Bottom spacing for mobile bar */}
       <div className="h-20 lg:hidden" />
     </MarketLayout>
   );
