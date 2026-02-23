@@ -179,7 +179,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 export function useLocation(): LocationCtx {
   const ctx = useContext(LocationContext);
   if (!ctx) {
-    // Graceful fallback when rendered outside LocationProvider (e.g. HMR edge-case)
+    // Safe fallback – prevents crash when rendered outside LocationProvider (HMR, early render)
+    console.warn("[useLocation] Context not found – returning fallback values");
     return {
       country: null,
       city: null,
