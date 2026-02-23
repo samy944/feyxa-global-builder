@@ -14,6 +14,10 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
 import DashboardLayout from "./pages/DashboardLayout";
+import DashboardLandings from "./pages/DashboardLandings";
+import DashboardLandingEditor from "./pages/DashboardLandingEditor";
+import DashboardLandingAB from "./pages/DashboardLandingAB";
+import LandingPagePublic from "./pages/LandingPagePublic";
 import DashboardOverview from "./pages/DashboardOverview";
 import DashboardProducts from "./pages/DashboardProducts";
 import DashboardOrders from "./pages/DashboardOrders";
@@ -64,12 +68,16 @@ const App = () => (
               <Route path="insights" element={<DashboardInsights />} />
               <Route path="trends" element={<DashboardTrends />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
-              <Route path="landing" element={<DashboardLanding />} />
+              <Route path="landings" element={<DashboardLandings />} />
+              <Route path="landings/:id/edit" element={<DashboardLandingEditor />} />
+              <Route path="landings/:id/ab" element={<DashboardLandingAB />} />
+              <Route path="landing" element={<DashboardLandings />} />
               <Route path="shipping" element={<DashboardShipping />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route path="/store/:slug" element={<StorefrontHome />} />
             <Route path="/store/:slug/lp" element={<OneProductLanding />} />
+            <Route path="/lp/:slug" element={<LandingPagePublic />} />
             {/* Marketplace */}
             <Route path="/market" element={<MarketHome />} />
             <Route path="/market/category/:slug" element={<MarketCategory />} />

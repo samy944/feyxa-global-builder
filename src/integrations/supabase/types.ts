@@ -336,6 +336,141 @@ export type Database = {
           },
         ]
       }
+      landing_ab_variants: {
+        Row: {
+          add_to_carts: number
+          clicks: number
+          created_at: string
+          id: string
+          is_winner: boolean
+          landing_page_id: string
+          purchases: number
+          revenue: number
+          sections: Json
+          updated_at: string
+          variant_name: string
+          views: number
+        }
+        Insert: {
+          add_to_carts?: number
+          clicks?: number
+          created_at?: string
+          id?: string
+          is_winner?: boolean
+          landing_page_id: string
+          purchases?: number
+          revenue?: number
+          sections?: Json
+          updated_at?: string
+          variant_name?: string
+          views?: number
+        }
+        Update: {
+          add_to_carts?: number
+          clicks?: number
+          created_at?: string
+          id?: string
+          is_winner?: boolean
+          landing_page_id?: string
+          purchases?: number
+          revenue?: number
+          sections?: Json
+          updated_at?: string
+          variant_name?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_ab_variants_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_pages: {
+        Row: {
+          ab_enabled: boolean
+          ab_split: number
+          collection_id: string | null
+          created_at: string
+          id: string
+          og_image_url: string | null
+          product_id: string | null
+          sections: Json
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          status: Database["public"]["Enums"]["landing_status"]
+          store_id: string
+          template_id: string
+          theme: Json | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          ab_enabled?: boolean
+          ab_split?: number
+          collection_id?: string | null
+          created_at?: string
+          id?: string
+          og_image_url?: string | null
+          product_id?: string | null
+          sections?: Json
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["landing_status"]
+          store_id: string
+          template_id?: string
+          theme?: Json | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          ab_enabled?: boolean
+          ab_split?: number
+          collection_id?: string | null
+          created_at?: string
+          id?: string
+          og_image_url?: string | null
+          product_id?: string | null
+          sections?: Json
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["landing_status"]
+          store_id?: string
+          template_id?: string
+          theme?: Json | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_pages_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_pages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_pages_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_categories: {
         Row: {
           created_at: string
@@ -1197,6 +1332,7 @@ export type Database = {
       app_role: "marketplace_admin" | "marketplace_moderator"
       discount_type: "percentage" | "fixed"
       escrow_status: "held" | "released" | "refunded" | "disputed"
+      landing_status: "draft" | "published" | "archived"
       order_status:
         | "new"
         | "confirmed"
@@ -1344,6 +1480,7 @@ export const Constants = {
       app_role: ["marketplace_admin", "marketplace_moderator"],
       discount_type: ["percentage", "fixed"],
       escrow_status: ["held", "released", "refunded", "disputed"],
+      landing_status: ["draft", "published", "archived"],
       order_status: [
         "new",
         "confirmed",

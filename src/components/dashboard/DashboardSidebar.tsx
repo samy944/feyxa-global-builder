@@ -31,7 +31,7 @@ const navItems = [
   { icon: Wallet, label: "Portefeuille", path: "/dashboard/wallet" },
   { icon: Zap, label: "Insights", path: "/dashboard/insights" },
   { icon: TrendingUp, label: "Trends", path: "/dashboard/trends" },
-  { icon: FileText, label: "Landing Page", path: "/dashboard/landing" },
+  { icon: FileText, label: "Landing Pages", path: "/dashboard/landings" },
   { icon: Settings, label: "Paramètres", path: "/dashboard/settings" },
 ];
 
