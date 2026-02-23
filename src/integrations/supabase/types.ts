@@ -1578,6 +1578,56 @@ export type Database = {
           },
         ]
       }
+      store_invitations: {
+        Row: {
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["store_role"]
+          status: Database["public"]["Enums"]["invitation_status"]
+          store_id: string
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          role?: Database["public"]["Enums"]["store_role"]
+          status?: Database["public"]["Enums"]["invitation_status"]
+          store_id: string
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["store_role"]
+          status?: Database["public"]["Enums"]["invitation_status"]
+          store_id?: string
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_invitations_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_members: {
         Row: {
           created_at: string
@@ -2215,6 +2265,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: {
+        Args: { _token_hash: string; _user_id: string }
+        Returns: Json
+      }
       can_access_ticket: {
         Args: { _ticket_id: string; _user_id: string }
         Returns: boolean
@@ -2232,6 +2286,10 @@ export type Database = {
         Returns: boolean
       }
       ensure_wallet: { Args: { _store_id: string }; Returns: string }
+      get_member_permissions: {
+        Args: { _store_id: string; _user_id: string }
+        Returns: string[]
+      }
       get_store_id_for_order: { Args: { _order_id: string }; Returns: string }
       get_store_id_for_product: {
         Args: { _product_id: string }
@@ -2309,6 +2367,7 @@ export type Database = {
         | "vendor"
       discount_type: "percentage" | "fixed"
       escrow_status: "held" | "released" | "refunded" | "disputed"
+      invitation_status: "pending" | "accepted" | "expired" | "revoked"
       landing_status: "draft" | "published" | "archived"
       order_status:
         | "new"
@@ -2328,7 +2387,14 @@ export type Database = {
         | "rejected"
         | "received"
         | "refunded"
-      store_role: "owner" | "admin" | "staff"
+      store_role:
+        | "owner"
+        | "admin"
+        | "staff"
+        | "manager"
+        | "support"
+        | "finance"
+        | "viewer"
       ticket_priority: "low" | "medium" | "high" | "urgent"
       ticket_status:
         | "open"
@@ -2477,6 +2543,7 @@ export const Constants = {
       ],
       discount_type: ["percentage", "fixed"],
       escrow_status: ["held", "released", "refunded", "disputed"],
+      invitation_status: ["pending", "accepted", "expired", "revoked"],
       landing_status: ["draft", "published", "archived"],
       order_status: [
         "new",
@@ -2498,7 +2565,15 @@ export const Constants = {
         "received",
         "refunded",
       ],
-      store_role: ["owner", "admin", "staff"],
+      store_role: [
+        "owner",
+        "admin",
+        "staff",
+        "manager",
+        "support",
+        "finance",
+        "viewer",
+      ],
       ticket_priority: ["low", "medium", "high", "urgent"],
       ticket_status: [
         "open",
