@@ -29,11 +29,12 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft, Eye, Save, Plus, Trash2, GripVertical, Monitor, Smartphone, Tablet,
-  Settings2, Palette, Search, Copy, EyeOff, Undo2, Redo2, History, Layers, Maximize2, X, Sparkles,
+  Settings2, Palette, Search, Copy, EyeOff, Undo2, Redo2, History, Layers, Maximize2, X, Sparkles, Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ImageUploader } from "@/components/landing/ImageUploader";
 import { AiOptimizeDialog } from "@/components/dashboard/AiOptimizeDialog";
+import { AiDesignDialog } from "@/components/dashboard/AiDesignDialog";
 
 const BLOCK_CATEGORIES = [
   { key: "essential", label: "Essentiels" },
@@ -120,6 +121,7 @@ export default function DashboardLandingEditor() {
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showAiOptimize, setShowAiOptimize] = useState(false);
+  const [showAiDesign, setShowAiDesign] = useState(false);
   const autosaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sectionsRef = useRef(sections);
   const themeRef = useRef(theme);
@@ -377,9 +379,13 @@ export default function DashboardLandingEditor() {
           <Button size="sm" variant="ghost" onClick={() => setShowRevisions(!showRevisions)} title="Historique">
             <History className="w-4 h-4" />
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setShowAiOptimize(true)} className="gap-1.5 text-primary border-primary/30 hover:bg-primary/5">
-            <Sparkles className="w-4 h-4" /> IA
+          <Button size="sm" variant="outline" onClick={() => setShowAiDesign(true)} className="gap-1.5 text-violet-600 border-violet-300 hover:bg-violet-50">
+            <Wand2 className="w-4 h-4" /> Design IA
           </Button>
+          <Button size="sm" variant="outline" onClick={() => setShowAiOptimize(true)} className="gap-1.5 text-primary border-primary/30 hover:bg-primary/5">
+            <Sparkles className="w-4 h-4" /> Copywriting IA
+          </Button>
+          
           <Button size="sm" variant="outline" onClick={() => setShowFullPreview(true)} title="Preview plein écran">
             <Maximize2 className="w-4 h-4 mr-1" /> Preview
           </Button>
@@ -657,6 +663,21 @@ export default function DashboardLandingEditor() {
           updateSections(newSections);
           setSeoTitle(newSeoTitle);
           setSeoDesc(newSeoDesc);
+          setIsDirty(true);
+        }}
+      />
+      {/* AI Design Dialog */}
+      <AiDesignDialog
+        open={showAiDesign}
+        onOpenChange={setShowAiDesign}
+        sections={sections}
+        currentTheme={theme}
+        storeName={landing?.title}
+        onApply={(newSections, newTheme, newSeoTitle, newSeoDesc) => {
+          updateSections(newSections);
+          setTheme(prev => ({ ...prev, ...newTheme }));
+          if (newSeoTitle) setSeoTitle(newSeoTitle);
+          if (newSeoDesc) setSeoDesc(newSeoDesc);
           setIsDirty(true);
         }}
       />

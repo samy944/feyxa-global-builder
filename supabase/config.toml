@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.optimize-landing]
 verify_jwt = false
+
+[functions.design-landing]
+verify_jwt = false
