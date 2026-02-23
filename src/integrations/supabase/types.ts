@@ -704,6 +704,47 @@ export type Database = {
           },
         ]
       }
+      landing_subpages: {
+        Row: {
+          created_at: string
+          id: string
+          is_home: boolean
+          landing_page_id: string
+          sections: Json
+          slug: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_home?: boolean
+          landing_page_id: string
+          sections?: Json
+          slug: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_home?: boolean
+          landing_page_id?: string
+          sections?: Json
+          slug?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_subpages_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_categories: {
         Row: {
           created_at: string

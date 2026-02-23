@@ -29,13 +29,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft, Eye, Save, Plus, Trash2, GripVertical, Monitor, Smartphone, Tablet,
-  Settings2, Palette, Search, Copy, EyeOff, Undo2, Redo2, History, Layers, Maximize2, X, Sparkles, Wand2,
+  Settings2, Palette, Search, Copy, EyeOff, Undo2, Redo2, History, Layers, Maximize2, X, Sparkles, Wand2, ImagePlus, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ImageUploader } from "@/components/landing/ImageUploader";
 import { AiOptimizeDialog } from "@/components/dashboard/AiOptimizeDialog";
 import { AiDesignDialog } from "@/components/dashboard/AiDesignDialog";
 import { LandingThemePresets } from "@/components/dashboard/LandingThemePresets";
+import { AiImageDialog } from "@/components/dashboard/AiImageDialog";
 
 const BLOCK_CATEGORIES = [
   { key: "essential", label: "Essentiels" },
@@ -131,6 +132,12 @@ export default function DashboardLandingEditor() {
   const seoDescRef = useRef(seoDesc);
   const abEnabledRef = useRef(abEnabled);
 
+  // Multi-page state
+  const [subpages, setSubpages] = useState<any[]>([]);
+  const [activeSubpageId, setActiveSubpageId] = useState<string | null>(null);
+  const [showAiImage, setShowAiImage] = useState(false);
+  const [aiImageTargetField, setAiImageTargetField] = useState<{ sectionId: string; field: string } | null>(null);
+
   // Keep refs in sync
   useEffect(() => { sectionsRef.current = sections; }, [sections]);
   useEffect(() => { themeRef.current = theme; }, [theme]);
@@ -188,16 +195,35 @@ export default function DashboardLandingEditor() {
       .select("*")
       .eq("id", id)
       .single()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!data) return navigate("/dashboard/landings");
         setLanding(data);
-        const s = (data.sections as unknown as LandingSection[]) || [];
-        setSections(s);
-        pushHistory(s);
         if (data.theme) setTheme(prev => ({ ...prev, ...(data.theme as any) }));
         setSeoTitle(data.seo_title || "");
         setSeoDesc(data.seo_description || "");
         setAbEnabled(data.ab_enabled || false);
+
+        // Fetch subpages
+        const { data: subs } = await supabase
+          .from("landing_subpages")
+          .select("*")
+          .eq("landing_page_id", id)
+          .order("sort_order");
+
+        if (subs && subs.length > 0) {
+          setSubpages(subs);
+          const homePage = subs.find((s: any) => s.is_home) || subs[0];
+          setActiveSubpageId(homePage.id);
+          const s = (homePage.sections as unknown as LandingSection[]) || [];
+          setSections(s);
+          pushHistory(s);
+        } else {
+          setSubpages([]);
+          setActiveSubpageId(null);
+          const s = (data.sections as unknown as LandingSection[]) || [];
+          setSections(s);
+          pushHistory(s);
+        }
       });
   }, [id]);
 
@@ -227,10 +253,18 @@ export default function DashboardLandingEditor() {
       });
     }
 
+    // If multi-page mode, save to the active subpage
+    if (activeSubpageId) {
+      await supabase
+        .from("landing_subpages")
+        .update({ sections: sectionsRef.current as any })
+        .eq("id", activeSubpageId);
+    }
+
     const { error } = await supabase
       .from("landing_pages")
       .update({
-        sections: sectionsRef.current as any,
+        sections: activeSubpageId ? (landing?.sections || []) : sectionsRef.current as any,
         theme: themeRef.current as any,
         seo_title: seoTitleRef.current,
         seo_description: seoDescRef.current,
@@ -246,6 +280,90 @@ export default function DashboardLandingEditor() {
       setLastSaved(new Date());
       if (!silent) toast.success("Sauvegardé !");
     }
+  };
+
+  // === Subpage management ===
+  const addSubpage = async () => {
+    if (!id) return;
+    const title = `Page ${subpages.length + 1}`;
+    const slug = `page-${subpages.length + 1}`;
+    const isHome = subpages.length === 0;
+
+    // If first subpage, migrate current sections
+    const migratedSections = isHome ? sectionsRef.current : [];
+
+    const { data, error } = await supabase
+      .from("landing_subpages")
+      .insert({
+        landing_page_id: id,
+        title,
+        slug,
+        sections: migratedSections as any,
+        sort_order: subpages.length,
+        is_home: isHome,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    if (data) {
+      const newSubs = [...subpages, data];
+      setSubpages(newSubs);
+      setActiveSubpageId(data.id);
+      const s = (data.sections as unknown as LandingSection[]) || [];
+      setSections(s);
+      pushHistory(s);
+      toast.success(`"${title}" ajoutée`);
+    }
+  };
+
+  const switchSubpage = async (subpageId: string) => {
+    // Save current subpage first if dirty
+    if (isDirty && activeSubpageId) {
+      await supabase
+        .from("landing_subpages")
+        .update({ sections: sectionsRef.current as any })
+        .eq("id", activeSubpageId);
+    }
+
+    const sub = subpages.find(s => s.id === subpageId);
+    if (!sub) return;
+    setActiveSubpageId(subpageId);
+    const s = (sub.sections as unknown as LandingSection[]) || [];
+    setSections(s);
+    pushHistory(s);
+    setSelectedSectionId(null);
+    setIsDirty(false);
+  };
+
+  const renameSubpage = async (subpageId: string, newTitle: string) => {
+    await supabase
+      .from("landing_subpages")
+      .update({ title: newTitle, slug: newTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") })
+      .eq("id", subpageId);
+    setSubpages(subpages.map(s => s.id === subpageId ? { ...s, title: newTitle } : s));
+  };
+
+  const deleteSubpage = async (subpageId: string) => {
+    if (subpages.length <= 1) {
+      toast.error("Impossible de supprimer la dernière page");
+      return;
+    }
+    await supabase.from("landing_subpages").delete().eq("id", subpageId);
+    const remaining = subpages.filter(s => s.id !== subpageId);
+    setSubpages(remaining);
+    if (activeSubpageId === subpageId) {
+      const next = remaining[0];
+      setActiveSubpageId(next.id);
+      const s = (next.sections as unknown as LandingSection[]) || [];
+      setSections(s);
+      pushHistory(s);
+    }
+    toast.success("Page supprimée");
   };
 
   // Autosave every 30s when dirty
@@ -405,6 +523,45 @@ export default function DashboardLandingEditor() {
         </div>
       </div>
 
+      {/* Subpages Tabs Bar */}
+      {subpages.length > 0 && (
+        <div className="h-10 border-b border-border bg-muted/30 flex items-center px-4 gap-1 shrink-0 overflow-x-auto">
+          <FileText className="w-3.5 h-3.5 text-muted-foreground mr-1 shrink-0" />
+          {subpages.map(sp => (
+            <button
+              key={sp.id}
+              onClick={() => switchSubpage(sp.id)}
+              onDoubleClick={() => {
+                const newTitle = window.prompt("Nom de la page:", sp.title);
+                if (newTitle) renameSubpage(sp.id, newTitle);
+              }}
+              className={`group relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                activeSubpageId === sp.id
+                  ? "bg-background text-foreground shadow-sm border border-border"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+              }`}
+            >
+              {sp.title}
+              {sp.is_home && <span className="ml-1 text-[9px] opacity-50">●</span>}
+              {!sp.is_home && subpages.length > 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteSubpage(sp.id); }}
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-white text-[9px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ✕
+                </button>
+              )}
+            </button>
+          ))}
+          <button
+            onClick={addSubpage}
+            className="px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-md transition-colors flex items-center gap-1"
+          >
+            <Plus className="w-3 h-3" /> Page
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 flex overflow-hidden">
         {/* === LEFT SIDEBAR: Blocks Library + Layers === */}
         <div className="w-64 border-r border-border bg-card flex flex-col shrink-0">
@@ -517,7 +674,14 @@ export default function DashboardLandingEditor() {
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-3">
-                  <SectionDataEditor section={selectedSection} onChange={(d) => updateSectionData(selectedSection.id, d)} />
+                  <SectionDataEditor
+                    section={selectedSection}
+                    onChange={(d) => updateSectionData(selectedSection.id, d)}
+                    onAiImage={(field) => {
+                      setAiImageTargetField({ sectionId: selectedSection.id, field });
+                      setShowAiImage(true);
+                    }}
+                  />
                 </div>
               </ScrollArea>
             </>
@@ -701,14 +865,41 @@ export default function DashboardLandingEditor() {
         }}
         onPreview={(t) => setPreviewTheme(t ? { ...theme, ...t } : null)}
       />
+      {/* AI Image Dialog */}
+      <AiImageDialog
+        open={showAiImage}
+        onOpenChange={setShowAiImage}
+        storeId={landing?.store_id || ""}
+        context={landing?.title}
+        onImageGenerated={(url) => {
+          if (aiImageTargetField && selectedSectionId) {
+            const section = sections.find(s => s.id === selectedSectionId);
+            if (section) {
+              updateSectionData(selectedSectionId, { ...section.data, [aiImageTargetField.field]: url });
+            }
+          }
+          setAiImageTargetField(null);
+        }}
+      />
     </div>
   );
 }
 
 // --- Generic section data editor ---
-function SectionDataEditor({ section, onChange }: { section: LandingSection; onChange: (d: any) => void }) {
+function SectionDataEditor({ section, onChange, onAiImage }: { section: LandingSection; onChange: (d: any) => void; onAiImage?: (field: string) => void }) {
   const { data } = section;
   const set = (key: string, value: any) => onChange({ ...data, [key]: value });
+
+  const AiImageBtn = ({ field }: { field: string }) => (
+    onAiImage ? (
+      <button
+        onClick={() => onAiImage(field)}
+        className="text-[10px] text-violet-600 hover:text-violet-800 flex items-center gap-1 mt-1"
+      >
+        <Wand2 className="w-3 h-3" /> Générer avec l'IA
+      </button>
+    ) : null
+  );
 
   return (
     <div className="space-y-3 text-xs">
@@ -743,10 +934,16 @@ function SectionDataEditor({ section, onChange }: { section: LandingSection; onC
         </div>
       )}
       {data.imageUrl !== undefined && (
-        <ImageUploader value={data.imageUrl} onChange={(v) => set("imageUrl", v)} label="Image" />
+        <div>
+          <ImageUploader value={data.imageUrl} onChange={(v) => set("imageUrl", v)} label="Image" />
+          <AiImageBtn field="imageUrl" />
+        </div>
       )}
       {data.url !== undefined && section.type === "image" && (
-        <ImageUploader value={data.url} onChange={(v) => set("url", v)} label="Image" />
+        <div>
+          <ImageUploader value={data.url} onChange={(v) => set("url", v)} label="Image" />
+          <AiImageBtn field="url" />
+        </div>
       )}
       {data.url !== undefined && section.type !== "image" && (
         <div>
@@ -755,10 +952,16 @@ function SectionDataEditor({ section, onChange }: { section: LandingSection; onC
         </div>
       )}
       {data.beforeImage !== undefined && (
-        <ImageUploader value={data.beforeImage} onChange={(v) => set("beforeImage", v)} label="Image Avant" />
+        <div>
+          <ImageUploader value={data.beforeImage} onChange={(v) => set("beforeImage", v)} label="Image Avant" />
+          <AiImageBtn field="beforeImage" />
+        </div>
       )}
       {data.afterImage !== undefined && (
-        <ImageUploader value={data.afterImage} onChange={(v) => set("afterImage", v)} label="Image Après" />
+        <div>
+          <ImageUploader value={data.afterImage} onChange={(v) => set("afterImage", v)} label="Image Après" />
+          <AiImageBtn field="afterImage" />
+        </div>
       )}
       {data.poster !== undefined && (
         <ImageUploader value={data.poster} onChange={(v) => set("poster", v)} label="Poster vidéo" />

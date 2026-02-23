@@ -19,6 +19,8 @@ interface Props {
   productId?: string | null;
   collectionId?: string | null;
   onAddToCart?: (product: any, variant?: any) => void;
+  subpages?: any[];
+  landingSlug?: string;
 }
 
 const easeOut = [0.25, 0.46, 0.45, 0.94] as const;
@@ -48,7 +50,7 @@ function subtleText(color: string, opacity: number) {
   return color + Math.round(opacity * 255).toString(16).padStart(2, "0");
 }
 
-export function LandingSectionRenderer({ section, theme, onCtaClick, storeId, productId, collectionId, onAddToCart }: Props) {
+export function LandingSectionRenderer({ section, theme, onCtaClick, storeId, productId, collectionId, onAddToCart, subpages, landingSlug }: Props) {
   if (!section.visible) return null;
 
   const { data } = section;
@@ -57,7 +59,7 @@ export function LandingSectionRenderer({ section, theme, onCtaClick, storeId, pr
   switch (section.type) {
     // ===== HEADER =====
     case "header":
-      return <LandingHeader data={data} theme={t} onCtaClick={onCtaClick} />;
+      return <LandingHeader data={data} theme={t} onCtaClick={onCtaClick} subpages={subpages} landingSlug={landingSlug} />;
 
     // ===== HERO — Apple-style immersive =====
     case "hero":
@@ -640,7 +642,7 @@ export function LandingSectionRenderer({ section, theme, onCtaClick, storeId, pr
 
 // ========== SUB-COMPONENTS ==========
 
-function LandingHeader({ data, theme: t, onCtaClick }: { data: any; theme: Props["theme"]; onCtaClick?: () => void }) {
+function LandingHeader({ data, theme: t, onCtaClick, subpages, landingSlug }: { data: any; theme: Props["theme"]; onCtaClick?: () => void; subpages?: any[]; landingSlug?: string }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -658,6 +660,16 @@ function LandingHeader({ data, theme: t, onCtaClick }: { data: any; theme: Props
     setMobileOpen(false);
   };
 
+  // Build nav links: combine data.links + subpages
+  const navLinks = [...(data.links || [])];
+  if (subpages && subpages.length > 1 && landingSlug) {
+    subpages.forEach((sp: any) => {
+      if (!sp.is_home) {
+        navLinks.push({ label: sp.title, href: `/lp/${landingSlug}/${sp.slug}` });
+      }
+    });
+  }
+
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
@@ -673,17 +685,17 @@ function LandingHeader({ data, theme: t, onCtaClick }: { data: any; theme: Props
           {data.logo ? (
             <img src={data.logo} alt={data.storeName} className="h-7 w-auto" />
           ) : (
-            <span className="text-lg font-bold tracking-tight" style={{ color: t.textColor }}>{data.storeName}</span>
+            <a href={landingSlug ? `/lp/${landingSlug}` : "#"} className="text-lg font-bold tracking-tight" style={{ color: t.textColor }}>{data.storeName}</a>
           )}
         </div>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          {(data.links || []).map((link: any, i: number) => (
+          {navLinks.map((link: any, i: number) => (
             <a
               key={i}
               href={link.href}
-              onClick={(e) => scrollTo(e, link.href)}
+              onClick={(e) => link.href.startsWith("#") ? scrollTo(e, link.href) : undefined}
               className="text-xs font-medium transition-colors duration-200 hover:opacity-100"
               style={{ color: subtleText(t.textColor, 0.65) }}
             >
@@ -721,11 +733,11 @@ function LandingHeader({ data, theme: t, onCtaClick }: { data: any; theme: Props
           style={{ backgroundColor: t.bgColor + "F8", borderTop: `1px solid ${t.textColor}08` }}
         >
           <div className="max-w-[980px] mx-auto px-6 py-5 flex flex-col gap-4">
-            {(data.links || []).map((link: any, i: number) => (
+            {navLinks.map((link: any, i: number) => (
               <a
                 key={i}
                 href={link.href}
-                onClick={(e) => scrollTo(e, link.href)}
+                onClick={(e) => link.href.startsWith("#") ? scrollTo(e, link.href) : undefined}
                 className="text-sm font-medium py-1"
                 style={{ color: subtleText(t.textColor, 0.7) }}
               >
