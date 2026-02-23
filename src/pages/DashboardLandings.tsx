@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LANDING_TEMPLATES, getDefaultSectionsForTemplate } from "@/lib/landing-templates";
-import { Plus, Copy, Eye, Pencil, Trash2, BarChart3, ExternalLink } from "lucide-react";
+import { LANDING_TEMPLATES, getDefaultSectionsForTemplate, getTemplateById } from "@/lib/landing-templates";
+import { Plus, Copy, Eye, Pencil, Trash2, BarChart3, ExternalLink, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+
+const TEMPLATE_CATEGORIES = [...new Set(LANDING_TEMPLATES.map(t => t.category))];
 
 export default function DashboardLandings() {
   const { store } = useStore();
@@ -20,6 +22,7 @@ export default function DashboardLandings() {
   const [newTitle, setNewTitle] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("one-product");
+  const [filterCat, setFilterCat] = useState<string | null>(null);
 
   const fetchLandings = async () => {
     if (!store) return;
@@ -39,6 +42,7 @@ export default function DashboardLandings() {
 
     const slug = newSlug.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
     const sections = getDefaultSectionsForTemplate(selectedTemplate);
+    const template = getTemplateById(selectedTemplate);
 
     const { data, error } = await supabase
       .from("landing_pages")
@@ -48,6 +52,7 @@ export default function DashboardLandings() {
         slug,
         template_id: selectedTemplate,
         sections: sections as any,
+        theme: template?.suggestedTheme || null,
       })
       .select()
       .single();
@@ -98,6 +103,10 @@ export default function DashboardLandings() {
     return "bg-amber-100 text-amber-700";
   };
 
+  const filteredTemplates = filterCat
+    ? LANDING_TEMPLATES.filter(t => t.category === filterCat)
+    : LANDING_TEMPLATES;
+
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -109,15 +118,16 @@ export default function DashboardLandings() {
           <DialogTrigger asChild>
             <Button><Plus className="w-4 h-4 mr-2" /> Nouvelle Landing</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Créer une Landing Page</DialogTitle>
+              <DialogTitle className="text-xl">Créer une Landing Page</DialogTitle>
+              <p className="text-sm text-muted-foreground">Choisissez un template premium, puis personnalisez-le dans l'éditeur visuel.</p>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium text-foreground">Titre</label>
-                  <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Ma page de vente" />
+                  <Input value={newTitle} onChange={e => { setNewTitle(e.target.value); if (!newSlug || newSlug === newTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")) setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")); }} placeholder="Ma page de vente" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground">Slug (URL)</label>
@@ -127,22 +137,84 @@ export default function DashboardLandings() {
 
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">Choisir un template</label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {LANDING_TEMPLATES.map(t => (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button
+                    onClick={() => setFilterCat(null)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${!filterCat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                  >
+                    Tous
+                  </button>
+                  {TEMPLATE_CATEGORIES.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setFilterCat(cat)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${filterCat === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {filteredTemplates.map(t => (
                     <button
                       key={t.id}
                       onClick={() => setSelectedTemplate(t.id)}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${selectedTemplate === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}
+                      className={`group relative overflow-hidden rounded-xl border-2 text-left transition-all duration-200 ${
+                        selectedTemplate === t.id
+                          ? "border-primary ring-2 ring-primary/20 shadow-lg"
+                          : "border-border hover:border-primary/40 hover:shadow-md"
+                      }`}
                     >
-                      <span className="text-2xl mb-2 block">{t.icon}</span>
-                      <h3 className="text-sm font-semibold text-foreground">{t.name}</h3>
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{t.description}</p>
+                      <div
+                        className="h-20 w-full relative overflow-hidden"
+                        style={{ backgroundColor: t.preview || t.suggestedTheme?.bgColor || "#f5f5f5" }}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center">
+                            <span className="text-3xl block mb-1">{t.icon}</span>
+                            {t.suggestedTheme && (
+                              <div className="flex gap-1 justify-center">
+                                <span className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: t.suggestedTheme.primaryColor }} />
+                                <span className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: t.suggestedTheme.textColor }} />
+                                <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: t.suggestedTheme.bgColor }} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {selectedTemplate === t.id && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                            <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-sm font-semibold text-foreground">{t.name}</h3>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t.category}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>
+                        <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
+                          <FileText className="w-3 h-3" />
+                          <span>{LANDING_TEMPLATES.find(tpl => tpl.id === t.id)?.sections.length || 0} sections</span>
+                          {t.suggestedTheme && (
+                            <>
+                              <span className="mx-1">•</span>
+                              <span>{t.suggestedTheme.fontHeading}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <Button onClick={handleCreate} className="w-full">Créer la landing page</Button>
+              <Button onClick={handleCreate} className="w-full" size="lg" disabled={!newTitle.trim() || !newSlug.trim()}>
+                Créer la landing page
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -155,8 +227,10 @@ export default function DashboardLandings() {
       ) : landings.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-16 text-center">
-            <p className="text-muted-foreground mb-4">Aucune landing page pour le moment</p>
-            <Button onClick={() => setCreateOpen(true)} variant="outline"><Plus className="w-4 h-4 mr-2" /> Créer votre première</Button>
+            <div className="text-4xl mb-4">🚀</div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Créez votre première landing page</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">Choisissez parmi nos templates premium et personnalisez-les avec l'éditeur visuel drag & drop.</p>
+            <Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-2" /> Créer une landing page</Button>
           </CardContent>
         </Card>
       ) : (
