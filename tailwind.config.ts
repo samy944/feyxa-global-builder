@@ -14,13 +14,14 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Manrope", "system-ui", "-apple-system", "sans-serif"],
-        heading: ["Clash Display", "Inter", "sans-serif"],
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        heading: ["Clash Display", "Satoshi", "Inter", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
       fontSize: {
-        "hero": ["clamp(3rem, 8vw, 6rem)", { lineHeight: "1.05", letterSpacing: "0.04em", fontWeight: "700" }],
-        "hero-sub": ["clamp(1.125rem, 2vw, 1.5rem)", { lineHeight: "1.5", fontWeight: "400" }],
+        "hero": ["clamp(2.25rem, 5vw + 1rem, 4rem)", { lineHeight: "1.05", letterSpacing: "-0.02em", fontWeight: "600" }],
+        "hero-sub": ["clamp(1rem, 1.5vw + 0.5rem, 1.25rem)", { lineHeight: "1.6", fontWeight: "400" }],
+        "display": ["2.5rem", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "600" }],
       },
       colors: {
         border: "hsl(var(--border))",
