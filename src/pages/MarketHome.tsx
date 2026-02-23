@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
-import { MarketSearch } from "@/components/market/MarketSearch";
+import { MarketHero } from "@/components/market/MarketHero";
 import { MarketCategoryCard } from "@/components/market/MarketCategoryCard";
 import { MarketProductCard } from "@/components/market/MarketProductCard";
 import { useLocation } from "@/hooks/useLocation";
@@ -140,49 +140,11 @@ export default function MarketHome() {
   return (
     <MarketLayout>
       {/* Hero */}
-      <section
-        className="relative flex flex-col items-center justify-center text-center"
-        style={{
-          background: "#0E0E11",
-          paddingTop: "clamp(6rem, 14vh, 10rem)",
-          paddingBottom: "clamp(5rem, 12vh, 8rem)",
-        }}
-      >
-        <h1
-          style={{
-            color: "#FFFFFF",
-            fontSize: "clamp(2.75rem, 6vw + 0.5rem, 4.5rem)",
-            fontWeight: 600,
-            letterSpacing: "-0.02em",
-            lineHeight: 1.05,
-          }}
-        >
-          Commerce nouvelle génération.
-        </h1>
-        <p
-          className="mt-5 mx-auto"
-          style={{
-            color: "#9CA3AF",
-            fontSize: "1.125rem",
-            fontWeight: 400,
-            lineHeight: 1.6,
-            maxWidth: "420px",
-          }}
-        >
-          Découvrez des produits d'exception.
-        </p>
-
-        <div
-          className="mt-12 w-full px-4"
-          style={{ maxWidth: "min(70%, 600px)", margin: "3rem auto 0" }}
-        >
-          <MarketSearch />
-        </div>
-      </section>
+      <MarketHero />
 
       {/* Categories */}
       {!query && (
-        <section style={{ background: "#0E0E11", paddingTop: "4rem", paddingBottom: "5rem" }}>
+        <section style={{ background: "#0b0f14", paddingTop: "4rem", paddingBottom: "5rem" }}>
           <div className="container">
             <h2
               className="text-center mb-14"
@@ -205,7 +167,7 @@ export default function MarketHome() {
       )}
 
       {/* Products */}
-      <section style={{ background: "#0E0E11", paddingTop: "4rem", paddingBottom: "6rem" }}>
+      <section style={{ background: "#0b0f14", paddingTop: "4rem", paddingBottom: "6rem" }}>
         <div className="container">
           <h2
             className="mb-12"

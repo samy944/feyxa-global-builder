@@ -31,16 +31,22 @@ export function MarketSearch({ placeholder = "Rechercher un produit, une marqueâ
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-12 pl-11 pr-5 text-sm transition-colors duration-200 focus:outline-none"
+        className="w-full h-13 pl-11 pr-5 text-sm transition-all duration-150 focus:outline-none"
         style={{
           background: "rgba(255,255,255,0.03)",
           border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "0.625rem",
+          borderRadius: "0.75rem",
           color: "#FFFFFF",
           fontWeight: 400,
         }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)"; }}
-        onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = "rgba(71,210,30,0.35)";
+          e.currentTarget.style.boxShadow = "0 0 0 3px rgba(71,210,30,0.08), 0 0 20px rgba(71,210,30,0.06)";
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+          e.currentTarget.style.boxShadow = "none";
+        }}
       />
     </form>
   );
