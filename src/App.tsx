@@ -21,6 +21,7 @@ import LandingPagePublic from "./pages/LandingPagePublic";
 import DashboardOverview from "./pages/DashboardOverview";
 import DashboardProducts from "./pages/DashboardProducts";
 import DashboardOrders from "./pages/DashboardOrders";
+import DashboardOrderDetail from "./pages/DashboardOrderDetail";
 import DashboardSettings from "./pages/DashboardSettings";
 import DashboardLanding from "./pages/DashboardLanding";
 import StorefrontHome from "./pages/StorefrontHome";
@@ -71,6 +72,7 @@ const App = () => (
               <Route index element={<DashboardOverview />} />
               <Route path="products" element={<DashboardProducts />} />
               <Route path="orders" element={<DashboardOrders />} />
+              <Route path="orders/:orderId" element={<DashboardOrderDetail />} />
               <Route path="customers" element={<DashboardCustomers />} />
               <Route path="wallet" element={<DashboardWallet />} />
               <Route path="insights" element={<DashboardInsights />} />
