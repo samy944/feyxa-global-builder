@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          created_at: string
+          currency: string
+          event_type: string
+          event_value: number
+          id: string
+          metadata: Json | null
+          product_id: string | null
+          session_id: string | null
+          store_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          event_type: string
+          event_value?: number
+          id?: string
+          metadata?: Json | null
+          product_id?: string | null
+          session_id?: string | null
+          store_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          event_type?: string
+          event_value?: number
+          id?: string
+          metadata?: Json | null
+          product_id?: string | null
+          session_id?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -597,6 +648,79 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_attributions: {
+        Row: {
+          created_at: string
+          first_campaign: string | null
+          first_content: string | null
+          first_medium: string | null
+          first_source: string | null
+          id: string
+          last_campaign: string | null
+          last_content: string | null
+          last_medium: string | null
+          last_source: string | null
+          order_id: string
+          session_id: string | null
+          store_id: string
+          tracking_link_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          first_campaign?: string | null
+          first_content?: string | null
+          first_medium?: string | null
+          first_source?: string | null
+          id?: string
+          last_campaign?: string | null
+          last_content?: string | null
+          last_medium?: string | null
+          last_source?: string | null
+          order_id: string
+          session_id?: string | null
+          store_id: string
+          tracking_link_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          first_campaign?: string | null
+          first_content?: string | null
+          first_medium?: string | null
+          first_source?: string | null
+          id?: string
+          last_campaign?: string | null
+          last_content?: string | null
+          last_medium?: string | null
+          last_source?: string | null
+          order_id?: string
+          session_id?: string | null
+          store_id?: string
+          tracking_link_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_attributions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_attributions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_attributions_tracking_link_id_fkey"
+            columns: ["tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
             referencedColumns: ["id"]
           },
         ]
@@ -1197,6 +1321,151 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tracking_events_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_links: {
+        Row: {
+          campaign: string | null
+          click_count: number
+          content: string | null
+          created_at: string
+          id: string
+          medium: string
+          product_id: string | null
+          short_code: string
+          source: string
+          store_id: string
+          target_url: string
+          updated_at: string
+        }
+        Insert: {
+          campaign?: string | null
+          click_count?: number
+          content?: string | null
+          created_at?: string
+          id?: string
+          medium?: string
+          product_id?: string | null
+          short_code: string
+          source: string
+          store_id: string
+          target_url: string
+          updated_at?: string
+        }
+        Update: {
+          campaign?: string | null
+          click_count?: number
+          content?: string | null
+          created_at?: string
+          id?: string
+          medium?: string
+          product_id?: string | null
+          short_code?: string
+          source?: string
+          store_id?: string
+          target_url?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_links_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_sessions: {
+        Row: {
+          first_campaign: string | null
+          first_content: string | null
+          first_medium: string | null
+          first_referrer: string | null
+          first_seen_at: string
+          first_source: string | null
+          first_tracking_link_id: string | null
+          id: string
+          last_campaign: string | null
+          last_content: string | null
+          last_medium: string | null
+          last_referrer: string | null
+          last_seen_at: string
+          last_source: string | null
+          last_tracking_link_id: string | null
+          page_views: number
+          session_id: string
+          store_id: string
+        }
+        Insert: {
+          first_campaign?: string | null
+          first_content?: string | null
+          first_medium?: string | null
+          first_referrer?: string | null
+          first_seen_at?: string
+          first_source?: string | null
+          first_tracking_link_id?: string | null
+          id?: string
+          last_campaign?: string | null
+          last_content?: string | null
+          last_medium?: string | null
+          last_referrer?: string | null
+          last_seen_at?: string
+          last_source?: string | null
+          last_tracking_link_id?: string | null
+          page_views?: number
+          session_id: string
+          store_id: string
+        }
+        Update: {
+          first_campaign?: string | null
+          first_content?: string | null
+          first_medium?: string | null
+          first_referrer?: string | null
+          first_seen_at?: string
+          first_source?: string | null
+          first_tracking_link_id?: string | null
+          id?: string
+          last_campaign?: string | null
+          last_content?: string | null
+          last_medium?: string | null
+          last_referrer?: string | null
+          last_seen_at?: string
+          last_source?: string | null
+          last_tracking_link_id?: string | null
+          page_views?: number
+          session_id?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_sessions_first_tracking_link_id_fkey"
+            columns: ["first_tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_sessions_last_tracking_link_id_fkey"
+            columns: ["last_tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_sessions_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
