@@ -10,7 +10,7 @@ import { FaqSection } from "@/components/landing/FaqSection";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background dark">
       <Navbar />
       <main>
         <HeroSection />

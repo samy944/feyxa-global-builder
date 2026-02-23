@@ -1,55 +1,73 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Zap } from "lucide-react";
 import { DeviceShowcase } from "./DeviceShowcase";
+
+const stats = [
+  { value: "2K+", label: "Vendeurs actifs" },
+  { value: "50K+", label: "Commandes/mois" },
+  { value: "15+", label: "Pays couverts" },
+];
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center bg-hero overflow-hidden">
-      {/* Subtle grid */}
-      <div className="absolute inset-0 grid-pattern opacity-30" />
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-hero">
+      {/* Grid pattern */}
+      <div className="absolute inset-0 grid-pattern opacity-20" />
 
-      {/* Green glow — very subtle */}
+      {/* Primary glow top-left */}
       <div
-        className="absolute top-1/3 left-1/4 w-[500px] h-[300px] rounded-full blur-[160px]"
-        style={{ background: "hsla(106, 75%, 47%, 0.06)" }}
+        className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full blur-[180px] opacity-[0.07]"
+        style={{ background: "hsl(var(--primary))" }}
+      />
+      {/* Secondary glow bottom-right */}
+      <div
+        className="absolute -bottom-40 -right-20 w-[500px] h-[400px] rounded-full blur-[160px] opacity-[0.05]"
+        style={{ background: "hsl(var(--primary))" }}
       />
 
-      <div className="container relative z-10 pt-32 pb-20 lg:pb-28">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <div className="container relative z-10 pt-28 pb-16 lg:pt-32 lg:pb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-20 items-center">
           {/* Left — Copy */}
           <div className="space-y-8 text-center lg:text-left">
-            <motion.p
+            {/* Badge */}
+            <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-sm font-medium tracking-widest uppercase text-primary"
+              transition={{ delay: 0.15, duration: 0.5 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-sm font-medium"
             >
-              E-commerce nouvelle génération
-            </motion.p>
+              <Zap size={14} />
+              La plateforme e-commerce #1 en Afrique
+            </motion.div>
 
+            {/* Headline */}
             <motion.h1
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="font-heading text-5xl sm:text-6xl lg:text-7xl xl:text-8xl leading-[0.95] text-foreground"
+              transition={{ delay: 0.25, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="font-heading text-5xl sm:text-6xl lg:text-7xl xl:text-[5.5rem] leading-[0.95] text-foreground"
             >
-              VENDEZ
+              CRÉEZ.
               <br />
-              <span className="text-gradient">PARTOUT.</span>
+              VENDEZ.
+              <br />
+              <span className="text-gradient">SCALEZ.</span>
             </motion.h1>
 
+            {/* Subline */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-lg text-muted-foreground max-w-md mx-auto lg:mx-0 leading-relaxed"
+              className="text-lg sm:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0 leading-relaxed"
             >
-              Créez votre boutique en ligne en 5 minutes. Paiements Afrique & monde,
-              IA intégrée, logistique mondiale. Tout-en-un.
+              Lancez votre boutique en 5 minutes. Paiements Mobile Money & internationaux,
+              IA intégrée, logistique simplifiée — tout ce qu'il faut pour réussir.
             </motion.p>
 
+            {/* CTAs */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -63,33 +81,40 @@ export function HeroSection() {
                 </Link>
               </Button>
               <Button variant="hero-outline" size="lg" asChild>
-                <Link to="#features">Découvrir</Link>
+                <a href="#features" onClick={(e) => {
+                  e.preventDefault();
+                  document.querySelector("#features")?.scrollIntoView({ behavior: "smooth" });
+                }}>
+                  Découvrir
+                </a>
               </Button>
             </motion.div>
 
+            {/* Stats row */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.7 }}
+              transition={{ delay: 0.65 }}
               className="flex items-center justify-center lg:justify-start gap-8 pt-4"
             >
-              {["Stripe", "Paystack", "Mobile Money", "Wave"].map((name) => (
-                <span
-                  key={name}
-                  className="text-xs text-muted-foreground/50 font-medium tracking-widest uppercase"
-                >
-                  {name}
-                </span>
+              {stats.map((s, i) => (
+                <div key={s.label} className="flex flex-col items-center lg:items-start">
+                  <span className="text-2xl font-heading font-bold text-foreground">{s.value}</span>
+                  <span className="text-xs text-muted-foreground tracking-wider uppercase">{s.label}</span>
+                  {i < stats.length - 1 && (
+                    <div className="hidden" />
+                  )}
+                </div>
               ))}
             </motion.div>
           </div>
 
-          {/* Right — Single Device Showcase */}
+          {/* Right — Device */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            className="flex justify-center lg:justify-center"
+            transition={{ delay: 0.4, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            className="flex justify-center"
           >
             <DeviceShowcase />
           </motion.div>
