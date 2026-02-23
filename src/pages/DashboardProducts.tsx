@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Plus, Search, Filter, Image as ImageIcon, Loader2, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Filter, Image as ImageIcon, Loader2, Pencil, Trash2, MoreHorizontal, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
 import { toast } from "sonner";
 import ProductFormDialog, { type ProductToEdit } from "@/components/dashboard/ProductFormDialog";
+import { TrackingLinkGenerator } from "@/components/dashboard/TrackingLinkGenerator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -201,26 +202,36 @@ export default function DashboardProducts() {
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <MoreHorizontal size={16} />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem onClick={() => handleEdit(p)}>
-                            <Pencil size={14} className="mr-2" />
-                            Modifier
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => setDeleteTarget(p)}
-                          >
-                            <Trash2 size={14} className="mr-2" />
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center justify-end gap-1">
+                        {store && (
+                          <TrackingLinkGenerator
+                            storeId={store.id}
+                            productId={p.id}
+                            productSlug={p.slug}
+                            productName={p.name}
+                          />
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                              <MoreHorizontal size={16} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={() => handleEdit(p)}>
+                              <Pencil size={14} className="mr-2" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setDeleteTarget(p)}
+                            >
+                              <Trash2 size={14} className="mr-2" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </td>
                   </motion.tr>
                 );

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { upsertTrackingSession, recordAnalyticsEvent } from "@/lib/marketing-session";
 
 // --- Types ---
 
@@ -112,6 +113,9 @@ export async function initStoreTracking(storeId: string, currency?: string) {
   currentStoreId = storeId;
   if (currency) currentCurrency = currency;
 
+  // Upsert marketing session (fire-and-forget)
+  upsertTrackingSession(storeId).catch(() => {});
+
   if (injectedStoreId === storeId) return; // already injected
 
   const { data } = await supabase
@@ -167,6 +171,7 @@ function pintrk(method: string, ...args: any[]) {
 
 export function trackPageView() {
   recordEvent("page_view");
+  if (currentStoreId) recordAnalyticsEvent(currentStoreId, "page_view").catch(() => {});
   fbq("track", "PageView");
   snaptr("track", "PAGE_VIEW");
   pintrk("page");
@@ -176,6 +181,7 @@ export function trackPageView() {
 
 export function trackViewContent(product: { id: string; name: string; price: number; currency: string; category?: string }) {
   recordEvent("view_content", product.price);
+  if (currentStoreId) recordAnalyticsEvent(currentStoreId, "view_content", product.id, product.price, product.currency).catch(() => {});
   fbq("track", "ViewContent", {
     content_ids: [product.id],
     content_name: product.name,
@@ -216,6 +222,7 @@ export function trackViewContent(product: { id: string; name: string; price: num
 
 export function trackAddToCart(product: { id: string; name: string; price: number; currency: string; quantity: number }) {
   recordEvent("add_to_cart", product.price * product.quantity);
+  if (currentStoreId) recordAnalyticsEvent(currentStoreId, "add_to_cart", product.id, product.price * product.quantity, product.currency).catch(() => {});
   fbq("track", "AddToCart", {
     content_ids: [product.id],
     content_name: product.name,
@@ -261,6 +268,7 @@ export function trackAddToCart(product: { id: string; name: string; price: numbe
 
 export function trackInitiateCheckout(value: number, currency: string, numItems: number) {
   recordEvent("initiate_checkout", value);
+  if (currentStoreId) recordAnalyticsEvent(currentStoreId, "initiate_checkout", null, value, currency).catch(() => {});
   fbq("track", "InitiateCheckout", {
     value,
     currency,
@@ -296,6 +304,7 @@ export function trackPurchase(data: PurchaseData) {
   const contentIds = data.items.map((i) => i.id);
   const numItems = data.items.reduce((s, i) => s + i.quantity, 0);
   recordEvent("purchase", data.value);
+  if (currentStoreId) recordAnalyticsEvent(currentStoreId, "purchase", null, data.value, data.currency, { order_id: data.orderId }).catch(() => {});
 
   fbq("track", "Purchase", {
     content_ids: contentIds,

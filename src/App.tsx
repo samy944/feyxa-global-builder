@@ -34,7 +34,9 @@ import DashboardWallet from "./pages/DashboardWallet";
 import DashboardInsights from "./pages/DashboardInsights";
 import DashboardTrends from "./pages/DashboardTrends";
 import DashboardAnalytics from "./pages/DashboardAnalytics";
+import DashboardMarketing from "./pages/DashboardMarketing";
 import TrackOrder from "./pages/TrackOrder";
+import TrackingRedirect from "./pages/TrackingRedirect";
 import AdminPayouts from "./pages/AdminPayouts";
 import AdminReviews from "./pages/AdminReviews";
 import MyOrders from "./pages/MyOrders";
@@ -68,6 +70,7 @@ const App = () => (
               <Route path="insights" element={<DashboardInsights />} />
               <Route path="trends" element={<DashboardTrends />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
+              <Route path="marketing" element={<DashboardMarketing />} />
               <Route path="landings" element={<DashboardLandings />} />
               <Route path="landings/:id/edit" element={<DashboardLandingEditor />} />
               <Route path="landings/:id/ab" element={<DashboardLandingAB />} />
@@ -84,6 +87,7 @@ const App = () => (
             <Route path="/market/product/:slug" element={<MarketProduct />} />
             <Route path="/market/vendor/:slug" element={<MarketVendor />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/r/:code" element={<TrackingRedirect />} />
             <Route path="/track" element={<TrackOrder />} />
             <Route path="/track/:orderNumber" element={<TrackOrder />} />
             <Route path="/admin/payouts" element={

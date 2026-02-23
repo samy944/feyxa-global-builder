@@ -1604,6 +1604,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_tracking_link_click: {
+        Args: { _short_code: string }
+        Returns: undefined
+      }
       is_store_admin_or_owner: {
         Args: { _store_id: string; _user_id: string }
         Returns: boolean
