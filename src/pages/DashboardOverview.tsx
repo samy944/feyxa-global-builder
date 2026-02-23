@@ -4,6 +4,7 @@ import ConversionAlertWidget from "@/components/dashboard/ConversionAlertWidget"
 import RecentOrdersWidget from "@/components/dashboard/RecentOrdersWidget";
 import TopProductsWidget from "@/components/dashboard/TopProductsWidget";
 import LowStockWidget from "@/components/dashboard/LowStockWidget";
+import KpiCardsWidget from "@/components/dashboard/KpiCardsWidget";
 
 export default function DashboardOverview() {
   return (
@@ -18,6 +19,9 @@ export default function DashboardOverview() {
           <span>{new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</span>
         </div>
       </div>
+
+      {/* KPI Cards */}
+      <KpiCardsWidget />
 
       {/* Conversion Alert Widget */}
       <ConversionAlertWidget />
