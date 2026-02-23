@@ -4,6 +4,7 @@ import { useAuth } from "./useAuth";
 
 const COUNTRY_KEY = "feyxa_country_id";
 const CITY_KEY = "feyxa_city_id";
+const NOTIF_DISMISSED_KEY = "feyxa_location_notif_dismissed";
 
 interface Country {
   id: string;
@@ -25,13 +26,18 @@ interface LocationCtx {
   countries: Country[];
   cities: City[];
   loading: boolean;
-  needsSelection: boolean;
+  autoDetected: boolean;
+  showLocationNotif: boolean;
+  dismissLocationNotif: () => void;
   setCountry: (c: Country) => void;
   setCity: (c: City) => void;
   loadCities: (countryId: string) => Promise<void>;
 }
 
 const LocationContext = createContext<LocationCtx | undefined>(undefined);
+
+// Default fallback country code
+const DEFAULT_COUNTRY_CODE = "BJ";
 
 export function LocationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -40,20 +46,21 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const [countries, setCountries] = useState<Country[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
-  const [needsSelection, setNeedsSelection] = useState(false);
+  const [autoDetected, setAutoDetected] = useState(false);
+  const [showLocationNotif, setShowLocationNotif] = useState(false);
 
-  // Load countries
+  // Load countries + auto-detect
   useEffect(() => {
     supabase
       .from("countries")
       .select("id, code, name, currency_code, flag_emoji")
       .eq("is_active", true)
       .order("sort_order")
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         const list = (data || []) as Country[];
         setCountries(list);
 
-        // Restore from localStorage
+        // 1. Check localStorage first
         const savedCountryId = localStorage.getItem(COUNTRY_KEY);
         const savedCityId = localStorage.getItem(CITY_KEY);
 
@@ -67,12 +74,42 @@ export function LocationProvider({ children }: { children: ReactNode }) {
                 if (foundCity) setCityState(foundCity);
               }
             });
-          } else {
-            setNeedsSelection(true);
+            setLoading(false);
+            return;
           }
-        } else {
-          setNeedsSelection(true);
         }
+
+        // 2. Auto-detect via IP geolocation (free API)
+        let detectedCode: string | null = null;
+        try {
+          const resp = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) });
+          if (resp.ok) {
+            const geo = await resp.json();
+            detectedCode = geo.country_code;
+          }
+        } catch {
+          // Silently fail, use fallback
+        }
+
+        // 3. Match detected country or fallback
+        const matchCode = detectedCode || DEFAULT_COUNTRY_CODE;
+        const matched = list.find(c => c.code.toUpperCase() === matchCode.toUpperCase())
+          || list.find(c => c.code.toUpperCase() === DEFAULT_COUNTRY_CODE)
+          || list[0];
+
+        if (matched) {
+          setCountryState(matched);
+          localStorage.setItem(COUNTRY_KEY, matched.id);
+          loadCitiesInternal(matched.id);
+          setAutoDetected(true);
+
+          // Show non-blocking notification if not previously dismissed
+          const dismissed = localStorage.getItem(NOTIF_DISMISSED_KEY);
+          if (!dismissed) {
+            setShowLocationNotif(true);
+          }
+        }
+
         setLoading(false);
       });
   }, []);
@@ -93,15 +130,21 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     await loadCitiesInternal(countryId);
   }, []);
 
+  const dismissLocationNotif = useCallback(() => {
+    setShowLocationNotif(false);
+    localStorage.setItem(NOTIF_DISMISSED_KEY, "1");
+  }, []);
+
   const setCountry = useCallback((c: Country) => {
     setCountryState(c);
     localStorage.setItem(COUNTRY_KEY, c.id);
     setCityState(null);
     localStorage.removeItem(CITY_KEY);
-    setNeedsSelection(false);
+    setAutoDetected(false);
+    setShowLocationNotif(false);
+    localStorage.setItem(NOTIF_DISMISSED_KEY, "1");
     loadCitiesInternal(c.id);
 
-    // Persist to profile if logged in
     if (user) {
       supabase
         .from("profiles")
@@ -126,7 +169,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
   return (
     <LocationContext.Provider
-      value={{ country, city, countries, cities, loading, needsSelection, setCountry, setCity, loadCities }}
+      value={{ country, city, countries, cities, loading, autoDetected, showLocationNotif, dismissLocationNotif, setCountry, setCity, loadCities }}
     >
       {children}
     </LocationContext.Provider>
