@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
 import OrderAttributionWidget from "@/components/dashboard/OrderAttributionWidget";
 
-type OrderStatus = "new" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled" | "refunded";
+type OrderStatus = "new" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled" | "refunded" | "dispute";
 type PaymentStatus = "pending" | "paid" | "cod" | "failed" | "refunded";
 
 interface OrderRow {
@@ -37,6 +37,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   delivered: { label: "Livrée", color: "bg-accent/10 text-accent" },
   cancelled: { label: "Annulée", color: "bg-destructive/10 text-destructive" },
   refunded: { label: "Remboursée", color: "bg-destructive/10 text-destructive" },
+  dispute: { label: "Litige", color: "bg-destructive/10 text-destructive" },
 };
 
 const paymentConfig: Record<string, { label: string; color: string }> = {

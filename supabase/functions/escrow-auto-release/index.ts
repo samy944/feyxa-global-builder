@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     // Find all held escrows past their release_at date
     const { data: dueEscrows, error: fetchErr } = await sb
       .from("escrow_records")
-      .select("id")
+      .select("id, order_id")
       .eq("status", "held")
       .lte("release_at", new Date().toISOString());
 
@@ -27,6 +27,19 @@ Deno.serve(async (req) => {
 
     let released = 0;
     for (const escrow of dueEscrows ?? []) {
+      // Skip if there's an active return request (dispute) on this order
+      const { data: activeReturns } = await sb
+        .from("return_requests")
+        .select("id")
+        .eq("order_id", escrow.order_id)
+        .not("status", "in", '("rejected","refunded")')
+        .limit(1);
+
+      if (activeReturns && activeReturns.length > 0) {
+        console.log(`Skipping escrow ${escrow.id}: active return request on order ${escrow.order_id}`);
+        continue;
+      }
+
       const { data: ok, error } = await sb.rpc("release_escrow", {
         _escrow_id: escrow.id,
       });
