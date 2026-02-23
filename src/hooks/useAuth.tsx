@@ -19,10 +19,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // Auto-accept pending invite after login
+      if (session?.user && _event === 'SIGNED_IN') {
+        const pendingToken = localStorage.getItem('feyxa_pending_invite');
+        if (pendingToken) {
+          localStorage.removeItem('feyxa_pending_invite');
+          supabase.functions.invoke('team-invite', {
+            body: { action: 'accept', token_hash: pendingToken },
+          }).then(({ data }) => {
+            if (data?.success) {
+              window.location.href = '/dashboard';
+            }
+          });
+        }
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {

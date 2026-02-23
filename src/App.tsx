@@ -58,6 +58,7 @@ import ClientWishlist from "./pages/ClientWishlist";
 import ClientOverview from "./pages/ClientOverview";
 import DashboardStores from "./pages/DashboardStores";
 import NewStore from "./pages/NewStore";
+import AcceptInvite from "./pages/AcceptInvite";
 
 const queryClient = new QueryClient();
 
@@ -113,6 +114,7 @@ const App = () => (
             <Route path="/market/product/:slug" element={<MarketProduct />} />
             <Route path="/market/vendor/:slug" element={<MarketVendor />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/invite/accept" element={<AcceptInvite />} />
             <Route path="/r/:code" element={<TrackingRedirect />} />
             <Route path="/track" element={<TrackOrder />} />
             <Route path="/track/:orderNumber" element={<TrackOrder />} />
