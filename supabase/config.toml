@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.escalate-tickets]
 verify_jwt = false
+
+[functions.optimize-landing]
+verify_jwt = false
