@@ -1,11 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShoppingBag, Menu, X, Search } from "lucide-react";
+import { ShoppingBag, Menu, X, Heart, User } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useWishlist } from "@/hooks/useWishlist";
 import { GlobalSearch } from "@/components/market/GlobalSearch";
 
 const navLinks = [
@@ -19,7 +20,8 @@ export function MarketNavbar() {
   const location = useLocation();
   const { totalItems, setIsOpen } = useCart();
   const { user } = useAuth();
-  const { role } = useUserRole();
+  const { isVendor } = useUserRole();
+  const { count: wishlistCount } = useWishlist();
 
   return (
     <motion.header
@@ -58,14 +60,27 @@ export function MarketNavbar() {
           <GlobalSearch />
         </div>
 
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-2">
+          {user && (
+            <Link
+              to="/account/wishlist"
+              className="relative text-muted-foreground hover:text-primary transition-colors p-1.5"
+            >
+              <Heart size={19} />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-pink-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
+          )}
           <button
             onClick={() => setIsOpen(true)}
-            className="relative text-foreground hover:text-primary transition-colors p-1"
+            className="relative text-muted-foreground hover:text-primary transition-colors p-1.5"
           >
-            <ShoppingBag size={20} />
+            <ShoppingBag size={19} />
             {totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
                 {totalItems}
               </span>
             )}
@@ -73,9 +88,11 @@ export function MarketNavbar() {
           {user ? (
             <>
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/account">Mon compte</Link>
+                <Link to="/account">
+                  <User size={16} className="mr-1" /> Mon compte
+                </Link>
               </Button>
-              {role === "vendor" && (
+              {isVendor && (
                 <Button variant="hero" size="sm" asChild>
                   <Link to="/dashboard">Dashboard</Link>
                 </Button>
@@ -93,14 +110,24 @@ export function MarketNavbar() {
           )}
         </div>
 
-        <div className="flex items-center gap-3 md:hidden">
+        <div className="flex items-center gap-2 md:hidden">
+          {user && (
+            <Link to="/account/wishlist" className="relative text-foreground p-1">
+              <Heart size={19} />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
+          )}
           <button
             onClick={() => setIsOpen(true)}
             className="relative text-foreground p-1"
           >
-            <ShoppingBag size={20} />
+            <ShoppingBag size={19} />
             {totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">
                 {totalItems}
               </span>
             )}
@@ -134,7 +161,7 @@ export function MarketNavbar() {
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/account" onClick={() => setOpen(false)}>Mon compte</Link>
                 </Button>
-                {role === "vendor" && (
+                {isVendor && (
                   <Button variant="hero" size="sm" asChild>
                     <Link to="/dashboard" onClick={() => setOpen(false)}>Dashboard</Link>
                   </Button>
