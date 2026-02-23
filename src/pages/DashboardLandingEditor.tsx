@@ -32,6 +32,7 @@ import {
   Settings2, Palette, Search, Copy, EyeOff, Undo2, Redo2, History, Layers,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ImageUploader } from "@/components/landing/ImageUploader";
 
 const BLOCK_CATEGORIES = [
   { key: "essential", label: "Essentiels" },
@@ -605,16 +606,25 @@ function SectionDataEditor({ section, onChange }: { section: LandingSection; onC
         </div>
       )}
       {data.imageUrl !== undefined && (
-        <div>
-          <Label className="text-[10px]">Image URL</Label>
-          <Input value={data.imageUrl} onChange={e => set("imageUrl", e.target.value)} className="h-7 text-xs mt-0.5" placeholder="https://..." />
-        </div>
+        <ImageUploader value={data.imageUrl} onChange={(v) => set("imageUrl", v)} label="Image" />
       )}
-      {data.url !== undefined && (
+      {data.url !== undefined && section.type === "image" && (
+        <ImageUploader value={data.url} onChange={(v) => set("url", v)} label="Image" />
+      )}
+      {data.url !== undefined && section.type !== "image" && (
         <div>
           <Label className="text-[10px]">URL</Label>
           <Input value={data.url} onChange={e => set("url", e.target.value)} className="h-7 text-xs mt-0.5" placeholder="https://..." />
         </div>
+      )}
+      {data.beforeImage !== undefined && (
+        <ImageUploader value={data.beforeImage} onChange={(v) => set("beforeImage", v)} label="Image Avant" />
+      )}
+      {data.afterImage !== undefined && (
+        <ImageUploader value={data.afterImage} onChange={(v) => set("afterImage", v)} label="Image Après" />
+      )}
+      {data.poster !== undefined && (
+        <ImageUploader value={data.poster} onChange={(v) => set("poster", v)} label="Poster vidéo" />
       )}
       {data.placeholder !== undefined && (
         <div>
