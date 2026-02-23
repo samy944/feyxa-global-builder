@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useWishlist } from "@/hooks/useWishlist";
 import { GlobalSearch } from "@/components/market/GlobalSearch";
+import { LocationSelector } from "@/components/market/LocationSelector";
 
 const navLinks = [
   { label: "Accueil", href: "/market" },
@@ -67,6 +68,7 @@ export function MarketNavbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-1.5">
+          <LocationSelector />
           {user && (
             <Link
               to="/account/wishlist"

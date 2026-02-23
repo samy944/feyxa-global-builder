@@ -7,6 +7,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { CartDrawer } from "@/components/market/CartDrawer";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { LocationProvider } from "@/hooks/useLocation";
+import { LocationPickerModal } from "@/components/market/LocationPickerModal";
 import { VendorRoute, AuthRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -63,6 +65,7 @@ const App = () => (
   <ThemeProvider>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <LocationProvider>
       <CartProvider>
       <TooltipProvider>
         <Toaster />
@@ -141,9 +144,11 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           <CartDrawer />
+          <LocationPickerModal />
         </BrowserRouter>
       </TooltipProvider>
       </CartProvider>
+      </LocationProvider>
     </AuthProvider>
   </QueryClientProvider>
   </ThemeProvider>
