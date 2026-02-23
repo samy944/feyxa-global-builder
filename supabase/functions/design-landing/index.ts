@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,11 +7,68 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function generateImage(apiKey: string, prompt: string, storeId: string, supabaseAdmin: any): Promise<string | null> {
+  try {
+    const imagePrompt = `Create a stunning, ultra high-resolution commercial photograph. Style: editorial, premium, modern. ${prompt}. Requirements: photorealistic, cinematic lighting, clean composition, no text or watermarks, no logos, sharp focus, 16:9 aspect ratio.`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: imagePrompt }],
+        modalities: ["image", "text"],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Image gen failed:", response.status);
+      return null;
+    }
+
+    const aiResult = await response.json();
+    const imageData = aiResult.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    if (!imageData) return null;
+
+    const base64Match = imageData.match(/^data:image\/(png|jpeg|webp);base64,(.+)$/);
+    if (!base64Match) return null;
+
+    const mimeType = `image/${base64Match[1]}`;
+    const extension = base64Match[1] === "jpeg" ? "jpg" : base64Match[1];
+    const rawBase64 = base64Match[2];
+
+    const binaryStr = atob(rawBase64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+
+    const fileName = `${storeId}/ai-generated/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from("store-assets")
+      .upload(fileName, bytes, { contentType: mimeType, upsert: false });
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      return null;
+    }
+
+    const { data: urlData } = supabaseAdmin.storage.from("store-assets").getPublicUrl(fileName);
+    return urlData.publicUrl;
+  } catch (e) {
+    console.error("Image generation error:", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { sections, prompt, storeName, productName, currentTheme, themeOnly } = await req.json();
+    const { sections, prompt, storeName, productName, currentTheme, themeOnly, storeId, generateImages } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -22,117 +80,95 @@ serve(async (req) => {
       });
     }
 
-    const sectionTypes = [
-      "header", "hero", "benefits", "social-proof", "product-highlights", "pricing", "countdown",
-      "faq", "guarantee", "cta", "collection-grid", "lead-capture", "waitlist",
-      "image", "video", "rich-text", "columns", "testimonials-grid", "stats",
-      "comparison-table", "tabs", "trust-badges", "announcement-bar",
-      "whatsapp-button", "sticky-cta", "before-after", "gallery", "footer",
-    ];
-
     const systemPrompt = themeOnly
-      ? `Tu es un directeur artistique de classe mondiale, formé chez Apple, Stripe et Airbnb. Tu crées des identités visuelles qui rivalisent avec les meilleures marques tech au monde.
+      ? `Tu es un directeur artistique légendaire — ex-Apple, ex-Stripe. Tu crées des identités visuelles qui définissent des époques.
 
 CONTEXTE:
 - Boutique: ${storeName || "N/A"}
-- Produit principal: ${productName || "N/A"}
+- Produit: ${productName || "N/A"}
 - Thème actuel: ${JSON.stringify(currentTheme || {})}
 
-TA MISSION:
-Génère un thème visuel EXCEPTIONNEL basé sur le prompt du vendeur. Pense comme un directeur artistique de marque de luxe.
+MISSION: Génère un thème visuel RÉVOLUTIONNAIRE. Pas joli — INOUBLIABLE.
 
-PRINCIPES DE DESIGN ELITE:
-1. **Théorie des couleurs** : Utilise des palettes harmonieuses (analogues, complémentaires split, triadiques). Jamais de couleurs aléatoires.
-2. **Contraste** : Ratio WCAG AA minimum (4.5:1 pour le texte). Un fond sombre exige des textes clairs et vice versa.
-3. **Typographie** : Combine une police display distinctive (titres) + une sans-serif élégante (corps). Exemples de combos premium:
+PRINCIPES:
+1. Palette: harmonieuse (analogues, complémentaires split, triadiques). Couleurs RICHES et PROFONDES, jamais fades.
+2. Contraste: WCAG AA minimum. Fond sombre → texte clair, et vice versa.
+3. Typo: Combine display distinctive + sans-serif élégante. Combos:
    - "Playfair Display" + "Inter" (luxe classique)
    - "Space Grotesk" + "DM Sans" (tech moderne)
    - "Clash Display" + "Satoshi" (avant-garde)
    - "Fraunces" + "Outfit" (artisanal premium)
    - "Syne" + "Work Sans" (bold créatif)
-4. **Radius** : Cohérent avec le style — "0" pour brutaliste, "0.5rem" pour moderne, "1.5rem" pour playful, "9999px" pour pill-shaped
+   - "Cabinet Grotesk" + "General Sans" (startup)
+   - "Instrument Serif" + "Plus Jakarta Sans" (editorial)
+4. Radius: cohérent — "0" brutaliste, "0.5rem" moderne, "1rem" friendly, "9999px" pill
 
-GÉNÈRE UN THÈME AVEC:
-- primaryColor: couleur HEX principale (riche, pas fade)
-- bgColor: couleur HEX de fond
-- textColor: couleur HEX du texte (DOIT contraster avec bgColor)
-- radius: border-radius CSS
-- fontHeading: police Google Fonts pour titres (EXISTANTE sur Google Fonts)
-- fontBody: police Google Fonts pour le corps (EXISTANTE sur Google Fonts)
-
-FORMAT DE RÉPONSE (JSON uniquement):
+GÉNÈRE exactement ce JSON:
 {
-  "theme": { "primaryColor": "...", "bgColor": "...", "textColor": "...", "radius": "...", "fontHeading": "...", "fontBody": "..." }
+  "theme": { "primaryColor": "#HEX", "bgColor": "#HEX", "textColor": "#HEX", "radius": "Xrem", "fontHeading": "...", "fontBody": "..." }
 }`
-      : `Tu es un directeur artistique et stratège de conversion de classe mondiale. Tu as travaillé pour Apple, Stripe, Airbnb et les plus grandes marques D2C. Tu crées des landing pages qui génèrent des millions en revenus.
+      : `Tu es le meilleur designer de landing pages au monde. Tu as généré +$500M en revenus pour des marques D2C. Tu crées des pages qui CONVERTISSENT et qui sont visuellement EXCEPTIONNELLES.
 
 CONTEXTE:
-- Boutique: ${storeName || "N/A"}  
-- Produit principal: ${productName || "N/A"}
+- Boutique: ${storeName || "N/A"}
+- Produit: ${productName || "N/A"}
 - Thème actuel: ${JSON.stringify(currentTheme || {})}
 
-TA MISSION:
-Transformer cette landing page en une expérience de conversion exceptionnelle. Chaque pixel doit servir un objectif. Chaque mot doit vendre.
+═══════════════════════════════════════
+🎯 TA MISSION
+═══════════════════════════════════════
+Créer une landing page PREMIUM qui rivalise avec Apple, Glossier, Allbirds. Chaque section doit être pensée pour CONVERTIR.
 
 ═══════════════════════════════════════
-PRINCIPES DE DESIGN ELITE
+🔥 COPYWRITING D'ÉLITE
 ═══════════════════════════════════════
-
-1. **HIÉRARCHIE VISUELLE** : Le regard doit être guidé naturellement — Hero captivant → Preuve sociale → Bénéfices → CTA irrésistible
-2. **COPYWRITING DE CONVERSION** :
-   - Titres: Bénéfice principal + émotion. Pas de descriptions plates.
-   - Sous-titres: Éliminer l'objection principale du lecteur.
-   - CTA: Verbe d'action + résultat ("Obtenir mon kit" pas "Acheter")
-3. **THÉORIE DES COULEURS** : Palette harmonieuse, accents stratégiques sur les CTA
-4. **TYPOGRAPHIE PREMIUM** : Police display impactante + sans-serif lisible
-   Combos recommandés: "Playfair Display"+"Inter", "Space Grotesk"+"DM Sans", "Syne"+"Work Sans", "Fraunces"+"Outfit"
-5. **ESPACEMENT** : Généreux, aéré. Les landing pages premium respirent.
-6. **PREUVE SOCIALE** : Chiffres spécifiques ("+2,847 clients", pas "des milliers"), témoignages avec nom/ville
+- Titres: COURTS, PERCUTANTS, ÉMOTIONNELS. Max 8 mots. Utilise des verbes d'action.
+  ✅ "Révélez votre éclat naturel"
+  ✅ "Le secret des femmes qui rayonnent"
+  ❌ "Notre nouveau produit de beauté pour la peau"
+  
+- Sous-titres: Éliminent l'objection #1. Max 2 lignes.
+- CTA: Verbe + résultat. "Obtenir mon kit" pas "Acheter".
+- Chiffres: TOUJOURS spécifiques. "+2,847 clients" pas "des milliers".
+- Témoignages: Noms RÉALISTES africains avec villes. Ex: "Aminata K., Abidjan", "Fatou D., Dakar"
 
 ═══════════════════════════════════════
-STRUCTURE D'UNE PAGE À FORT TAUX DE CONVERSION
+🎨 DESIGN PREMIUM
 ═══════════════════════════════════════
-
-Ordre recommandé (adapte selon le contexte):
-1. header — Navigation avec logo et liens
-2. hero — Accroche émotionnelle + CTA principal + image
-3. social-proof / trust-badges — Crédibilité immédiate
-4. benefits — 3-6 bénéfices avec icônes
-5. product-highlights / image — Mise en valeur visuelle
-6. testimonials-grid — Témoignages détaillés avec noms
-7. stats — Chiffres impressionnants
-8. faq — Éliminer les dernières objections
-9. cta — CTA final avec urgence
-10. footer — Liens, réseaux sociaux, légal
+- Palette: Couleurs RICHES, harmonieuses. Accent fort sur CTA uniquement.
+- Typo: Police display DISTINCTIVE pour titres. Combos recommandés:
+  "Space Grotesk"+"DM Sans", "Syne"+"Work Sans", "Clash Display"+"Satoshi", "Instrument Serif"+"Plus Jakarta Sans"
+- Espacement: GÉNÉREUX. Les pages premium RESPIRENT.
+- Structure: 8-12 sections pour une page complète et persuasive.
 
 ═══════════════════════════════════════
-EXEMPLES DE DESIGN EXCEPTIONNELS (FEW-SHOT)
+📐 STRUCTURE OPTIMALE
 ═══════════════════════════════════════
-
-EXEMPLE 1 — Marque beauté premium:
-{
-  "theme": { "primaryColor": "#c9a87c", "bgColor": "#faf8f5", "textColor": "#1a1a1a", "radius": "0.5rem", "fontHeading": "Playfair Display", "fontBody": "Inter" },
-  "sections": [
-    { "id": "hdr", "type": "header", "visible": true, "data": { "storeName": "Luxe Beauté", "links": [{"label":"Produits","href":"#products"},{"label":"Témoignages","href":"#reviews"},{"label":"FAQ","href":"#faq"}] } },
-    { "id": "h1", "type": "hero", "visible": true, "data": { "title": "Révélez l'éclat naturel de votre peau", "subtitle": "Notre sérum bio, formulé avec 12 actifs naturels, transforme votre routine beauté en 14 jours. Résultats visibles ou remboursé.", "ctaText": "Découvrir le sérum →", "imageUrl": "" } },
-    { "id": "sp1", "type": "trust-badges", "visible": true, "data": { "items": [{"icon":"🌿","label":"100% Bio"},{"icon":"🇨🇲","label":"Made in Africa"},{"icon":"⭐","label":"4.9/5 — 1,247 avis"},{"icon":"🚚","label":"Livraison 48h"}] } },
-    { "id": "b1", "type": "benefits", "visible": true, "data": { "title": "Pourquoi 3,000+ femmes l'adorent", "items": [{"icon":"✨","title":"Résultat en 14 jours","desc":"Peau visiblement plus lumineuse dès la 2ème semaine d'utilisation"},{"icon":"🌱","title":"0% chimique","desc":"Formulé uniquement avec des ingrédients naturels et certifiés bio"},{"icon":"💧","title":"Hydratation 24h","desc":"Technologie micro-encapsulation pour une hydratation qui dure"}] } }
-  ]
-}
-
-EXEMPLE 2 — Tech/SaaS audacieux:
-{
-  "theme": { "primaryColor": "#6366f1", "bgColor": "#0a0a0a", "textColor": "#f5f5f5", "radius": "0.75rem", "fontHeading": "Space Grotesk", "fontBody": "DM Sans" },
-  "sections": [
-    { "id": "h1", "type": "hero", "visible": true, "data": { "title": "Multipliez vos ventes par 3 en 30 jours", "subtitle": "L'outil IA qui analyse votre marché, optimise vos prix et automatise votre marketing. Rejoignez +500 e-commerçants africains.", "ctaText": "Essayer gratuitement", "imageUrl": "" } },
-    { "id": "st1", "type": "stats", "visible": true, "data": { "items": [{"value":"+247%","label":"Croissance moyenne"},{"value":"30 sec","label":"Pour démarrer"},{"value":"500+","label":"Boutiques actives"},{"value":"99.9%","label":"Disponibilité"}] } }
-  ]
-}
+1. header — Logo + navigation clean
+2. hero — Accroche ÉMOTIONNELLE + sous-titre + CTA + imageUrl (REMPLIS avec une description pour la génération IA entre crochets, ex: "[Photo lifestyle femme souriante utilisant le produit]")
+3. trust-badges — 4 badges de crédibilité avec émojis
+4. benefits — 3-4 bénéfices avec icônes émojis et descriptions percutantes
+5. image ou gallery — Visuels produit (imageUrl avec descriptions entre crochets)
+6. testimonials-grid — 3-4 témoignages RÉALISTES avec noms/villes africaines
+7. stats — 4 chiffres impressionnants et SPÉCIFIQUES
+8. product-highlights — Caractéristiques techniques
+9. faq — 4-6 questions/réponses éliminant les objections
+10. cta — CTA final avec urgence subtile
+11. footer — Liens et réseaux sociaux
 
 ═══════════════════════════════════════
-TYPES DE BLOCS ET LEURS DATA
+🖼️ IMAGES — CRITIQUE
 ═══════════════════════════════════════
+Pour CHAQUE champ imageUrl dans hero, image, gallery, before-after:
+- Remplis avec une DESCRIPTION entre crochets pour la génération IA automatique
+- Ex: "[Photo produit sur fond blanc minimaliste avec éclairage studio]"
+- Ex: "[Photo lifestyle femme africaine souriante utilisant le produit dans un salon moderne]"
+- Ex: "[Flat lay du produit avec des éléments naturels, feuilles, fleurs]"
+- NE LAISSE AUCUN imageUrl VIDE si la section nécessite une image
 
+═══════════════════════════════════════
+TYPES DE BLOCS ET DATA
+═══════════════════════════════════════
 - header: { storeName, links: [{ label, href }] }
 - hero: { title, subtitle, ctaText, imageUrl }
 - benefits: { title, items: [{ icon, title, desc }] }
@@ -143,7 +179,6 @@ TYPES DE BLOCS ET LEURS DATA
 - pricing: { title, items: [{ name, price, features: [], highlight }] }
 - countdown: { title, endDate }
 - lead-capture: { title, placeholder, buttonText, incentive }
-- waitlist: { title, placeholder, buttonText, spotsText }
 - stats: { items: [{ value, label }] }
 - testimonials-grid: { title, items: [{ name, text, rating, avatar }] }
 - trust-badges: { items: [{ icon, label }] }
@@ -157,38 +192,37 @@ TYPES DE BLOCS ET LEURS DATA
 - comparison-table: { title, headers: [], rows: [[]] }
 - tabs: { items: [{ label, content }] }
 - before-after: { title, beforeImage, afterImage, beforeLabel, afterLabel }
-- gallery: { title, images: [] }
-- product-highlights: { title, items: [] }
+- gallery: { title, images: [{ url, alt }] }
+- product-highlights: { title, items: [{ icon, title, desc }] }
 - collection-grid: { title, columns }
 - footer: { storeName, links: [{ label, href }], socials: [{ platform, url }] }
 
 ═══════════════════════════════════════
 RÈGLES ABSOLUES
 ═══════════════════════════════════════
-
-- Écris en français naturel, adapté au marché africain francophone
-- Chaque titre doit provoquer une ÉMOTION ou un DÉSIR
-- Les chiffres doivent être SPÉCIFIQUES (pas "beaucoup" mais "2,847")
-- NE CHANGE PAS les URLs d'images existantes (garde les champs imageUrl vides si pas d'image)
-- COMMENCE TOUJOURS par un header et TERMINE par un footer
-- Renvoie UNIQUEMENT du JSON valide, pas de markdown ni commentaires
+- Français naturel, adapté au marché africain francophone
+- COMMENCE par header, TERMINE par footer
+- imageUrl: remplis avec descriptions entre crochets [...]
+- JSON UNIQUEMENT, pas de markdown
+- Chaque titre provoque ÉMOTION ou DÉSIR
+- Chiffres SPÉCIFIQUES partout
 
 FORMAT DE RÉPONSE:
 {
-  "theme": { "primaryColor": "...", "bgColor": "...", "textColor": "...", "radius": "...", "fontHeading": "...", "fontBody": "..." },
+  "theme": { "primaryColor": "#...", "bgColor": "#...", "textColor": "#...", "radius": "...", "fontHeading": "...", "fontBody": "..." },
   "sections": [...],
   "seoTitle": "...",
   "seoDescription": "..."
 }`;
 
     const userPrompt = themeOnly
-      ? `PROMPT DU VENDEUR: "${prompt}"\n\nGénère uniquement un nouveau thème visuel (couleurs, polices, radius) correspondant au style demandé. Ne touche pas aux sections.`
+      ? `PROMPT DU VENDEUR: "${prompt}"\n\nGénère uniquement un nouveau thème visuel spectaculaire.`
       : `PROMPT DU VENDEUR: "${prompt}"
 
-Sections actuelles de la landing page:
+Sections actuelles:
 ${JSON.stringify(sections, null, 2)}
 
-Transforme complètement le design et le contenu de cette landing page selon le prompt du vendeur. Crée une page qui rivalise avec les meilleures marques D2C au monde. Garde les images existantes mais change tout le reste (couleurs, polices, textes, structure, ambiance). Assure-toi d'inclure un header et un footer.`;
+CRÉE une landing page EXCEPTIONNELLE. Design premium, copywriting de conversion, structure optimale. Remplis les imageUrl avec des descriptions entre crochets pour la génération automatique d'images. Assure-toi d'inclure header et footer.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -208,21 +242,18 @@ Transforme complètement le design et le contenu de cette landing page selon le 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Trop de requêtes. Réessayez dans quelques instants." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Crédits IA insuffisants." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "Erreur du service IA" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -252,6 +283,92 @@ Transforme complètement le design et le contenu de cette landing page selon le 
         id: s.id || Math.random().toString(36).slice(2, 10),
         visible: s.visible !== undefined ? s.visible : true,
       }));
+    }
+
+    // Auto-generate images if requested and storeId provided
+    if (generateImages && storeId && parsed.sections && !themeOnly) {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+
+      const imagePromises: Promise<void>[] = [];
+
+      for (const section of parsed.sections) {
+        // Hero image
+        if (section.type === "hero" && section.data?.imageUrl && section.data.imageUrl.startsWith("[")) {
+          const desc = section.data.imageUrl.replace(/^\[|\]$/g, "");
+          const sectionRef = section;
+          imagePromises.push(
+            generateImage(LOVABLE_API_KEY, `${desc}. For brand: ${storeName || "e-commerce"}. Product: ${productName || "premium product"}`, storeId, supabaseAdmin)
+              .then(url => { if (url) sectionRef.data.imageUrl = url; else sectionRef.data.imageUrl = ""; })
+          );
+        }
+
+        // Image section
+        if (section.type === "image" && section.data?.url && section.data.url.startsWith("[")) {
+          const desc = section.data.url.replace(/^\[|\]$/g, "");
+          const sectionRef = section;
+          imagePromises.push(
+            generateImage(LOVABLE_API_KEY, `${desc}. For brand: ${storeName || "e-commerce"}`, storeId, supabaseAdmin)
+              .then(url => { if (url) sectionRef.data.url = url; else sectionRef.data.url = ""; })
+          );
+        }
+
+        // Gallery images
+        if (section.type === "gallery" && section.data?.images) {
+          for (let i = 0; i < section.data.images.length; i++) {
+            const img = section.data.images[i];
+            const imgUrl = typeof img === "string" ? img : img?.url;
+            if (imgUrl && imgUrl.startsWith("[")) {
+              const desc = imgUrl.replace(/^\[|\]$/g, "");
+              const idx = i;
+              const sectionRef = section;
+              imagePromises.push(
+                generateImage(LOVABLE_API_KEY, `${desc}. For brand: ${storeName || "e-commerce"}`, storeId, supabaseAdmin)
+                  .then(url => {
+                    if (url) {
+                      if (typeof sectionRef.data.images[idx] === "string") {
+                        sectionRef.data.images[idx] = url;
+                      } else {
+                        sectionRef.data.images[idx].url = url;
+                      }
+                    }
+                  })
+              );
+            }
+          }
+        }
+
+        // Before-after images
+        if (section.type === "before-after") {
+          if (section.data?.beforeImage && section.data.beforeImage.startsWith("[")) {
+            const desc = section.data.beforeImage.replace(/^\[|\]$/g, "");
+            const sectionRef = section;
+            imagePromises.push(
+              generateImage(LOVABLE_API_KEY, desc, storeId, supabaseAdmin)
+                .then(url => { if (url) sectionRef.data.beforeImage = url; else sectionRef.data.beforeImage = ""; })
+            );
+          }
+          if (section.data?.afterImage && section.data.afterImage.startsWith("[")) {
+            const desc = section.data.afterImage.replace(/^\[|\]$/g, "");
+            const sectionRef = section;
+            imagePromises.push(
+              generateImage(LOVABLE_API_KEY, desc, storeId, supabaseAdmin)
+                .then(url => { if (url) sectionRef.data.afterImage = url; else sectionRef.data.afterImage = ""; })
+            );
+          }
+        }
+      }
+
+      // Generate up to 4 images in parallel (avoid rate limits)
+      const batches = [];
+      for (let i = 0; i < imagePromises.length; i += 3) {
+        batches.push(imagePromises.slice(i, i + 3));
+      }
+      for (const batch of batches) {
+        await Promise.allSettled(batch);
+      }
     }
 
     return new Response(JSON.stringify(parsed), {
