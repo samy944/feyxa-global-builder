@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.smart-start]
 verify_jwt = false
+
+[functions.escalate-tickets]
+verify_jwt = false
