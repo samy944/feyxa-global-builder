@@ -99,6 +99,7 @@ const App = () => (
             <Route path="/store/:slug" element={<StorefrontHome />} />
             <Route path="/store/:slug/lp" element={<OneProductLanding />} />
             <Route path="/lp/:slug" element={<LandingPagePublic />} />
+            <Route path="/lp/:slug/:subpage" element={<LandingPagePublic />} />
             {/* Marketplace */}
             <Route path="/market" element={<MarketHome />} />
             <Route path="/market/category/:slug" element={<MarketCategory />} />

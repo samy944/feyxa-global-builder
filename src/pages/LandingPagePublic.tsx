@@ -27,9 +27,10 @@ export default function LandingPagePublic() {
 }
 
 function LandingPageContent() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, subpage } = useParams<{ slug: string; subpage?: string }>();
   const [landing, setLanding] = useState<any>(null);
   const [sections, setSections] = useState<LandingSection[]>([]);
+  const [subpages, setSubpages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [variantId, setVariantId] = useState<string | null>(null);
@@ -40,6 +41,7 @@ function LandingPageContent() {
     if (!slug) return;
 
     const fetchLanding = async () => {
+      setLoading(true);
       const { data, error: err } = await supabase
         .from("landing_pages")
         .select("*, stores(slug, currency, name)")
@@ -56,32 +58,58 @@ function LandingPageContent() {
       setLanding(data);
       setStore(data.stores);
 
-      // A/B test logic
-      if (data.ab_enabled) {
-        const { data: variants } = await supabase
-          .from("landing_ab_variants")
-          .select("*")
-          .eq("landing_page_id", data.id)
-          .order("variant_name");
+      // Fetch subpages
+      const { data: subpagesData } = await supabase
+        .from("landing_subpages")
+        .select("*")
+        .eq("landing_page_id", data.id)
+        .order("sort_order");
 
-        if (variants && variants.length >= 2) {
-          const split = data.ab_split || 50;
-          const rand = Math.random() * 100;
-          const chosen = rand < split ? variants[0] : variants[1];
-          setSections((chosen.sections as unknown as LandingSection[]) || []);
-          setVariantId(chosen.id);
+      const subs = subpagesData || [];
+      setSubpages(subs);
 
-          // Increment view
-          await supabase
-            .from("landing_ab_variants")
-            .update({ views: (chosen.views || 0) + 1 })
-            .eq("id", chosen.id);
-        } else {
-          setSections((data.sections as unknown as LandingSection[]) || []);
+      // Determine which sections to show
+      let activeSections: LandingSection[] = [];
+
+      if (subs.length > 0) {
+        // Multi-page mode
+        let activePage: any;
+        if (subpage) {
+          activePage = subs.find((s: any) => s.slug === subpage);
         }
+        if (!activePage) {
+          activePage = subs.find((s: any) => s.is_home) || subs[0];
+        }
+        activeSections = (activePage?.sections as unknown as LandingSection[]) || [];
       } else {
-        setSections((data.sections as unknown as LandingSection[]) || []);
+        // Legacy single-page mode with A/B testing
+        if (data.ab_enabled) {
+          const { data: variants } = await supabase
+            .from("landing_ab_variants")
+            .select("*")
+            .eq("landing_page_id", data.id)
+            .order("variant_name");
+
+          if (variants && variants.length >= 2) {
+            const split = data.ab_split || 50;
+            const rand = Math.random() * 100;
+            const chosen = rand < split ? variants[0] : variants[1];
+            activeSections = (chosen.sections as unknown as LandingSection[]) || [];
+            setVariantId(chosen.id);
+
+            await supabase
+              .from("landing_ab_variants")
+              .update({ views: (chosen.views || 0) + 1 })
+              .eq("id", chosen.id);
+          } else {
+            activeSections = (data.sections as unknown as LandingSection[]) || [];
+          }
+        } else {
+          activeSections = (data.sections as unknown as LandingSection[]) || [];
+        }
       }
+
+      setSections(activeSections);
 
       // Init tracking
       if (data.store_id) {
@@ -96,7 +124,7 @@ function LandingPageContent() {
     };
 
     fetchLanding();
-  }, [slug]);
+  }, [slug, subpage]);
 
   const theme = useMemo(() => {
     if (!landing?.theme) return DEFAULT_THEME;
@@ -160,12 +188,9 @@ function LandingPageContent() {
   }
 
   const handleCtaClick = () => {
-    // If linked to a product, redirect to checkout or store
     if (landing.product_id && landing.stores?.slug) {
       window.location.href = `/store/${landing.stores.slug}`;
     }
-
-    // Track CTA click for A/B
     if (variantId) {
       supabase
         .from("landing_ab_variants")
@@ -201,6 +226,8 @@ function LandingPageContent() {
           productId={landing.product_id}
           collectionId={landing.collection_id}
           onAddToCart={handleAddToCart}
+          subpages={subpages}
+          landingSlug={slug}
         />
       ))}
     </div>
