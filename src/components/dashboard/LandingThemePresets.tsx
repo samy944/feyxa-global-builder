@@ -25,9 +25,10 @@ interface LandingTheme {
 interface Props {
   currentTheme: LandingTheme;
   onApply: (theme: LandingTheme) => void;
+  onPreview?: (theme: LandingTheme | null) => void;
 }
 
-export function LandingThemePresets({ currentTheme, onApply }: Props) {
+export function LandingThemePresets({ currentTheme, onApply, onPreview }: Props) {
   const [customPresets, setCustomPresets] = useState<LandingThemePreset[]>(getCustomPresets);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [newPresetName, setNewPresetName] = useState("");
@@ -94,6 +95,7 @@ export function LandingThemePresets({ currentTheme, onApply }: Props) {
               preset={preset}
               isActive={isCurrentTheme(preset)}
               onApply={() => handleApply(preset)}
+              onHover={(hovering) => onPreview?.(hovering ? preset.theme : null)}
             />
           ))}
         </div>
@@ -107,13 +109,14 @@ export function LandingThemePresets({ currentTheme, onApply }: Props) {
           </p>
           <div className="grid grid-cols-2 gap-1.5">
             {customPresets.map((preset) => (
-              <PresetCard
-                key={preset.id}
-                preset={preset}
-                isActive={isCurrentTheme(preset)}
-                onApply={() => handleApply(preset)}
-                onDelete={() => handleDeleteCustom(preset.id)}
-              />
+            <PresetCard
+              key={preset.id}
+              preset={preset}
+              isActive={isCurrentTheme(preset)}
+              onApply={() => handleApply(preset)}
+              onDelete={() => handleDeleteCustom(preset.id)}
+              onHover={(hovering) => onPreview?.(hovering ? preset.theme : null)}
+            />
             ))}
           </div>
         </div>
@@ -170,15 +173,19 @@ function PresetCard({
   isActive,
   onApply,
   onDelete,
+  onHover,
 }: {
   preset: LandingThemePreset;
   isActive: boolean;
   onApply: () => void;
   onDelete?: () => void;
+  onHover?: (hovering: boolean) => void;
 }) {
   return (
     <button
       onClick={onApply}
+      onMouseEnter={() => onHover?.(true)}
+      onMouseLeave={() => onHover?.(false)}
       className={`group relative text-left p-2 rounded-lg border transition-all text-[11px] ${
         isActive
           ? "border-primary bg-primary/5 ring-1 ring-primary/20"

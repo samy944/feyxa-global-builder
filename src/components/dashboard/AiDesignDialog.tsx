@@ -41,9 +41,10 @@ interface Props {
   storeName?: string;
   productName?: string;
   onApply: (sections: LandingSection[], theme: ThemeResult, seoTitle: string, seoDescription: string) => void;
+  onPreview?: (theme: ThemeResult | null) => void;
 }
 
-export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, storeName, productName, onApply }: Props) {
+export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, storeName, productName, onApply, onPreview }: Props) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [themeOnly, setThemeOnly] = useState(false);
@@ -91,6 +92,9 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
         });
       }
       setStep("preview");
+      // Emit preview to canvas
+      const themeResult = themeOnly ? (data.theme || currentTheme) : (data.theme || currentTheme);
+      onPreview?.(themeResult as ThemeResult);
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || "Erreur lors de la génération");
@@ -101,6 +105,7 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
 
   const handleApply = () => {
     if (!result) return;
+    onPreview?.(null);
     onApply(result.sections, result.theme, result.seoTitle, result.seoDescription);
     onOpenChange(false);
     toast.success(themeOnly ? "Thème appliqué avec succès !" : "Design appliqué avec succès !");
@@ -114,6 +119,7 @@ export function AiDesignDialog({ open, onOpenChange, sections, currentTheme, sto
     if (!v) {
       setStep("prompt");
       setResult(null);
+      onPreview?.(null);
     }
     onOpenChange(v);
   };
