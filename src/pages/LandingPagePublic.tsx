@@ -1,10 +1,13 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LandingSectionRenderer } from "@/components/landing/LandingSectionRenderer";
 import { LandingSection } from "@/lib/landing-templates";
 import { useSeoHead } from "@/hooks/useSeoHead";
 import { initStoreTracking, trackPageView, trackViewContent } from "@/lib/tracking";
+import { CartProvider, useCart } from "@/hooks/useCart";
+import { CartDrawer } from "@/components/market/CartDrawer";
+import { ShoppingBag } from "lucide-react";
 
 const DEFAULT_THEME = {
   primaryColor: "#3b82f6",
@@ -16,12 +19,22 @@ const DEFAULT_THEME = {
 };
 
 export default function LandingPagePublic() {
+  return (
+    <CartProvider>
+      <LandingPageContent />
+    </CartProvider>
+  );
+}
+
+function LandingPageContent() {
   const { slug } = useParams<{ slug: string }>();
   const [landing, setLanding] = useState<any>(null);
   const [sections, setSections] = useState<LandingSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [variantId, setVariantId] = useState<string | null>(null);
+  const [store, setStore] = useState<any>(null);
+  const { addItem, totalItems, setIsOpen } = useCart();
 
   useEffect(() => {
     if (!slug) return;
@@ -41,6 +54,7 @@ export default function LandingPagePublic() {
       }
 
       setLanding(data);
+      setStore(data.stores);
 
       // A/B test logic
       if (data.ab_enabled) {
@@ -106,6 +120,26 @@ export default function LandingPagePublic() {
     image: landing?.og_image_url,
   });
 
+  const handleAddToCart = useCallback((product: any, variant?: any) => {
+    if (!landing || !store) return;
+    const imageUrl = Array.isArray(product.images) && product.images.length > 0
+      ? (typeof product.images[0] === "string" ? product.images[0] : product.images[0]?.url || "")
+      : null;
+
+    addItem({
+      productId: variant ? `${product.id}_${variant.id}` : product.id,
+      name: variant ? `${product.name} — ${variant.name}` : product.name,
+      price: variant?.price ?? product.price,
+      currency: store.currency || "XOF",
+      image: imageUrl,
+      storeId: landing.store_id,
+      storeName: store.name || "",
+      storeSlug: store.slug || "",
+      slug: product.slug,
+      maxStock: variant?.stock_quantity ?? product.stock_quantity,
+    });
+  }, [landing, store, addItem]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: theme.bgColor }}>
@@ -142,7 +176,21 @@ export default function LandingPagePublic() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: theme.bgColor, fontFamily: `"${theme.fontBody}", sans-serif` }}>
+    <div className="min-h-screen relative" style={{ backgroundColor: theme.bgColor, fontFamily: `"${theme.fontBody}", sans-serif` }}>
+      {/* Floating cart button */}
+      {totalItems > 0 && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 py-3 text-white font-semibold shadow-xl transition-all hover:scale-105 active:scale-95"
+          style={{ backgroundColor: theme.primaryColor, borderRadius: theme.radius }}
+        >
+          <ShoppingBag size={20} />
+          <span>{totalItems}</span>
+        </button>
+      )}
+
+      <CartDrawer />
+
       {sections.filter(s => s.visible).map((section) => (
         <LandingSectionRenderer
           key={section.id}
@@ -152,6 +200,7 @@ export default function LandingPagePublic() {
           storeId={landing.store_id}
           productId={landing.product_id}
           collectionId={landing.collection_id}
+          onAddToCart={handleAddToCart}
         />
       ))}
     </div>
