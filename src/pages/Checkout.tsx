@@ -13,6 +13,7 @@ import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, MessageCircle, Pa
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import { trackInitiateCheckout, trackPurchase } from "@/lib/tracking";
+import { createOrderAttribution } from "@/lib/marketing-session";
 
 const shippingSchema = z.object({
   firstName: z.string().trim().min(1, "Prénom requis").max(100),
@@ -220,6 +221,9 @@ export default function Checkout() {
           subtotal,
           currency: storeItems[0].currency,
         });
+
+        // Create order attribution from marketing session
+        createOrderAttribution(orderId, storeId).catch(() => {});
 
         clearStore(storeId);
       }
