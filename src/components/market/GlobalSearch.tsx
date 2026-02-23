@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Search, X, Loader2, Store } from "lucide-react";
+import { Search, X, Loader2, Store, Camera } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { VisualSearchDialog } from "@/components/market/VisualSearchDialog";
 
 interface SearchResult {
   id: string;
@@ -18,6 +19,7 @@ export function GlobalSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [visualOpen, setVisualOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -100,18 +102,30 @@ export function GlobalSearch() {
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder="Rechercher un produit..."
-          className="w-full h-9 rounded-lg border border-border bg-secondary/50 pl-9 pr-8 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+          className="w-full h-9 rounded-lg border border-border bg-secondary/50 pl-9 pr-16 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
         />
-        {query && (
+        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+          {query && (
+            <button
+              type="button"
+              onClick={() => { setQuery(""); setResults([]); inputRef.current?.focus(); }}
+              className="text-muted-foreground hover:text-foreground transition-colors p-1"
+            >
+              <X size={14} />
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => { setQuery(""); setResults([]); inputRef.current?.focus(); }}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setVisualOpen(true)}
+            className="text-muted-foreground hover:text-primary transition-colors p-1 rounded-md hover:bg-primary/10"
+            title="Recherche par image"
           >
-            <X size={14} />
+            <Camera size={15} />
           </button>
-        )}
+        </div>
       </form>
+
+      <VisualSearchDialog open={visualOpen} onOpenChange={setVisualOpen} />
 
       <AnimatePresence>
         {showDropdown && (
