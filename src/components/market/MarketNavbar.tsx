@@ -28,7 +28,8 @@ export function MarketNavbar() {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="fixed top-0 left-0 right-0 z-50 glass"
+      className="fixed top-0 left-0 right-0 z-50"
+      style={{ background: "rgba(17,17,20,0.85)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
     >
       <div className="container flex h-14 items-center justify-between">
         <Link to="/market" className="flex items-center gap-2.5">

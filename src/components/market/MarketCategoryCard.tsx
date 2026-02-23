@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 
 import modeVetements from "@/assets/categories/mode-vetements.jpg";
 import electronique from "@/assets/categories/electronique.jpg";
@@ -29,31 +28,33 @@ interface MarketCategoryCardProps {
   index?: number;
 }
 
-export function MarketCategoryCard({ name, slug, image_url, productCount, index = 0 }: MarketCategoryCardProps) {
+export function MarketCategoryCard({ name, slug, image_url, index = 0 }: MarketCategoryCardProps) {
   const imgSrc = image_url || categoryImages[slug];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.4 }}
+    <Link
+      to={`/market/category/${slug}`}
+      className="group flex flex-col items-center gap-3 py-4 px-2 rounded-xl transition-colors duration-200"
+      style={{ background: "transparent" }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
-      <Link
-        to={`/market/category/${slug}`}
-        className="group block rounded-xl border border-border bg-card p-4 text-center hover:border-primary/30 hover:shadow-glow transition-all duration-300"
-      >
-        <div className="mb-3 mx-auto h-16 w-16 rounded-xl overflow-hidden bg-secondary flex items-center justify-center">
-          {imgSrc ? (
-            <img src={imgSrc} alt={name} className="h-full w-full object-cover" />
-          ) : (
-            <span className="font-heading text-lg text-primary">{name.charAt(0).toUpperCase()}</span>
-          )}
-        </div>
-        <h3 className="font-semibold text-foreground text-sm">{name}</h3>
-        {productCount !== undefined && (
-          <p className="text-xs text-muted-foreground mt-1">{productCount} {productCount <= 1 ? "produit" : "produits"}</p>
+      <div className="h-20 w-20 rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+        {imgSrc ? (
+          <img
+            src={imgSrc}
+            alt={name}
+            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+          />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center">
+            <span className="font-heading text-xl text-foreground">{name.charAt(0)}</span>
+          </div>
         )}
-      </Link>
-    </motion.div>
+      </div>
+      <span className="text-sm text-center" style={{ color: "#E5E7EB", fontWeight: 500 }}>
+        {name}
+      </span>
+    </Link>
   );
 }

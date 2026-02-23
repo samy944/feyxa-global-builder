@@ -1,4 +1,4 @@
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -7,7 +7,7 @@ interface MarketSearchProps {
   className?: string;
 }
 
-export function MarketSearch({ placeholder = "Rechercher un produit, une marque...", className = "" }: MarketSearchProps) {
+export function MarketSearch({ placeholder = "Rechercher un produit, une marque…", className = "" }: MarketSearchProps) {
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const navigate = useNavigate();
@@ -21,13 +21,22 @@ export function MarketSearch({ placeholder = "Rechercher un produit, une marque.
 
   return (
     <form onSubmit={handleSubmit} className={`relative ${className}`}>
-      <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "#6B7280" }} />
       <input
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-11 rounded-xl border border-border bg-card pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+        className="w-full h-12 pl-11 pr-5 text-sm text-foreground transition-colors duration-200 focus:outline-none"
+        style={{
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "0.625rem",
+          fontWeight: 400,
+          color: "#F8FAFC",
+        }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)"; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
       />
     </form>
   );

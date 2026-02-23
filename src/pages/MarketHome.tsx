@@ -5,7 +5,6 @@ import { MarketLayout } from "@/components/market/MarketLayout";
 import { MarketSearch } from "@/components/market/MarketSearch";
 import { MarketProductCard } from "@/components/market/MarketProductCard";
 import { MarketCategoryCard } from "@/components/market/MarketCategoryCard";
-import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 
 interface MarketProduct {
@@ -62,7 +61,6 @@ export default function MarketHome() {
       .order("sort_order");
     if (!data) return;
 
-    // Fetch product counts per category
     const { data: countData } = await supabase
       .from("products")
       .select("marketplace_category_id")
@@ -115,44 +113,51 @@ export default function MarketHome() {
 
   return (
     <MarketLayout>
-      {/* Hero */}
-      <section className="bg-hero relative py-20">
-        <div className="absolute inset-0 grid-pattern opacity-20" />
-        <div className="container relative z-10 text-center space-y-6">
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="font-heading text-4xl sm:text-5xl lg:text-6xl text-foreground"
-          >
-            FEYXA MARKET
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground max-w-md mx-auto"
-          >
-            Découvrez des produits uniques de vendeurs à travers l'Afrique et le monde.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="max-w-xl mx-auto"
-          >
-            <MarketSearch />
-          </motion.div>
+      {/* Hero — Apple minimal */}
+      <section
+        className="relative flex flex-col items-center justify-center text-center"
+        style={{
+          background: "#111114",
+          paddingTop: "clamp(5rem, 12vh, 9rem)",
+          paddingBottom: "clamp(4rem, 10vh, 7rem)",
+        }}
+      >
+        <h1
+          className="font-heading text-foreground"
+          style={{
+            fontSize: "clamp(3rem, 6vw + 1rem, 4.5rem)",
+            fontWeight: 600,
+            letterSpacing: "-0.02em",
+            lineHeight: 1.05,
+          }}
+        >
+          Feyxa Market
+        </h1>
+        <p
+          className="mt-4 max-w-md mx-auto"
+          style={{ color: "#9CA3AF", fontSize: "1.05rem", fontWeight: 400, lineHeight: 1.6 }}
+        >
+          Découvrez l'essentiel.
+        </p>
+
+        <div className="mt-10 w-full" style={{ maxWidth: "min(70%, 640px)", margin: "2.5rem auto 0" }}>
+          <MarketSearch />
         </div>
       </section>
 
       {/* Categories */}
       {!query && (
-        <section id="categories" className="py-16">
+        <section className="py-20" style={{ background: "#111114" }}>
           <div className="container">
-            <h2 className="font-heading text-2xl text-foreground mb-8">CATÉGORIES</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+            <h2
+              className="font-heading text-foreground mb-12 text-center"
+              style={{ fontSize: "1.5rem", fontWeight: 600, letterSpacing: "-0.01em" }}
+            >
+              Catégories
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-6 max-w-3xl mx-auto">
               {categories.map((cat, i) => (
-                <MarketCategoryCard key={cat.id} {...cat} productCount={cat.productCount} index={i} />
+                <MarketCategoryCard key={cat.id} {...cat} index={i} />
               ))}
             </div>
           </div>
@@ -160,24 +165,24 @@ export default function MarketHome() {
       )}
 
       {/* Products */}
-      <section className="pb-20">
+      <section className="py-20" style={{ background: "#111114" }}>
         <div className="container">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="font-heading text-2xl text-foreground">
-              {query ? `RÉSULTATS POUR "${query.toUpperCase()}"` : "PRODUITS RÉCENTS"}
+          <div className="flex items-center justify-between mb-10">
+            <h2
+              className="font-heading text-foreground"
+              style={{ fontSize: "1.5rem", fontWeight: 600, letterSpacing: "-0.01em" }}
+            >
+              {query ? `Résultats pour « ${query} »` : "Produits récents"}
             </h2>
-            {!loading && (
-              <span className="text-sm text-muted-foreground">{products.length} produits</span>
-            )}
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 size={24} className="animate-spin text-primary" />
+            <div className="flex items-center justify-center py-24">
+              <Loader2 size={22} className="animate-spin" style={{ color: "#9CA3AF" }} />
             </div>
           ) : products.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-muted-foreground">Aucun produit trouvé.</p>
+            <div className="text-center py-24">
+              <p style={{ color: "#9CA3AF" }}>Aucun produit trouvé.</p>
             </div>
           ) : (
             <>
@@ -200,16 +205,21 @@ export default function MarketHome() {
                 ))}
               </div>
               {hasMore && (
-                <div className="flex justify-center mt-10">
+                <div className="flex justify-center mt-14">
                   <button
                     onClick={() => fetchProducts(products.length)}
                     disabled={loadingMore}
-                    className="inline-flex items-center gap-2 px-8 py-3 rounded-xl border border-border bg-card text-foreground font-semibold hover:border-primary/30 hover:shadow-glow transition-all duration-300 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-8 py-3 text-sm font-medium text-foreground transition-colors duration-200 disabled:opacity-50"
+                    style={{
+                      borderRadius: "0.5rem",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      background: "transparent",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
-                    {loadingMore ? (
-                      <Loader2 size={18} className="animate-spin" />
-                    ) : null}
-                    {loadingMore ? "Chargement…" : "Voir plus de produits"}
+                    {loadingMore && <Loader2 size={16} className="animate-spin" />}
+                    {loadingMore ? "Chargement…" : "Voir plus"}
                   </button>
                 </div>
               )}
