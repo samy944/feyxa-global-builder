@@ -16,15 +16,36 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, ImagePlus, X, GripVertical, Plus, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Loader2, ImagePlus, X, GripVertical, Plus, Trash2,
+  Package, DollarSign, Layers, Tag, Settings2, Globe, BarChart3, Weight, Barcode, Info
+} from "lucide-react";
 
+// ── Schema ──────────────────────────────────────────────────────────
 const schema = z.object({
-  name: z.string().min(2, "Nom requis (min 2 caractères)"),
+  name: z.string().min(2, "Nom requis (min 2 caractères)").max(200),
   price: z.coerce.number().min(0, "Prix invalide"),
+  compare_at_price: z.coerce.number().min(0).optional().or(z.literal("")),
+  cost_price: z.coerce.number().min(0).optional().or(z.literal("")),
   stock_quantity: z.coerce.number().int().min(0, "Stock invalide"),
-  description: z.string().optional(),
-  sku: z.string().optional(),
+  low_stock_threshold: z.coerce.number().int().min(0).optional().or(z.literal("")),
+  description: z.string().max(5000).optional(),
+  sku: z.string().max(100).optional(),
+  barcode: z.string().max(100).optional(),
+  weight_grams: z.coerce.number().int().min(0).optional().or(z.literal("")),
   is_published: z.boolean().default(false),
+  is_marketplace_published: z.boolean().default(false),
+  marketplace_category_id: z.string().optional(),
+  tags: z.string().optional(), // comma-separated
 });
 
 type FormData = z.infer<typeof schema>;
@@ -39,6 +60,14 @@ export interface ProductToEdit {
   sku: string | null;
   is_published: boolean;
   images: any;
+  compare_at_price?: number | null;
+  cost_price?: number | null;
+  barcode?: string | null;
+  weight_grams?: number | null;
+  tags?: string[] | null;
+  low_stock_threshold?: number | null;
+  is_marketplace_published?: boolean;
+  marketplace_category_id?: string | null;
 }
 
 interface Props {
@@ -55,13 +84,18 @@ interface ImageItem {
 }
 
 interface VariantRow {
-  _key: string; // local key for React
-  id?: string; // DB id if existing
+  _key: string;
+  id?: string;
   name: string;
   price: number;
   stock_quantity: number;
   sku: string;
-  options: Record<string, string>; // e.g. { Taille: "M", Couleur: "Noir" }
+  options: Record<string, string>;
+}
+
+interface MarketCategory {
+  id: string;
+  name: string;
 }
 
 function slugify(text: string) {
@@ -93,10 +127,17 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = !!product;
 
+  // Tags UI
+  const [tagInput, setTagInput] = useState("");
+  const [tagList, setTagList] = useState<string[]>([]);
+
+  // Categories
+  const [categories, setCategories] = useState<MarketCategory[]>([]);
+
   // Variants
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<VariantRow[]>([]);
-  const [optionTypes, setOptionTypes] = useState<string[]>([]); // e.g. ["Taille", "Couleur"]
+  const [optionTypes, setOptionTypes] = useState<string[]>([]);
   const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([]);
 
   const {
@@ -104,20 +145,45 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", price: 0, stock_quantity: 0, description: "", sku: "", is_published: false },
+    defaultValues: {
+      name: "", price: 0, compare_at_price: "", cost_price: "",
+      stock_quantity: 0, low_stock_threshold: "",
+      description: "", sku: "", barcode: "", weight_grams: "",
+      is_published: false, is_marketplace_published: false,
+      marketplace_category_id: "", tags: "",
+    },
   });
 
   const isPublished = watch("is_published");
+  const isMarketplace = watch("is_marketplace_published");
+  const price = watch("price");
+  const compareAtPrice = watch("compare_at_price");
+
+  // Load categories once
+  useEffect(() => {
+    supabase.from("marketplace_categories").select("id, name").order("sort_order").then(({ data }) => {
+      if (data) setCategories(data);
+    });
+  }, []);
 
   // Populate form when editing
   useEffect(() => {
     if (open && product) {
       setValue("name", product.name);
       setValue("price", product.price);
+      setValue("compare_at_price", product.compare_at_price ?? "");
+      setValue("cost_price", product.cost_price ?? "");
       setValue("stock_quantity", product.stock_quantity);
+      setValue("low_stock_threshold", product.low_stock_threshold ?? "");
       setValue("description", product.description || "");
       setValue("sku", product.sku || "");
+      setValue("barcode", product.barcode || "");
+      setValue("weight_grams", product.weight_grams ?? "");
       setValue("is_published", product.is_published);
+      setValue("is_marketplace_published", product.is_marketplace_published ?? false);
+      setValue("marketplace_category_id", product.marketplace_category_id || "");
+
+      setTagList(product.tags ?? []);
 
       const existingImages: ImageItem[] = (
         Array.isArray(product.images) ? product.images : []
@@ -143,7 +209,6 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
               options: (v.options as Record<string, string>) || {},
             }));
             setVariants(rows);
-            // Infer option types from existing variants
             const types = new Set<string>();
             rows.forEach((r) => Object.keys(r.options).forEach((k) => types.add(k)));
             setOptionTypes(types.size > 0 ? Array.from(types) : ["Taille"]);
@@ -155,8 +220,10 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
         });
       setDeletedVariantIds([]);
     } else if (open && !product) {
-      reset({ name: "", price: 0, stock_quantity: 0, description: "", sku: "", is_published: false });
+      reset();
       setImages([]);
+      setTagList([]);
+      setTagInput("");
       setHasVariants(false);
       setVariants([]);
       setOptionTypes(["Taille"]);
@@ -164,7 +231,33 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
     }
   }, [open, product, setValue, reset]);
 
-  // --- Image handling (unchanged) ---
+  // Discount calculation
+  const discountPercent = (() => {
+    const cp = Number(compareAtPrice);
+    const p = Number(price);
+    if (cp && cp > p && p > 0) return Math.round(((cp - p) / cp) * 100);
+    return 0;
+  })();
+
+  // Margin calculation
+  const costPrice = Number(watch("cost_price"));
+  const margin = (() => {
+    const p = Number(price);
+    if (costPrice > 0 && p > 0) return Math.round(((p - costPrice) / p) * 100);
+    return null;
+  })();
+
+  // --- Tags ---
+  const addTag = () => {
+    const t = tagInput.trim();
+    if (t && !tagList.includes(t) && tagList.length < 20) {
+      setTagList((prev) => [...prev, t]);
+      setTagInput("");
+    }
+  };
+  const removeTag = (tag: string) => setTagList((prev) => prev.filter((t) => t !== tag));
+
+  // --- Image handling ---
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const remaining = MAX_IMAGES - images.length;
@@ -229,7 +322,7 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
   };
 
   const addOptionType = () => {
-    const name = prompt("Nom de l'option (ex: Couleur, Matière)");
+    const name = prompt("Nom de l'option (ex: Couleur, Matière, Pointure)");
     if (name && name.trim() && !optionTypes.includes(name.trim())) {
       setOptionTypes((prev) => [...prev, name.trim()]);
     }
@@ -253,7 +346,6 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
   const onSubmit = async (data: FormData) => {
     if (!store) { toast.error("Boutique introuvable"); return; }
 
-    // Validate variants
     if (hasVariants && variants.length > 0) {
       for (const v of variants) {
         const name = v.name || autoGenerateVariantName(v);
@@ -272,21 +364,32 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
       setUploadingImages(false);
     }
 
+    const productPayload = {
+      name: data.name,
+      price: data.price,
+      compare_at_price: data.compare_at_price ? Number(data.compare_at_price) : null,
+      cost_price: data.cost_price ? Number(data.cost_price) : null,
+      stock_quantity: data.stock_quantity,
+      low_stock_threshold: data.low_stock_threshold ? Number(data.low_stock_threshold) : null,
+      description: data.description || null,
+      sku: data.sku || null,
+      barcode: data.barcode || null,
+      weight_grams: data.weight_grams ? Number(data.weight_grams) : null,
+      is_published: data.is_published,
+      is_marketplace_published: data.is_marketplace_published,
+      marketplace_category_id: data.marketplace_category_id || null,
+      images: imageUrls,
+      tags: tagList.length > 0 ? tagList : null,
+    };
+
     let productId = product?.id;
 
     if (isEdit) {
-      const { error } = await supabase.from("products").update({
-        name: data.name, price: data.price, stock_quantity: data.stock_quantity,
-        description: data.description || null, sku: data.sku || null,
-        is_published: data.is_published, images: imageUrls,
-      }).eq("id", product!.id);
+      const { error } = await supabase.from("products").update(productPayload).eq("id", product!.id);
       if (error) { console.error(error); toast.error("Erreur lors de la mise à jour"); setLoading(false); return; }
     } else {
       const { data: inserted, error } = await supabase.from("products").insert({
-        store_id: store.id, name: data.name, slug,
-        price: data.price, stock_quantity: data.stock_quantity,
-        description: data.description || null, sku: data.sku || null,
-        is_published: data.is_published, images: imageUrls,
+        store_id: store.id, slug, ...productPayload,
       }).select("id").single();
       if (error || !inserted) { console.error(error); toast.error("Erreur lors de la création"); setLoading(false); return; }
       productId = inserted.id;
@@ -294,11 +397,9 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
 
     // Save variants
     if (hasVariants && productId) {
-      // Delete removed variants
       if (deletedVariantIds.length > 0) {
         await supabase.from("product_variants").delete().in("id", deletedVariantIds);
       }
-
       for (const v of variants) {
         const variantName = v.name || autoGenerateVariantName(v);
         const payload = {
@@ -309,7 +410,6 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
           sku: v.sku || null,
           options: v.options,
         };
-
         if (v.id) {
           await supabase.from("product_variants").update(payload).eq("id", v.id);
         } else {
@@ -317,7 +417,6 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
         }
       }
     } else if (!hasVariants && productId && isEdit) {
-      // If variants were disabled, delete all existing variants
       await supabase.from("product_variants").delete().eq("product_id", productId);
     }
 
@@ -326,6 +425,7 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
     images.forEach((img) => { if (img.type === "file") URL.revokeObjectURL(img.preview); });
     setImages([]);
     setVariants([]);
+    setTagList([]);
     reset();
     onOpenChange(false);
     onSuccess();
@@ -336,6 +436,7 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
       images.forEach((img) => { if (img.type === "file") URL.revokeObjectURL(img.preview); });
       setImages([]);
       setVariants([]);
+      setTagList([]);
       reset();
     }
     onOpenChange(isOpen);
@@ -343,197 +444,417 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Modifier le produit" : "Ajouter un produit"}</DialogTitle>
+      <DialogContent className="sm:max-w-3xl max-h-[92vh] overflow-y-auto p-0">
+        <DialogHeader className="px-6 pt-6 pb-2">
+          <DialogTitle className="text-xl font-bold">
+            {isEdit ? "Modifier le produit" : "Nouveau produit"}
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {isEdit ? "Mettez à jour les informations de votre produit" : "Remplissez les informations pour créer votre produit"}
+          </p>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Image upload */}
-          <div className="space-y-1.5">
-            <Label>Images du produit</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {images.map((img, i) => (
-                <div
-                  key={img.preview}
-                  draggable
-                  onDragStart={() => handleDragStart(i)}
-                  onDragOver={(e) => handleDragOver(e, i)}
-                  onDrop={(e) => handleDrop(e, i)}
-                  onDragEnd={handleDragEnd}
-                  className={`relative aspect-square rounded-lg overflow-hidden border bg-secondary group cursor-grab active:cursor-grabbing transition-all ${
-                    dragOverIndex === i && dragIndex !== i ? "border-primary ring-2 ring-primary/30 scale-[1.02]"
-                    : dragIndex === i ? "opacity-50 border-border" : "border-border"
-                  }`}
-                >
-                  <img src={img.preview} alt="" className="h-full w-full object-cover pointer-events-none" />
-                  <div className="absolute top-1 left-1 h-6 w-6 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground">
-                    <GripVertical size={12} />
-                  </div>
-                  <button type="button" onClick={() => removeImage(i)} className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive hover:text-destructive-foreground">
-                    <X size={12} />
-                  </button>
-                  {i === 0 && (
-                    <span className="absolute bottom-1 left-1 text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded font-medium">Principale</span>
-                  )}
-                </div>
-              ))}
-              {images.length < MAX_IMAGES && (
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/50 bg-secondary/50 flex flex-col items-center justify-center gap-1 transition-colors text-muted-foreground hover:text-foreground">
-                  <ImagePlus size={20} />
-                  <span className="text-[10px]">Ajouter</span>
-                </button>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">{images.length}/{MAX_IMAGES} images · Max 5 Mo · Glissez pour réorganiser</p>
-            <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
-          </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="pf-name">Nom du produit *</Label>
-            <Input id="pf-name" placeholder="Ex: T-shirt Premium" {...register("name")} />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6">
+          <Tabs defaultValue="general" className="w-full">
+            <TabsList className="w-full grid grid-cols-4 mb-6">
+              <TabsTrigger value="general" className="gap-1.5 text-xs">
+                <Package size={14} />
+                Général
+              </TabsTrigger>
+              <TabsTrigger value="pricing" className="gap-1.5 text-xs">
+                <DollarSign size={14} />
+                Prix & Stock
+              </TabsTrigger>
+              <TabsTrigger value="variants" className="gap-1.5 text-xs">
+                <Layers size={14} />
+                Variantes
+              </TabsTrigger>
+              <TabsTrigger value="publishing" className="gap-1.5 text-xs">
+                <Globe size={14} />
+                Publication
+              </TabsTrigger>
+            </TabsList>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="pf-price">Prix de base (XOF) *</Label>
-              <Input id="pf-price" type="number" step="1" {...register("price")} />
-              {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pf-stock">Stock {hasVariants ? "(global)" : "*"}</Label>
-              <Input id="pf-stock" type="number" {...register("stock_quantity")} />
-              {errors.stock_quantity && <p className="text-xs text-destructive">{errors.stock_quantity.message}</p>}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="pf-sku">SKU (optionnel)</Label>
-            <Input id="pf-sku" placeholder="REF-001" {...register("sku")} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="pf-desc">Description</Label>
-            <Textarea id="pf-desc" placeholder="Décrivez votre produit..." rows={3} {...register("description")} />
-          </div>
-
-          {/* Variants section */}
-          <div className="rounded-lg border border-border overflow-hidden">
-            <div className="flex items-center justify-between p-3 bg-secondary/30">
-              <div>
-                <p className="text-sm font-medium text-foreground">Variantes</p>
-                <p className="text-xs text-muted-foreground">Tailles, couleurs, etc.</p>
-              </div>
-              <Switch checked={hasVariants} onCheckedChange={(v) => {
-                setHasVariants(v);
-                if (v && variants.length === 0) addVariant();
-              }} />
-            </div>
-
-            {hasVariants && (
-              <div className="p-3 space-y-3 border-t border-border">
-                {/* Option types */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-muted-foreground">Options :</span>
-                  {optionTypes.map((type) => (
-                    <span key={type} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs px-2 py-0.5 font-medium">
-                      {type}
-                      {optionTypes.length > 1 && (
-                        <button type="button" onClick={() => removeOptionType(type)} className="hover:text-destructive">
-                          <X size={10} />
-                        </button>
+            {/* ── TAB: General ── */}
+            <TabsContent value="general" className="space-y-5 mt-0">
+              {/* Images */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold flex items-center gap-1.5">
+                  <ImagePlus size={14} /> Images du produit
+                </Label>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {images.map((img, i) => (
+                    <div
+                      key={img.preview}
+                      draggable
+                      onDragStart={() => handleDragStart(i)}
+                      onDragOver={(e) => handleDragOver(e, i)}
+                      onDrop={(e) => handleDrop(e, i)}
+                      onDragEnd={handleDragEnd}
+                      className={`relative aspect-square rounded-lg overflow-hidden border bg-secondary group cursor-grab active:cursor-grabbing transition-all ${
+                        dragOverIndex === i && dragIndex !== i ? "border-primary ring-2 ring-primary/30 scale-[1.02]"
+                        : dragIndex === i ? "opacity-50 border-border" : "border-border"
+                      }`}
+                    >
+                      <img src={img.preview} alt="" className="h-full w-full object-cover pointer-events-none" />
+                      <div className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground">
+                        <GripVertical size={10} />
+                      </div>
+                      <button type="button" onClick={() => removeImage(i)} className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive hover:text-destructive-foreground">
+                        <X size={10} />
+                      </button>
+                      {i === 0 && (
+                        <span className="absolute bottom-0.5 left-0.5 text-[9px] bg-primary text-primary-foreground px-1 py-0.5 rounded font-medium">Principale</span>
                       )}
-                    </span>
-                  ))}
-                  <button type="button" onClick={addOptionType} className="text-xs text-primary hover:underline">
-                    + Ajouter une option
-                  </button>
-                </div>
-
-                {/* Variant rows */}
-                <div className="space-y-2">
-                  {variants.map((v, vi) => (
-                    <div key={v._key} className="rounded-lg border border-border p-3 space-y-2 bg-card">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          Variante {vi + 1}
-                          {autoGenerateVariantName(v) && ` — ${autoGenerateVariantName(v)}`}
-                        </span>
-                        <button type="button" onClick={() => removeVariant(vi)} className="text-muted-foreground hover:text-destructive transition-colors">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-
-                      {/* Option values */}
-                      <div className="grid grid-cols-2 gap-2">
-                        {optionTypes.map((type) => (
-                          <div key={type} className="space-y-1">
-                            <Label className="text-xs">{type}</Label>
-                            <Input
-                              placeholder={`Ex: ${type === "Taille" ? "M" : type === "Couleur" ? "Noir" : "..."}`}
-                              value={v.options[type] || ""}
-                              onChange={(e) => updateVariantOption(vi, type, e.target.value)}
-                              className="h-8 text-xs"
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Price, stock, SKU */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Prix (XOF)</Label>
-                          <Input
-                            type="number" step="1"
-                            value={v.price}
-                            onChange={(e) => updateVariant(vi, "price", Number(e.target.value))}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Stock</Label>
-                          <Input
-                            type="number"
-                            value={v.stock_quantity}
-                            onChange={(e) => updateVariant(vi, "stock_quantity", Number(e.target.value))}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">SKU</Label>
-                          <Input
-                            placeholder="SKU"
-                            value={v.sku}
-                            onChange={(e) => updateVariant(vi, "sku", e.target.value)}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                      </div>
                     </div>
                   ))}
+                  {images.length < MAX_IMAGES && (
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/50 bg-secondary/50 flex flex-col items-center justify-center gap-0.5 transition-colors text-muted-foreground hover:text-foreground">
+                      <ImagePlus size={18} />
+                      <span className="text-[9px]">Ajouter</span>
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{images.length}/{MAX_IMAGES} images · Max 5 Mo · Glissez pour réorganiser</p>
+                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
+              </div>
+
+              {/* Name */}
+              <div className="space-y-1.5">
+                <Label htmlFor="pf-name" className="font-semibold">Nom du produit *</Label>
+                <Input id="pf-name" placeholder="Ex: T-shirt Premium Coton Bio" {...register("name")} className="h-11" />
+                {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <Label htmlFor="pf-desc" className="font-semibold">Description</Label>
+                <Textarea id="pf-desc" placeholder="Décrivez votre produit en détail : matériaux, dimensions, conseils d'utilisation..." rows={5} {...register("description")} />
+                <p className="text-xs text-muted-foreground">Une bonne description augmente les conversions de 30%</p>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-1.5">
+                <Label className="font-semibold flex items-center gap-1.5">
+                  <Tag size={14} /> Tags / Mots-clés
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ex: coton, premium, été..."
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={addTag} disabled={!tagInput.trim()}>
+                    <Plus size={14} />
+                  </Button>
+                </div>
+                {tagList.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {tagList.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="gap-1 text-xs">
+                        {tag}
+                        <button type="button" onClick={() => removeTag(tag)} className="hover:text-destructive">
+                          <X size={10} />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">Les tags améliorent la recherche. Max 20 tags. Appuyez Entrée pour ajouter.</p>
+              </div>
+            </TabsContent>
+
+            {/* ── TAB: Pricing & Stock ── */}
+            <TabsContent value="pricing" className="space-y-5 mt-0">
+              {/* Pricing section */}
+              <div className="rounded-xl border border-border p-4 space-y-4">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <DollarSign size={14} /> Tarification
+                </h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pf-price">Prix de vente ({store?.currency || "XOF"}) *</Label>
+                    <Input id="pf-price" type="number" step="1" placeholder="0" {...register("price")} className="h-11 text-lg font-semibold" />
+                    {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pf-compare">Prix barré (ancien prix)</Label>
+                    <Input id="pf-compare" type="number" step="1" placeholder="Optionnel" {...register("compare_at_price")} />
+                    {discountPercent > 0 && (
+                      <p className="text-xs text-accent font-medium">↓ Remise de {discountPercent}%</p>
+                    )}
+                  </div>
                 </div>
 
-                <Button type="button" variant="outline" size="sm" onClick={addVariant} className="w-full">
-                  <Plus size={14} />
-                  Ajouter une variante
-                </Button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pf-cost">Prix d'achat / coût</Label>
+                    <Input id="pf-cost" type="number" step="1" placeholder="Optionnel" {...register("cost_price")} />
+                    {margin !== null && (
+                      <p className={`text-xs font-medium ${margin > 0 ? "text-accent" : "text-destructive"}`}>
+                        Marge : {margin}%
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-end pb-1">
+                    <div className="rounded-lg bg-secondary/50 p-3 w-full text-center">
+                      <p className="text-xs text-muted-foreground">Bénéfice estimé</p>
+                      <p className="text-lg font-bold text-foreground">
+                        {costPrice > 0 && Number(price) > 0
+                          ? `${(Number(price) - costPrice).toLocaleString()} ${store?.currency || "XOF"}`
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
 
-          <div className="flex items-center justify-between rounded-lg border border-border p-3">
-            <div>
-              <p className="text-sm font-medium text-foreground">Publier le produit</p>
-              <p className="text-xs text-muted-foreground">Rendre visible sur votre boutique</p>
-            </div>
-            <Switch checked={isPublished} onCheckedChange={(v) => setValue("is_published", v)} />
-          </div>
+              {/* Stock & Inventory */}
+              <div className="rounded-xl border border-border p-4 space-y-4">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <BarChart3 size={14} /> Inventaire
+                </h3>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => handleClose(false)}>Annuler</Button>
-            <Button type="submit" variant="hero" size="sm" disabled={loading}>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pf-stock">Quantité en stock *</Label>
+                    <Input id="pf-stock" type="number" placeholder="0" {...register("stock_quantity")} className="h-11" />
+                    {errors.stock_quantity && <p className="text-xs text-destructive">{errors.stock_quantity.message}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pf-low-stock">Seuil d'alerte stock bas</Label>
+                    <Input id="pf-low-stock" type="number" placeholder="5" {...register("low_stock_threshold")} />
+                    <p className="text-xs text-muted-foreground">Notification quand le stock passe en dessous</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pf-sku" className="flex items-center gap-1">
+                      <Barcode size={12} /> SKU
+                    </Label>
+                    <Input id="pf-sku" placeholder="REF-001" {...register("sku")} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pf-barcode" className="flex items-center gap-1">
+                      <Barcode size={12} /> Code-barres
+                    </Label>
+                    <Input id="pf-barcode" placeholder="EAN / UPC" {...register("barcode")} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pf-weight" className="flex items-center gap-1">
+                      <Weight size={12} /> Poids (g)
+                    </Label>
+                    <Input id="pf-weight" type="number" placeholder="500" {...register("weight_grams")} />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ── TAB: Variants ── */}
+            <TabsContent value="variants" className="space-y-5 mt-0">
+              <div className="rounded-xl border border-border overflow-hidden">
+                <div className="flex items-center justify-between p-4 bg-secondary/30">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      <Layers size={14} /> Variantes du produit
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Créez des déclinaisons (tailles, couleurs, matières...) avec prix et stock indépendants
+                    </p>
+                  </div>
+                  <Switch checked={hasVariants} onCheckedChange={(v) => {
+                    setHasVariants(v);
+                    if (v && variants.length === 0) addVariant();
+                  }} />
+                </div>
+
+                {hasVariants && (
+                  <div className="p-4 space-y-4 border-t border-border">
+                    {/* Option types */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Types d'options</Label>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {optionTypes.map((type) => (
+                          <Badge key={type} variant="outline" className="gap-1 px-2.5 py-1 text-xs font-medium border-primary/30 bg-primary/5 text-primary">
+                            {type}
+                            {optionTypes.length > 1 && (
+                              <button type="button" onClick={() => removeOptionType(type)} className="hover:text-destructive ml-0.5">
+                                <X size={10} />
+                              </button>
+                            )}
+                          </Badge>
+                        ))}
+                        <Button type="button" variant="ghost" size="sm" onClick={addOptionType} className="text-xs text-primary h-7">
+                          <Plus size={12} />
+                          Ajouter un type
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Variant rows */}
+                    <div className="space-y-3">
+                      {variants.map((v, vi) => (
+                        <div key={v._key} className="rounded-lg border border-border p-3 space-y-3 bg-card hover:border-primary/20 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-foreground">
+                              {autoGenerateVariantName(v) || `Variante ${vi + 1}`}
+                            </span>
+                            <button type="button" onClick={() => removeVariant(vi)} className="text-muted-foreground hover:text-destructive transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+
+                          {/* Option values */}
+                          <div className="grid grid-cols-2 gap-2">
+                            {optionTypes.map((type) => (
+                              <div key={type} className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">{type}</Label>
+                                <Input
+                                  placeholder={`Ex: ${type === "Taille" ? "M, L, XL" : type === "Couleur" ? "Noir, Blanc" : "..."}`}
+                                  value={v.options[type] || ""}
+                                  onChange={(e) => updateVariantOption(vi, type, e.target.value)}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Price, stock, SKU */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Prix ({store?.currency || "XOF"})</Label>
+                              <Input
+                                type="number" step="1"
+                                value={v.price}
+                                onChange={(e) => updateVariant(vi, "price", Number(e.target.value))}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Stock</Label>
+                              <Input
+                                type="number"
+                                value={v.stock_quantity}
+                                onChange={(e) => updateVariant(vi, "stock_quantity", Number(e.target.value))}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">SKU</Label>
+                              <Input
+                                placeholder="SKU"
+                                value={v.sku}
+                                onChange={(e) => updateVariant(vi, "sku", e.target.value)}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Button type="button" variant="outline" size="sm" onClick={addVariant} className="w-full">
+                      <Plus size={14} />
+                      Ajouter une variante
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {!hasVariants && (
+                <div className="rounded-xl border border-dashed border-border p-6 text-center space-y-2">
+                  <Layers size={32} className="mx-auto text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">Activez les variantes pour proposer différentes options</p>
+                  <p className="text-xs text-muted-foreground/70">Idéal pour les tailles, couleurs, matières, pointures...</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ── TAB: Publishing ── */}
+            <TabsContent value="publishing" className="space-y-5 mt-0">
+              {/* Publish toggle */}
+              <div className="rounded-xl border border-border p-4 flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Settings2 size={14} /> Publier sur ma boutique
+                  </p>
+                  <p className="text-xs text-muted-foreground">Le produit sera visible sur votre vitrine en ligne</p>
+                </div>
+                <Switch checked={isPublished} onCheckedChange={(v) => setValue("is_published", v)} />
+              </div>
+
+              {/* Marketplace toggle */}
+              <div className="rounded-xl border border-border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      <Globe size={14} /> Publier sur la marketplace
+                    </p>
+                    <p className="text-xs text-muted-foreground">Vendez sur Feyxa Market pour atteindre plus de clients</p>
+                  </div>
+                  <Switch checked={isMarketplace} onCheckedChange={(v) => setValue("is_marketplace_published", v)} />
+                </div>
+
+                {isMarketplace && (
+                  <div className="space-y-1.5 pt-1 border-t border-border">
+                    <Label className="text-sm">Catégorie marketplace *</Label>
+                    <Select
+                      value={watch("marketplace_category_id") || ""}
+                      onValueChange={(v) => setValue("marketplace_category_id", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choisir une catégorie..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Info size={10} /> Choisissez la catégorie la plus pertinente pour la visibilité
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Summary card */}
+              <div className="rounded-xl bg-secondary/30 border border-border p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Récapitulatif</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Statut boutique</p>
+                    <p className="font-medium">{isPublished ? "✅ Publié" : "📝 Brouillon"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Marketplace</p>
+                    <p className="font-medium">{isMarketplace ? "✅ Publié" : "❌ Non publié"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Images</p>
+                    <p className="font-medium">{images.length} image{images.length !== 1 ? "s" : ""}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Variantes</p>
+                    <p className="font-medium">{hasVariants ? `${variants.length} variante${variants.length !== 1 ? "s" : ""}` : "Aucune"}</p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-6 mt-6 border-t border-border">
+            <Button type="button" variant="ghost" size="sm" onClick={() => handleClose(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" variant="hero" size="default" disabled={loading} className="min-w-[160px]">
               {loading && <Loader2 size={14} className="animate-spin" />}
-              {uploadingImages ? "Upload des images..." : isEdit ? "Enregistrer" : "Créer le produit"}
+              {uploadingImages ? "Upload des images..." : isEdit ? "Enregistrer les modifications" : "Créer le produit"}
             </Button>
           </div>
         </form>

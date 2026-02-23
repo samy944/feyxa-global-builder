@@ -29,13 +29,19 @@ interface Product {
   name: string;
   slug: string;
   price: number;
+  compare_at_price: number | null;
+  cost_price: number | null;
   stock_quantity: number;
   is_published: boolean;
+  is_marketplace_published: boolean;
+  marketplace_category_id: string | null;
   images: any;
   tags: string[] | null;
   low_stock_threshold: number | null;
   description: string | null;
   sku: string | null;
+  barcode: string | null;
+  weight_grams: number | null;
 }
 
 function getStatus(p: Product) {
@@ -60,7 +66,7 @@ export default function DashboardProducts() {
     setLoading(true);
     const { data } = await supabase
       .from("products")
-      .select("id, name, slug, price, stock_quantity, is_published, images, tags, low_stock_threshold, description, sku")
+      .select("id, name, slug, price, compare_at_price, cost_price, stock_quantity, is_published, is_marketplace_published, marketplace_category_id, images, tags, low_stock_threshold, description, sku, barcode, weight_grams")
       .eq("store_id", store.id)
       .order("created_at", { ascending: false });
     setProducts(data ?? []);
@@ -75,11 +81,19 @@ export default function DashboardProducts() {
       name: p.name,
       slug: p.slug,
       price: p.price,
+      compare_at_price: p.compare_at_price,
+      cost_price: p.cost_price,
       stock_quantity: p.stock_quantity,
       description: p.description,
       sku: p.sku,
+      barcode: p.barcode,
+      weight_grams: p.weight_grams,
       is_published: p.is_published,
+      is_marketplace_published: p.is_marketplace_published,
+      marketplace_category_id: p.marketplace_category_id,
       images: p.images,
+      tags: p.tags,
+      low_stock_threshold: p.low_stock_threshold,
     });
     setDialogOpen(true);
   };
