@@ -5,6 +5,7 @@ import { MarketLayout } from "@/components/market/MarketLayout";
 import { MarketSearch } from "@/components/market/MarketSearch";
 import { MarketCategoryCard } from "@/components/market/MarketCategoryCard";
 import { MarketProductCard } from "@/components/market/MarketProductCard";
+import { useLocation } from "@/hooks/useLocation";
 import { Loader2 } from "lucide-react";
 
 interface MarketProduct {
@@ -34,6 +35,7 @@ interface MarketCategory {
 export default function MarketHome() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
+  const { country } = useLocation();
   const [products, setProducts] = useState<MarketProduct[]>([]);
   const [categories, setCategories] = useState<MarketCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +54,7 @@ export default function MarketHome() {
     setProducts([]);
     setHasMore(true);
     fetchProducts(0);
-  }, [query]);
+  }, [query, country?.id]);
 
   const fetchCategories = async () => {
     const { data } = await supabase
@@ -67,31 +69,70 @@ export default function MarketHome() {
     if (offset === 0) setLoading(true);
     else setLoadingMore(true);
 
-    let q = supabase
-      .from("products")
-      .select("id, name, slug, price, compare_at_price, images, stock_quantity, stores!inner(name, slug, city, currency)")
-      .eq("is_published", true)
-      .eq("is_marketplace_published", true)
-      .gt("stock_quantity", 0)
-      .eq("stores.is_active", true)
-      .eq("stores.is_banned", false)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + PAGE_SIZE - 1);
+    // If country is selected, use product_listings for localized data
+    if (country) {
+      let q = supabase
+        .from("product_listings")
+        .select("id, price, currency_code, stock_qty, product_id, products!inner(id, name, slug, images, compare_at_price, is_published, is_marketplace_published, stores!inner(name, slug, city, currency, is_active, is_banned))")
+        .eq("country_id", country.id)
+        .eq("is_available", true)
+        .gt("stock_qty", 0)
+        .eq("products.is_published", true)
+        .eq("products.is_marketplace_published", true)
+        .eq("products.stores.is_active", true)
+        .eq("products.stores.is_banned", false)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
 
-    if (query) {
-      q = q.ilike("name", `%${query}%`);
-    }
+      if (query) {
+        q = q.ilike("products.name", `%${query}%`);
+      }
 
-    const { data } = await q;
-    const newProducts = (data || []) as unknown as MarketProduct[];
+      const { data } = await q;
+      const newProducts = ((data || []) as any[]).map((l: any) => ({
+        id: l.products.id,
+        name: l.products.name,
+        slug: l.products.slug,
+        price: l.price,
+        compare_at_price: l.products.compare_at_price,
+        images: l.products.images,
+        stock_quantity: l.stock_qty,
+        stores: {
+          name: l.products.stores.name,
+          slug: l.products.stores.slug,
+          city: l.products.stores.city,
+          currency: l.currency_code,
+        },
+      }));
 
-    if (offset === 0) {
-      setProducts(newProducts);
+      if (offset === 0) setProducts(newProducts);
+      else setProducts((prev) => [...prev, ...newProducts]);
+      setHasMore(newProducts.length === PAGE_SIZE);
     } else {
-      setProducts((prev) => [...prev, ...newProducts]);
+      // Fallback: no country selected, show all products
+      let q = supabase
+        .from("products")
+        .select("id, name, slug, price, compare_at_price, images, stock_quantity, stores!inner(name, slug, city, currency)")
+        .eq("is_published", true)
+        .eq("is_marketplace_published", true)
+        .gt("stock_quantity", 0)
+        .eq("stores.is_active", true)
+        .eq("stores.is_banned", false)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (query) {
+        q = q.ilike("name", `%${query}%`);
+      }
+
+      const { data } = await q;
+      const newProducts = (data || []) as unknown as MarketProduct[];
+
+      if (offset === 0) setProducts(newProducts);
+      else setProducts((prev) => [...prev, ...newProducts]);
+      setHasMore(newProducts.length === PAGE_SIZE);
     }
 
-    setHasMore(newProducts.length === PAGE_SIZE);
     setLoading(false);
     setLoadingMore(false);
   };

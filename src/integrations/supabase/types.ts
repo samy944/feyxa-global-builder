@@ -106,6 +106,41 @@ export type Database = {
           },
         ]
       }
+      cities: {
+        Row: {
+          country_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          country_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          country_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cities_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collection_products: {
         Row: {
           collection_id: string
@@ -185,6 +220,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      countries: {
+        Row: {
+          code: string
+          created_at: string
+          currency_code: string
+          flag_emoji: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency_code?: string
+          flag_emoji?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency_code?: string
+          flag_emoji?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: []
       }
       coupons: {
         Row: {
@@ -1140,6 +1208,60 @@ export type Database = {
           },
         ]
       }
+      product_listings: {
+        Row: {
+          country_id: string
+          created_at: string
+          currency_code: string
+          id: string
+          is_available: boolean
+          price: number
+          product_id: string
+          shipping_profile_id: string | null
+          stock_qty: number
+          updated_at: string
+        }
+        Insert: {
+          country_id: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          is_available?: boolean
+          price?: number
+          product_id: string
+          shipping_profile_id?: string | null
+          stock_qty?: number
+          updated_at?: string
+        }
+        Update: {
+          country_id?: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          is_available?: boolean
+          price?: number
+          product_id?: string
+          shipping_profile_id?: string | null
+          stock_qty?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_listings_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_listings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_variants: {
         Row: {
           created_at: string
@@ -1278,6 +1400,8 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          selected_city_id: string | null
+          selected_country_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1286,6 +1410,8 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          selected_city_id?: string | null
+          selected_country_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1294,9 +1420,26 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          selected_city_id?: string | null
+          selected_country_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_selected_city_id_fkey"
+            columns: ["selected_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_selected_country_id_fkey"
+            columns: ["selected_country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       return_requests: {
         Row: {
