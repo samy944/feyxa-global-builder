@@ -46,28 +46,34 @@ export function DashboardSidebar() {
   return (
     <aside
       className={cn(
-        "h-screen sticky top-0 border-r border-border bg-card flex flex-col transition-all duration-300",
-        collapsed ? "w-16" : "w-60"
+        "h-screen sticky top-0 flex flex-col transition-[width] duration-200 ease-out",
+        collapsed ? "w-[56px]" : "w-[220px]"
       )}
+      style={{ background: "#121417", borderRight: "1px solid hsla(0,0%,100%,0.06)" }}
     >
-      <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+      {/* Logo */}
+      <div className="h-14 flex items-center justify-between px-3" style={{ borderBottom: "1px solid hsla(0,0%,100%,0.06)" }}>
         {!collapsed && (
           <Link to="/" className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xs">F</span>
+              <span className="text-primary-foreground font-semibold text-xs">F</span>
             </div>
-            <span className="font-bold text-sm tracking-tight text-foreground">Feyxa</span>
+            <span className="font-heading text-sm tracking-tight" style={{ color: "#F8FAFC" }}>Feyxa</span>
           </Link>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          className="h-7 w-7 rounded-md flex items-center justify-center transition-colors duration-200"
+          style={{ color: "#9CA3AF" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#F8FAFC")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#9CA3AF")}
         >
-          <ChevronLeft size={14} className={cn("transition-transform", collapsed && "rotate-180")} />
+          <ChevronLeft size={14} className={cn("transition-transform duration-200", collapsed && "rotate-180")} />
         </button>
       </div>
 
-      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+      {/* Nav */}
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -75,42 +81,72 @@ export function DashboardSidebar() {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isActive
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                "relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200",
+                collapsed && "justify-center px-0"
               )}
+              style={{
+                color: isActive ? "#F8FAFC" : "#9CA3AF",
+                background: isActive ? "hsla(0,0%,100%,0.06)" : "transparent",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.color = "#F8FAFC";
+                  e.currentTarget.style.background = "hsla(0,0%,100%,0.04)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.color = "#9CA3AF";
+                  e.currentTarget.style.background = "transparent";
+                }
+              }}
               title={collapsed ? item.label : undefined}
             >
-              <item.icon size={18} />
+              {/* Active indicator — thin green bar */}
+              {isActive && (
+                <div
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
+                  style={{ height: "60%", background: "hsl(106 75% 47%)" }}
+                />
+              )}
+              <item.icon size={17} style={{ color: isActive ? "#F8FAFC" : "#6B7280", flexShrink: 0 }} />
               {!collapsed && <span>{item.label}</span>}
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-2 border-t border-border">
+      {/* Marketplace link */}
+      <div className="px-2 py-1" style={{ borderTop: "1px solid hsla(0,0%,100%,0.06)" }}>
         <Link
           to="/market"
           className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary"
+            "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200",
+            collapsed && "justify-center px-0"
           )}
+          style={{ color: "#9CA3AF" }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "#F8FAFC"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "#9CA3AF"; }}
           title={collapsed ? "Marketplace" : undefined}
         >
-          <Store size={18} />
+          <Store size={17} style={{ color: "#6B7280" }} />
           {!collapsed && <span>Marketplace</span>}
         </Link>
       </div>
 
-      <div className="p-3 border-t border-border">
+      {/* User block */}
+      <div className="px-3 py-3" style={{ borderTop: "1px solid hsla(0,0%,100%,0.06)" }}>
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold shrink-0">
+          <div
+            className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
+            style={{ background: "hsla(0,0%,100%,0.08)", color: "#F8FAFC" }}
+          >
             MA
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">Ma Boutique</p>
-              <p className="text-xs text-muted-foreground truncate">Plan Pro</p>
+              <p className="text-[13px] font-medium truncate" style={{ color: "#F8FAFC" }}>Ma Boutique</p>
+              <p className="text-[11px] truncate" style={{ color: "#6B7280" }}>Plan Pro</p>
             </div>
           )}
         </div>
