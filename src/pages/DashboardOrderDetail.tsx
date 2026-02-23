@@ -22,6 +22,7 @@ import { generateInvoicePDF } from "@/lib/generate-invoice-pdf";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
 import OrderAttributionWidget from "@/components/dashboard/OrderAttributionWidget";
+import DeliveryProofSection from "@/components/dashboard/DeliveryProofSection";
 import { toast } from "sonner";
 
 type OrderStatus = "new" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled" | "refunded" | "dispute";
@@ -486,11 +487,24 @@ export default function DashboardOrderDetail() {
             </div>
           </motion.div>
 
-          {/* Attribution */}
+          {/* Delivery Proof */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
+          >
+            <DeliveryProofSection
+              orderId={order.id}
+              storeId={store!.id}
+              orderStatus={order.status}
+            />
+          </motion.div>
+
+          {/* Attribution */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
             className="rounded-xl border border-border bg-card p-4"
           >
             <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">

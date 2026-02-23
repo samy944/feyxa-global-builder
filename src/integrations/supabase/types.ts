@@ -292,6 +292,86 @@ export type Database = {
           },
         ]
       }
+      delivery_proof_files: {
+        Row: {
+          created_at: string
+          file_url: string
+          id: string
+          mime_type: string
+          proof_id: string
+          size: number
+        }
+        Insert: {
+          created_at?: string
+          file_url: string
+          id?: string
+          mime_type?: string
+          proof_id: string
+          size?: number
+        }
+        Update: {
+          created_at?: string
+          file_url?: string
+          id?: string
+          mime_type?: string
+          proof_id?: string
+          size?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_proof_files_proof_id_fkey"
+            columns: ["proof_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_proofs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_proofs: {
+        Row: {
+          courier_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          seller_id: string
+          store_id: string
+        }
+        Insert: {
+          courier_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          seller_id: string
+          store_id: string
+        }
+        Update: {
+          courier_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          seller_id?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_proofs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_proofs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_zones: {
         Row: {
           cities: string[] | null

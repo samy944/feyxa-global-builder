@@ -19,6 +19,7 @@ import {
   ShoppingBag,
   XCircle,
 } from "lucide-react";
+import DeliveryProofSection from "@/components/dashboard/DeliveryProofSection";
 
 const statusConfig: Record<string, { label: string; icon: typeof Package; color: string }> = {
   new: { label: "Nouvelle", icon: Clock, color: "bg-blue-500/10 text-blue-500" },
@@ -262,6 +263,16 @@ export default function TrackOrder() {
                 })}
               </p>
             </div>
+
+            {/* Delivery proof (read-only for buyer) */}
+            {order.status === "delivered" && (
+              <DeliveryProofSection
+                orderId={order.id}
+                storeId={order.store_id}
+                orderStatus={order.status}
+                readOnly
+              />
+            )}
 
             {/* Confirm receipt */}
             {showConfirmBtn && (
