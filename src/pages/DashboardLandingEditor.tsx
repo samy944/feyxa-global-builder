@@ -114,6 +114,8 @@ export default function DashboardLandingEditor() {
   const [aiImageTargetField, setAiImageTargetField] = useState<{ sectionId: string; field: string } | null>(null);
   const [rightTab, setRightTab] = useState<"content" | "style">("content");
   const [showInsertMenu, setShowInsertMenu] = useState<number | null>(null);
+  const [clipboard, setClipboard] = useState<LandingSection | null>(null);
+  const [globalTab, setGlobalTab] = useState<"theme" | "seo">("theme");
 
   // Keep refs in sync
   useEffect(() => { sectionsRef.current = sections; }, [sections]);
@@ -149,16 +151,39 @@ export default function DashboardLandingEditor() {
   }, [history, historyIndex]);
 
   // Keyboard shortcuts
+  const copySection = useCallback((sectionId: string) => {
+    const section = sections.find(s => s.id === sectionId);
+    if (section) {
+      setClipboard(JSON.parse(JSON.stringify(section)));
+      toast.success("Section copiée");
+    }
+  }, [sections]);
+
+  const pasteSection = useCallback(() => {
+    if (!clipboard) return;
+    const clone: LandingSection = { ...JSON.parse(JSON.stringify(clipboard)), id: Math.random().toString(36).slice(2, 10) };
+    const idx = selectedSectionId ? sections.findIndex(s => s.id === selectedSectionId) + 1 : sections.length;
+    const arr = [...sections];
+    arr.splice(idx, 0, clone);
+    setSections(arr);
+    pushHistory(arr);
+    setIsDirty(true);
+    setSelectedSectionId(clone.id);
+    toast.success("Section collée");
+  }, [clipboard, sections, selectedSectionId, pushHistory]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
       if ((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) { e.preventDefault(); redo(); }
+      if ((e.metaKey || e.ctrlKey) && e.key === "c" && selectedSectionId) { e.preventDefault(); copySection(selectedSectionId); }
+      if ((e.metaKey || e.ctrlKey) && e.key === "v" && clipboard) { e.preventDefault(); pasteSection(); }
       if (e.key === "Delete" && selectedSectionId) { removeSection(selectedSectionId); }
       if (e.key === "Escape") { setSelectedSectionId(null); setShowInsertMenu(null); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [undo, redo, selectedSectionId]);
+  }, [undo, redo, selectedSectionId, copySection, pasteSection, clipboard]);
 
   // DnD sensors for layers panel
   const layerSensors = useSensors(
@@ -628,72 +653,85 @@ export default function DashboardLandingEditor() {
           ) : (
             <>
               <div className="flex border-b border-border shrink-0">
-                {[
-                  { key: "theme", icon: <Palette className="w-3.5 h-3.5" />, label: "Style" },
-                  { key: "seo", icon: <Search className="w-3.5 h-3.5" />, label: "SEO" },
-                ].map(tab => (
-                  <button key={tab.key} className="flex-1 py-2.5 text-xs font-medium flex items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground">
+                {([
+                  { key: "theme" as const, icon: <Palette className="w-3.5 h-3.5" />, label: "Style" },
+                  { key: "seo" as const, icon: <Search className="w-3.5 h-3.5" />, label: "SEO" },
+                ] as const).map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setGlobalTab(tab.key)}
+                    className={`flex-1 py-2.5 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                      globalTab === tab.key ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
                     {tab.icon} {tab.label}
                   </button>
                 ))}
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-3 space-y-4">
-                  <LandingThemePresets
-                    currentTheme={theme}
-                    onApply={(newTheme) => { setTheme(prev => ({ ...prev, ...newTheme })); setPreviewTheme(null); setIsDirty(true); }}
-                    onPreview={(t) => setPreviewTheme(t ? { ...theme, ...t } : null)}
-                  />
-                  <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Couleurs</p>
-                    {([
-                      { label: "Principale", key: "primaryColor" as const },
-                      { label: "Fond", key: "bgColor" as const },
-                      { label: "Texte", key: "textColor" as const },
-                    ]).map(c => (
-                      <div key={c.key} className="flex items-center gap-2 mb-2">
-                        <input type="color" value={theme[c.key]} onChange={e => { setTheme({ ...theme, [c.key]: e.target.value }); setIsDirty(true); }} className="w-7 h-7 rounded cursor-pointer border-0" />
-                        <Label className="text-xs flex-1">{c.label}</Label>
-                        <Input value={theme[c.key]} onChange={e => { setTheme({ ...theme, [c.key]: e.target.value }); setIsDirty(true); }} className="h-6 text-[10px] w-20" />
-                      </div>
-                    ))}
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Typographie</p>
-                    <div className="space-y-2">
+                  {globalTab === "theme" ? (
+                    <>
+                      <LandingThemePresets
+                        currentTheme={theme}
+                        onApply={(newTheme) => { setTheme(prev => ({ ...prev, ...newTheme })); setPreviewTheme(null); setIsDirty(true); }}
+                        onPreview={(t) => setPreviewTheme(t ? { ...theme, ...t } : null)}
+                      />
                       <div>
-                        <Label className="text-[10px]">Titres</Label>
-                        <Input value={theme.fontHeading} onChange={e => { setTheme({ ...theme, fontHeading: e.target.value }); setIsDirty(true); }} className="h-7 text-xs mt-0.5" />
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Couleurs</p>
+                        {([
+                          { label: "Principale", key: "primaryColor" as const },
+                          { label: "Fond", key: "bgColor" as const },
+                          { label: "Texte", key: "textColor" as const },
+                        ]).map(c => (
+                          <div key={c.key} className="flex items-center gap-2 mb-2">
+                            <input type="color" value={theme[c.key]} onChange={e => { setTheme({ ...theme, [c.key]: e.target.value }); setIsDirty(true); }} className="w-7 h-7 rounded cursor-pointer border-0" />
+                            <Label className="text-xs flex-1">{c.label}</Label>
+                            <Input value={theme[c.key]} onChange={e => { setTheme({ ...theme, [c.key]: e.target.value }); setIsDirty(true); }} className="h-6 text-[10px] w-20" />
+                          </div>
+                        ))}
                       </div>
                       <div>
-                        <Label className="text-[10px]">Corps</Label>
-                        <Input value={theme.fontBody} onChange={e => { setTheme({ ...theme, fontBody: e.target.value }); setIsDirty(true); }} className="h-7 text-xs mt-0.5" />
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Typographie</p>
+                        <div className="space-y-2">
+                          <div><Label className="text-[10px]">Titres</Label><Input value={theme.fontHeading} onChange={e => { setTheme({ ...theme, fontHeading: e.target.value }); setIsDirty(true); }} className="h-7 text-xs mt-0.5" /></div>
+                          <div><Label className="text-[10px]">Corps</Label><Input value={theme.fontBody} onChange={e => { setTheme({ ...theme, fontBody: e.target.value }); setIsDirty(true); }} className="h-7 text-xs mt-0.5" /></div>
+                          <div><Label className="text-[10px]">Radius</Label><Input value={theme.radius} onChange={e => { setTheme({ ...theme, radius: e.target.value }); setIsDirty(true); }} className="h-7 text-xs mt-0.5" /></div>
+                        </div>
                       </div>
+                    </>
+                  ) : (
+                    <>
                       <div>
-                        <Label className="text-[10px]">Radius</Label>
-                        <Input value={theme.radius} onChange={e => { setTheme({ ...theme, radius: e.target.value }); setIsDirty(true); }} className="h-7 text-xs mt-0.5" />
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">SEO</p>
+                        <div className="space-y-2">
+                          <div>
+                            <Label className="text-[10px]">Meta Title</Label>
+                            <Input value={seoTitle} onChange={e => { setSeoTitle(e.target.value); setIsDirty(true); }} className="h-7 text-xs mt-0.5" maxLength={60} />
+                            <p className="text-[9px] text-muted-foreground mt-0.5">{seoTitle.length}/60</p>
+                          </div>
+                          <div>
+                            <Label className="text-[10px]">Meta Description</Label>
+                            <Textarea value={seoDesc} onChange={e => { setSeoDesc(e.target.value); setIsDirty(true); }} className="text-xs mt-0.5" maxLength={160} rows={2} />
+                            <p className="text-[9px] text-muted-foreground mt-0.5">{seoDesc.length}/160</p>
+                          </div>
+                        </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={abEnabled} onCheckedChange={(v) => { setAbEnabled(v); setIsDirty(true); }} />
+                        <Label className="text-xs">A/B Testing</Label>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Clipboard status */}
+                  {clipboard && (
+                    <div className="p-2 rounded-lg border border-dashed border-primary/30 bg-primary/5">
+                      <p className="text-[10px] text-muted-foreground mb-1">📋 Section copiée</p>
+                      <p className="text-[10px] font-medium">{getBlockDefinition(clipboard.type)?.icon} {getBlockDefinition(clipboard.type)?.label}</p>
+                      <button onClick={pasteSection} className="mt-1 text-[10px] text-primary hover:underline">Coller ici (Ctrl+V)</button>
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">SEO</p>
-                    <div className="space-y-2">
-                      <div>
-                        <Label className="text-[10px]">Meta Title</Label>
-                        <Input value={seoTitle} onChange={e => { setSeoTitle(e.target.value); setIsDirty(true); }} className="h-7 text-xs mt-0.5" maxLength={60} />
-                        <p className="text-[9px] text-muted-foreground mt-0.5">{seoTitle.length}/60</p>
-                      </div>
-                      <div>
-                        <Label className="text-[10px]">Meta Description</Label>
-                        <Textarea value={seoDesc} onChange={e => { setSeoDesc(e.target.value); setIsDirty(true); }} className="text-xs mt-0.5" maxLength={160} rows={2} />
-                        <p className="text-[9px] text-muted-foreground mt-0.5">{seoDesc.length}/160</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch checked={abEnabled} onCheckedChange={(v) => { setAbEnabled(v); setIsDirty(true); }} />
-                    <Label className="text-xs">A/B Testing</Label>
-                  </div>
+                  )}
                 </div>
               </ScrollArea>
             </>
