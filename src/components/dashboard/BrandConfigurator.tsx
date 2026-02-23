@@ -62,7 +62,16 @@ interface Props {
 }
 
 export default function BrandConfigurator({ storeId, initialBrand, onBrandChange, compact }: Props) {
-  const [brand, setBrand] = useState<BrandConfig>(initialBrand || DEFAULT_BRAND);
+  const [brand, setBrand] = useState<BrandConfig>(() => {
+    if (!initialBrand || !initialBrand.colors) return DEFAULT_BRAND;
+    return {
+      ...DEFAULT_BRAND,
+      ...initialBrand,
+      colors: { ...DEFAULT_BRAND.colors, ...initialBrand.colors },
+      fonts: { ...DEFAULT_BRAND.fonts, ...(initialBrand.fonts || {}) },
+      style: { ...DEFAULT_BRAND.style, ...(initialBrand.style || {}) },
+    };
+  });
   const [cloneUrl, setCloneUrl] = useState("");
   const [cloning, setCloning] = useState(false);
   const [uploading, setUploading] = useState(false);
