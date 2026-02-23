@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LANDING_TEMPLATES, getDefaultSectionsForTemplate, getTemplateById } from "@/lib/landing-templates";
-import { Plus, Copy, Eye, Pencil, Trash2, BarChart3, ExternalLink, FileText } from "lucide-react";
+import { Plus, Copy, Eye, Pencil, Trash2, BarChart3, ExternalLink, FileText, Globe, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -23,7 +24,8 @@ export default function DashboardLandings() {
   const [newSlug, setNewSlug] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("one-product");
   const [filterCat, setFilterCat] = useState<string | null>(null);
-
+  const [cloneUrl, setCloneUrl] = useState("");
+  const [cloning, setCloning] = useState(false);
   const fetchLandings = async () => {
     if (!store) return;
     const { data } = await supabase
@@ -67,6 +69,55 @@ export default function DashboardLandings() {
     setNewTitle("");
     setNewSlug("");
     navigate(`/dashboard/landings/${data.id}/edit`);
+  };
+
+  const handleClone = async () => {
+    if (!store || !cloneUrl.trim() || !newTitle.trim() || !newSlug.trim()) return;
+    setCloning(true);
+
+    try {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("clone-landing", {
+        body: { url: cloneUrl },
+      });
+
+      if (fnError || !fnData?.success) {
+        toast.error(fnData?.error || fnError?.message || "Échec du clonage");
+        setCloning(false);
+        return;
+      }
+
+      const slug = newSlug.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
+
+      const { data, error } = await supabase
+        .from("landing_pages")
+        .insert({
+          store_id: store.id,
+          title: newTitle,
+          slug,
+          template_id: "cloned",
+          sections: fnData.sections as any,
+          theme: fnData.theme as any,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        toast.error(error.message.includes("duplicate") ? "Ce slug existe déjà" : error.message);
+        setCloning(false);
+        return;
+      }
+
+      toast.success("Landing page clonée avec succès !");
+      setCreateOpen(false);
+      setNewTitle("");
+      setNewSlug("");
+      setCloneUrl("");
+      navigate(`/dashboard/landings/${data.id}/edit`);
+    } catch (e: any) {
+      toast.error(e.message || "Erreur inattendue");
+    } finally {
+      setCloning(false);
+    }
   };
 
   const handleDuplicate = async (lp: any) => {
@@ -121,9 +172,9 @@ export default function DashboardLandings() {
           <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl">Créer une Landing Page</DialogTitle>
-              <p className="text-sm text-muted-foreground">Choisissez un template premium, puis personnalisez-le dans l'éditeur visuel.</p>
             </DialogHeader>
-            <div className="space-y-5">
+
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium text-foreground">Titre</label>
@@ -135,86 +186,147 @@ export default function DashboardLandings() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">Choisir un template</label>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <button
-                    onClick={() => setFilterCat(null)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${!filterCat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
-                  >
-                    Tous
-                  </button>
-                  {TEMPLATE_CATEGORIES.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setFilterCat(cat)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${filterCat === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
+              <Tabs defaultValue="templates" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="templates" className="flex items-center gap-2"><FileText className="w-4 h-4" /> Templates</TabsTrigger>
+                  <TabsTrigger value="clone" className="flex items-center gap-2"><Globe className="w-4 h-4" /> Cloner un site</TabsTrigger>
+                </TabsList>
 
-                <div className="grid grid-cols-2 gap-3">
-                  {filteredTemplates.map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedTemplate(t.id)}
-                      className={`group relative overflow-hidden rounded-xl border-2 text-left transition-all duration-200 ${
-                        selectedTemplate === t.id
-                          ? "border-primary ring-2 ring-primary/20 shadow-lg"
-                          : "border-border hover:border-primary/40 hover:shadow-md"
-                      }`}
-                    >
-                      <div
-                        className="h-20 w-full relative overflow-hidden"
-                        style={{ backgroundColor: t.preview || t.suggestedTheme?.bgColor || "#f5f5f5" }}
-                      >
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center">
-                            <span className="text-3xl block mb-1">{t.icon}</span>
-                            {t.suggestedTheme && (
-                              <div className="flex gap-1 justify-center">
-                                <span className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: t.suggestedTheme.primaryColor }} />
-                                <span className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: t.suggestedTheme.textColor }} />
-                                <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: t.suggestedTheme.bgColor }} />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        {selectedTemplate === t.id && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                            <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-sm font-semibold text-foreground">{t.name}</h3>
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t.category}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>
-                        <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
-                          <FileText className="w-3 h-3" />
-                          <span>{LANDING_TEMPLATES.find(tpl => tpl.id === t.id)?.sections.length || 0} sections</span>
-                          {t.suggestedTheme && (
-                            <>
-                              <span className="mx-1">•</span>
-                              <span>{t.suggestedTheme.fontHeading}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                <TabsContent value="templates" className="mt-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Titre</label>
+                  <Input value={newTitle} onChange={e => { setNewTitle(e.target.value); if (!newSlug || newSlug === newTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")) setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")); }} placeholder="Ma page de vente" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Slug (URL)</label>
+                  <Input value={newSlug} onChange={e => setNewSlug(e.target.value)} placeholder="ma-page" />
                 </div>
               </div>
 
-              <Button onClick={handleCreate} className="w-full" size="lg" disabled={!newTitle.trim() || !newSlug.trim()}>
-                Créer la landing page
-              </Button>
+                  <div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <button
+                        onClick={() => setFilterCat(null)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${!filterCat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                      >
+                        Tous
+                      </button>
+                      {TEMPLATE_CATEGORIES.map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setFilterCat(cat)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${filterCat === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      {filteredTemplates.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => setSelectedTemplate(t.id)}
+                          className={`group relative overflow-hidden rounded-xl border-2 text-left transition-all duration-200 ${
+                            selectedTemplate === t.id
+                              ? "border-primary ring-2 ring-primary/20 shadow-lg"
+                              : "border-border hover:border-primary/40 hover:shadow-md"
+                          }`}
+                        >
+                          <div
+                            className="h-20 w-full relative overflow-hidden"
+                            style={{ backgroundColor: t.preview || t.suggestedTheme?.bgColor || "#f5f5f5" }}
+                          >
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-center">
+                                <span className="text-3xl block mb-1">{t.icon}</span>
+                                {t.suggestedTheme && (
+                                  <div className="flex gap-1 justify-center">
+                                    <span className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: t.suggestedTheme.primaryColor }} />
+                                    <span className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: t.suggestedTheme.textColor }} />
+                                    <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: t.suggestedTheme.bgColor }} />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {selectedTemplate === t.id && (
+                              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-sm font-semibold text-foreground">{t.name}</h3>
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t.category}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>
+                            <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
+                              <FileText className="w-3 h-3" />
+                              <span>{LANDING_TEMPLATES.find(tpl => tpl.id === t.id)?.sections.length || 0} sections</span>
+                              {t.suggestedTheme && (
+                                <>
+                                  <span className="mx-1">•</span>
+                                  <span>{t.suggestedTheme.fontHeading}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button onClick={handleCreate} className="w-full" size="lg" disabled={!newTitle.trim() || !newSlug.trim()}>
+                    Créer la landing page
+                  </Button>
+                </TabsContent>
+
+                <TabsContent value="clone" className="mt-4 space-y-4">
+                  <div className="rounded-xl border border-border bg-muted/30 p-6 text-center space-y-4">
+                    <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">Clonage IA</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Collez l'URL d'un site web et l'IA analysera son contenu, sa structure et son design pour créer une landing page similaire — voire meilleure.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground block text-left mb-1.5">URL du site à cloner</label>
+                      <Input
+                        value={cloneUrl}
+                        onChange={e => setCloneUrl(e.target.value)}
+                        placeholder="https://exemple.com"
+                        type="url"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleClone}
+                    className="w-full"
+                    size="lg"
+                    disabled={!newTitle.trim() || !newSlug.trim() || !cloneUrl.trim() || cloning}
+                  >
+                    {cloning ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyse en cours…
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="w-4 h-4 mr-2" />
+                        Cloner et créer la landing
+                      </>
+                    )}
+                  </Button>
+                </TabsContent>
+              </Tabs>
             </div>
           </DialogContent>
         </Dialog>
