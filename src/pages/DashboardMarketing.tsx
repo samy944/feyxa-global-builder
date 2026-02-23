@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   BarChart3, Eye, ShoppingCart, CreditCard, Users, TrendingUp,
-  Link2, Copy, ExternalLink, ArrowRight,
+  Link2, Copy, ExternalLink, ArrowRight, Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -155,6 +155,64 @@ export default function DashboardMarketing() {
     toast.success("Lien copié !");
   };
 
+  const handleExportCSV = () => {
+    const lines: string[] = [];
+    const date = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+    // KPIs
+    lines.push("Résumé Marketing");
+    lines.push("Métrique,Valeur");
+    lines.push(`Visiteurs,${totalVisitors}`);
+    lines.push(`Taux conversion,${conversionRate}%`);
+    lines.push(`Ventes totales,${totalRevenue}`);
+    lines.push(`Panier moyen,${aov}`);
+    lines.push(`Achats,${totalPurchases}`);
+
+    // Sources
+    lines.push("");
+    lines.push("Sources de trafic");
+    lines.push("Source,Visiteurs,Achats,Revenu");
+    sourceData.forEach((s) => {
+      lines.push(`"${s.source}",${s.visitors},${s.purchases},${s.revenue}`);
+    });
+
+    // Funnel
+    lines.push("");
+    lines.push("Entonnoir de conversion");
+    lines.push("Étape,Valeur");
+    funnelData.forEach((f) => {
+      lines.push(`"${f.name}",${f.value}`);
+    });
+
+    // Campaigns
+    lines.push("");
+    lines.push("Campagnes");
+    lines.push("Campagne,Clics,Achats,Revenu");
+    campaignData.forEach((c) => {
+      lines.push(`"${c.campaign}",${c.clicks},${c.purchases},${c.revenue}`);
+    });
+
+    // Tracking links
+    lines.push("");
+    lines.push("Liens trackés");
+    lines.push("Source,Produit,Campagne,Code,Clics");
+    trackingLinks.forEach((l) => {
+      lines.push(`"${l.source}","${l.products?.name || ""}","${l.campaign || ""}","/r/${l.short_code}",${l.click_count}`);
+    });
+
+    const csv = "\uFEFF" + lines.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `feyxa-marketing-${period}j-${date}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Export CSV téléchargé !");
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -179,17 +237,22 @@ export default function DashboardMarketing() {
           <BarChart3 className="w-6 h-6 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">Marketing Intelligence</h1>
         </div>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">7 jours</SelectItem>
-            <SelectItem value="14">14 jours</SelectItem>
-            <SelectItem value="30">30 jours</SelectItem>
-            <SelectItem value="90">90 jours</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="w-4 h-4 mr-1" /> Export CSV
+          </Button>
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">7 jours</SelectItem>
+              <SelectItem value="14">14 jours</SelectItem>
+              <SelectItem value="30">30 jours</SelectItem>
+              <SelectItem value="90">90 jours</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* KPI Cards */}
