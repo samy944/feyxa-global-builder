@@ -67,6 +67,7 @@ import AdminOrders from "./pages/AdminOrders";
 import AdminTeam from "./pages/AdminTeam";
 import AcceptAdminInvite from "./pages/AcceptAdminInvite";
 import AdminKyc from "./pages/AdminKyc";
+import AdminSettings from "./pages/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -139,6 +140,7 @@ const App = () => (
               <Route path="reviews" element={<AdminReviews />} />
               <Route path="kyc" element={<AdminKyc />} />
               <Route path="team" element={<AdminTeam />} />
+              <Route path="settings" element={<AdminSettings />} />
             </Route>
             <Route path="/admin/invite" element={<AcceptAdminInvite />} />
             <Route path="/my-orders" element={

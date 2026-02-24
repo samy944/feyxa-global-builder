@@ -11,6 +11,7 @@ import {
   UserPlus,
   Shield,
   UserCheck,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ const links = [
   { to: "/admin/reviews", icon: Star, label: "Avis" },
   { to: "/admin/team", icon: UserPlus, label: "Équipe admin" },
   { to: "/admin/kyc", icon: UserCheck, label: "KYC Vendeurs" },
+  { to: "/admin/settings", icon: Settings, label: "Paramètres" },
 ];
 
 interface Props {
