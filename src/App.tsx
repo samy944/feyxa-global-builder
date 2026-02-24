@@ -59,6 +59,13 @@ import ClientOverview from "./pages/ClientOverview";
 import DashboardStores from "./pages/DashboardStores";
 import NewStore from "./pages/NewStore";
 import AcceptInvite from "./pages/AcceptInvite";
+import AdminLayout from "./pages/AdminLayout";
+import AdminOverview from "./pages/AdminOverview";
+import AdminStores from "./pages/AdminStores";
+import AdminUsers from "./pages/AdminUsers";
+import AdminOrders from "./pages/AdminOrders";
+import AdminTeam from "./pages/AdminTeam";
+import AcceptAdminInvite from "./pages/AcceptAdminInvite";
 
 const queryClient = new QueryClient();
 
@@ -119,18 +126,19 @@ const App = () => (
             <Route path="/track" element={<TrackOrder />} />
             <Route path="/track/:orderNumber" element={<TrackOrder />} />
             <Route path="/confirm-delivery/:token" element={<ConfirmDelivery />} />
-            <Route path="/admin/payouts" element={
-              <VendorRoute><AdminPayouts /></VendorRoute>
-            } />
-            <Route path="/admin/reviews" element={
-              <VendorRoute><AdminReviews /></VendorRoute>
-            } />
-            <Route path="/admin/tickets" element={
-              <VendorRoute><AdminTickets /></VendorRoute>
-            } />
-            <Route path="/admin/returns" element={
-              <VendorRoute><AdminReturns /></VendorRoute>
-            } />
+            {/* Super Admin */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminOverview />} />
+              <Route path="stores" element={<AdminStores />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="payouts" element={<AdminPayouts />} />
+              <Route path="tickets" element={<AdminTickets />} />
+              <Route path="returns" element={<AdminReturns />} />
+              <Route path="reviews" element={<AdminReviews />} />
+              <Route path="team" element={<AdminTeam />} />
+            </Route>
+            <Route path="/admin/invite" element={<AcceptAdminInvite />} />
             <Route path="/my-orders" element={
               <AuthRoute><MyOrders /></AuthRoute>
             } />
