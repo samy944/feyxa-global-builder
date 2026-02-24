@@ -10,6 +10,7 @@ import {
   Star,
   UserPlus,
   Shield,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ const links = [
   { to: "/admin/returns", icon: RotateCcw, label: "Retours" },
   { to: "/admin/reviews", icon: Star, label: "Avis" },
   { to: "/admin/team", icon: UserPlus, label: "Équipe admin" },
+  { to: "/admin/kyc", icon: UserCheck, label: "KYC Vendeurs" },
 ];
 
 interface Props {

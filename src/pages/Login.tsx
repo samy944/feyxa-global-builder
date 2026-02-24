@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { OtpVerifyDialog } from "@/components/security/OtpVerifyDialog";
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -13,23 +14,32 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [show2fa, setShow2fa] = useState(false);
+  const [pendingUser, setPendingUser] = useState<{ id: string; email: string } | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await signIn(email, password);
-    if (error) {
-      setLoading(false);
-      toast.error(error.message);
-      return;
-    }
+  const logLoginActivity = async (userId: string, success: boolean, failureReason?: string) => {
+    try {
+      await supabase.functions.invoke("otp", {
+        body: {
+          action: "log_login",
+          user_id: userId,
+          ip_address: null, // Can't reliably get from client
+          user_agent: navigator.userAgent,
+          success,
+          failure_reason: failureReason,
+        },
+      });
+    } catch {}
+  };
 
+  const proceedAfterAuth = async () => {
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) {
-      setLoading(false);
       navigate("/market");
       return;
     }
+
+    await logLoginActivity(authUser.id, true);
 
     const { data: roles } = await supabase
       .from("user_roles")
@@ -46,12 +56,47 @@ export default function Login() {
         .eq("owner_id", authUser.id)
         .limit(1)
         .maybeSingle();
-      setLoading(false);
       navigate(store ? "/dashboard" : "/onboarding");
     } else {
-      setLoading(false);
       navigate("/account");
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await signIn(email, password);
+    if (error) {
+      setLoading(false);
+      toast.error(error.message);
+      return;
+    }
+
+    // Check if 2FA is enabled
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setLoading(false);
+      navigate("/market");
+      return;
+    }
+
+    const { data: securitySettings } = await supabase
+      .from("user_security_settings")
+      .select("two_factor_enabled")
+      .eq("user_id", authUser.id)
+      .maybeSingle();
+
+    if (securitySettings?.two_factor_enabled) {
+      // Show 2FA dialog
+      setPendingUser({ id: authUser.id, email: authUser.email! });
+      setShow2fa(true);
+      setLoading(false);
+      return;
+    }
+
+    // No 2FA, proceed directly
+    await proceedAfterAuth();
+    setLoading(false);
   };
 
   return (
@@ -137,98 +182,32 @@ export default function Login() {
 
           {/* Divider */}
           <div className="relative my-7">
-            <div
-              className="absolute inset-0 flex items-center"
-            >
+            <div className="absolute inset-0 flex items-center">
               <div className="w-full" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
             </div>
             <div className="relative flex justify-center">
-              <span
-                className="px-3 text-xs"
-                style={{ background: "#141419", color: "#6B7280" }}
-              >
-                ou
-              </span>
+              <span className="px-3 text-xs" style={{ background: "#141419", color: "#6B7280" }}>ou</span>
             </div>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label
-                className="block mb-2 text-xs"
-                style={{ color: "#9CA3AF", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}
-              >
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="vous@exemple.com"
-                className="w-full h-12 px-4 text-sm transition-colors duration-200 focus:outline-none"
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: "0.625rem",
-                  color: "#FFFFFF",
-                  fontWeight: 400,
-                }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
-              />
+              <label className="block mb-2 text-xs" style={{ color: "#9CA3AF", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="vous@exemple.com" className="w-full h-12 px-4 text-sm transition-colors duration-200 focus:outline-none" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.625rem", color: "#FFFFFF", fontWeight: 400 }} onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; }} onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }} />
             </div>
 
             <div>
-              <label
-                className="block mb-2 text-xs"
-                style={{ color: "#9CA3AF", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}
-              >
-                Mot de passe
-              </label>
+              <label className="block mb-2 text-xs" style={{ color: "#9CA3AF", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>Mot de passe</label>
               <div className="relative">
-                <input
-                  type={showPw ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="w-full h-12 px-4 pr-11 text-sm transition-colors duration-200 focus:outline-none"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "0.625rem",
-                    color: "#FFFFFF",
-                    fontWeight: 400,
-                  }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-opacity duration-200 hover:opacity-70"
-                  style={{ color: "#6B7280" }}
-                >
+                <input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="w-full h-12 px-4 pr-11 text-sm transition-colors duration-200 focus:outline-none" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.625rem", color: "#FFFFFF", fontWeight: 400 }} onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; }} onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }} />
+                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-opacity duration-200 hover:opacity-70" style={{ color: "#6B7280" }}>
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-12 flex items-center justify-center gap-2 text-sm transition-opacity duration-200 hover:opacity-90 disabled:opacity-50"
-              style={{
-                background: "hsl(var(--primary))",
-                color: "#0E0E11",
-                borderRadius: "0.625rem",
-                fontWeight: 600,
-                border: "none",
-                marginTop: "1.75rem",
-              }}
-            >
+            <button type="submit" disabled={loading} className="w-full h-12 flex items-center justify-center gap-2 text-sm transition-opacity duration-200 hover:opacity-90 disabled:opacity-50" style={{ background: "hsl(var(--primary))", color: "#0E0E11", borderRadius: "0.625rem", fontWeight: 600, border: "none", marginTop: "1.75rem" }}>
               {loading ? "Connexion…" : "Se connecter"}
               {!loading && <ArrowRight size={16} />}
             </button>
@@ -236,20 +215,33 @@ export default function Login() {
         </div>
 
         {/* Footer link */}
-        <p
-          className="text-center mt-8"
-          style={{ color: "#6B7280", fontSize: "0.875rem" }}
-        >
+        <p className="text-center mt-8" style={{ color: "#6B7280", fontSize: "0.875rem" }}>
           Pas encore de compte ?{" "}
-          <Link
-            to="/signup"
-            className="transition-colors duration-200 hover:opacity-80"
-            style={{ color: "#FFFFFF", fontWeight: 500 }}
-          >
-            Créer un compte
-          </Link>
+          <Link to="/signup" className="transition-colors duration-200 hover:opacity-80" style={{ color: "#FFFFFF", fontWeight: 500 }}>Créer un compte</Link>
         </p>
       </div>
+
+      {/* 2FA OTP Dialog */}
+      {pendingUser && (
+        <OtpVerifyDialog
+          open={show2fa}
+          onOpenChange={(open) => {
+            if (!open) {
+              // User cancelled 2FA - sign out
+              supabase.auth.signOut();
+              setPendingUser(null);
+            }
+            setShow2fa(open);
+          }}
+          userId={pendingUser.id}
+          email={pendingUser.email}
+          purpose="login_2fa"
+          onVerified={async () => {
+            setPendingUser(null);
+            await proceedAfterAuth();
+          }}
+        />
+      )}
     </div>
   );
 }

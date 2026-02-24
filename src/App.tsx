@@ -66,6 +66,7 @@ import AdminUsers from "./pages/AdminUsers";
 import AdminOrders from "./pages/AdminOrders";
 import AdminTeam from "./pages/AdminTeam";
 import AcceptAdminInvite from "./pages/AcceptAdminInvite";
+import AdminKyc from "./pages/AdminKyc";
 
 const queryClient = new QueryClient();
 
@@ -136,6 +137,7 @@ const App = () => (
               <Route path="tickets" element={<AdminTickets />} />
               <Route path="returns" element={<AdminReturns />} />
               <Route path="reviews" element={<AdminReviews />} />
+              <Route path="kyc" element={<AdminKyc />} />
               <Route path="team" element={<AdminTeam />} />
             </Route>
             <Route path="/admin/invite" element={<AcceptAdminInvite />} />
