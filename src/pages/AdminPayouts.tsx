@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,40 +50,17 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function AdminPayouts() {
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [actionDialog, setActionDialog] = useState<{ payout: PayoutRequest; action: "approved" | "rejected" } | null>(null);
   const [actionNotes, setActionNotes] = useState("");
   const [processing, setProcessing] = useState(false);
   const [filter, setFilter] = useState<string>("pending");
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login");
-      return;
-    }
-    if (user) checkAdminAndFetch();
-  }, [user, authLoading]);
-
-  useEffect(() => {
-    if (isAdmin) fetchPayouts();
-  }, [filter, isAdmin]);
-
-  const checkAdminAndFetch = async () => {
-    const { data } = await supabase.rpc("has_role", {
-      _user_id: user!.id,
-      _role: "marketplace_admin" as any,
-    });
-    if (!data) {
-      toast.error("Accès refusé");
-      navigate("/");
-      return;
-    }
-    setIsAdmin(true);
-  };
+    fetchPayouts();
+  }, [filter]);
 
   const fetchPayouts = async () => {
     setLoading(true);
@@ -159,14 +135,6 @@ export default function AdminPayouts() {
       minute: "2-digit",
     });
 
-  if (authLoading || (!isAdmin && loading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
-  }
-
   const stats = {
     pending: payouts.filter((p) => p.status === "pending").length,
     totalPending: payouts
@@ -175,21 +143,14 @@ export default function AdminPayouts() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="container flex h-14 items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-            <ArrowLeft size={18} />
-          </Button>
-          <div className="flex items-center gap-2">
-            <Wallet size={20} className="text-primary" />
-            <h1 className="font-heading text-lg">Administration — Retraits</h1>
-          </div>
+    <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+      <div className="flex items-center gap-3">
+        <Wallet size={20} className="text-primary" />
+        <div>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Retraits</h1>
+          <p className="text-sm text-muted-foreground">{payouts.length} demande{payouts.length > 1 ? "s" : ""}</p>
         </div>
-      </header>
-
-      <main className="container py-8 space-y-6">
-        {/* Stats */}
+      </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardContent className="pt-6">
@@ -344,7 +305,6 @@ export default function AdminPayouts() {
             )}
           </CardContent>
         </Card>
-      </main>
 
       {/* Confirm Dialog */}
       <Dialog open={!!actionDialog} onOpenChange={() => setActionDialog(null)}>

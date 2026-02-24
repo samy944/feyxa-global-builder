@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
 import { Loader2, Check, X, Star, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,36 +19,13 @@ interface ReviewItem {
 }
 
 export default function AdminReviews() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved">("pending");
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    checkAdmin();
-  }, [user]);
-
-  useEffect(() => {
-    if (isAdmin) fetchReviews();
-  }, [isAdmin, filter]);
-
-  const checkAdmin = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "marketplace_admin")
-      .maybeSingle();
-
-    if (data) {
-      setIsAdmin(true);
-    } else {
-      navigate("/dashboard");
-    }
-  };
+    fetchReviews();
+  }, [filter]);
 
   const fetchReviews = async () => {
     setLoading(true);
@@ -103,11 +78,8 @@ export default function AdminReviews() {
       />
     ));
 
-  if (!isAdmin) return null;
-
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container max-w-4xl py-12">
+    <div className="p-6 lg:p-8 max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="font-heading text-3xl text-foreground">MODÉRATION AVIS</h1>
           <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
@@ -197,7 +169,6 @@ export default function AdminReviews() {
             ))}
           </div>
         )}
-      </div>
     </div>
   );
 }

@@ -17,10 +17,12 @@ import {
   Store,
   MessageSquare,
   RotateCcw,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { StoreSwitcher } from "./StoreSwitcher";
+import { useAdmin } from "@/hooks/useAdmin";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Vue d'ensemble", path: "/dashboard" },
@@ -47,7 +49,7 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-
+  const { isAdmin } = useAdmin();
   return (
     <aside
       className={cn(
@@ -128,10 +130,27 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       </nav>
 
       {/* Marketplace link */}
-      <div className="px-2 py-1" style={{ borderTop: "1px solid hsla(0,0%,100%,0.06)" }}>
+      <div className="px-2 py-1 space-y-0.5" style={{ borderTop: "1px solid hsla(0,0%,100%,0.06)" }}>
+        {isAdmin && (
+          <Link
+            to="/admin"
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200",
+              collapsed && "justify-center px-0"
+            )}
+            style={{ color: "#F59E0B" }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "#FBBF24"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "#F59E0B"; }}
+            title={collapsed ? "Super Admin" : undefined}
+          >
+            <Shield size={17} style={{ flexShrink: 0 }} />
+            {!collapsed && <span>Super Admin</span>}
+          </Link>
+        )}
         <Link
           to="/market"
-              onClick={onNavigate}
+          onClick={onNavigate}
           className={cn(
             "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200",
             collapsed && "justify-center px-0"

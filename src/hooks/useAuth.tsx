@@ -37,6 +37,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           });
         }
+
+        // Auto-accept pending admin invite
+        const pendingAdminToken = localStorage.getItem('feyxa_pending_admin_invite');
+        if (pendingAdminToken) {
+          localStorage.removeItem('feyxa_pending_admin_invite');
+          const encoder = new TextEncoder();
+          const data = encoder.encode(pendingAdminToken);
+          crypto.subtle.digest('SHA-256', data).then((hashBuffer) => {
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const tokenHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+            supabase.rpc('accept_admin_invitation', {
+              _token_hash: tokenHash,
+              _user_id: session.user.id,
+            }).then(() => {
+              window.location.href = '/admin';
+            });
+          });
+        }
       }
     });
 
