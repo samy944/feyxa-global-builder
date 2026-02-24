@@ -92,7 +92,7 @@ export default function Checkout() {
       itemLines,
       ``,
       `💰 Total: ${formatPrice(order.subtotal, order.currency)}`,
-      `💳 Paiement: ${paymentMethod === "cod" ? "À la livraison" : paymentMethod === "mobile_money" ? "Mobile Money" : "WhatsApp"}`,
+      `💳 Paiement: ${paymentMethod === "cod" ? "À la livraison" : paymentMethod === "stripe" ? "Carte bancaire" : paymentMethod === "fedapay" ? "Mobile Money (FedaPay)" : paymentMethod === "mobile_money" ? "Mobile Money" : "WhatsApp"}`,
       data.notes ? `\n📝 Notes: ${data.notes}` : "",
       ``,
       `Merci de confirmer cette commande ! 🙏`,
@@ -226,6 +226,38 @@ export default function Checkout() {
         createOrderAttribution(orderId, storeId).catch(() => {});
 
         clearStore(storeId);
+      }
+
+      // If online payment (Stripe or FedaPay), redirect to payment page
+      if (paymentMethod === "stripe" || paymentMethod === "fedapay") {
+        const totalAmount = completed.reduce((s, o) => s + o.subtotal, 0);
+        const orderIds = completed.map((o) => o.orderId);
+        try {
+          const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
+            "create-checkout-session",
+            {
+              body: {
+                provider: paymentMethod,
+                order_ids: orderIds,
+                amount: totalAmount,
+                currency: mainCurrency,
+                customer_email: `${form.phone}@feyxa.local`,
+                customer_name: `${form.firstName} ${form.lastName || ""}`.trim(),
+              },
+            }
+          );
+          if (checkoutError) throw checkoutError;
+          if (checkoutData?.url) {
+            window.open(checkoutData.url, "_blank");
+          }
+        } catch (payErr: any) {
+          console.error("Payment redirect error:", payErr);
+          toast({
+            title: "Commande créée",
+            description: "La commande est créée mais le paiement en ligne n'a pas pu être initié. Contactez le vendeur.",
+            variant: "destructive",
+          });
+        }
       }
 
       setCompletedOrders(completed);
@@ -448,11 +480,25 @@ export default function Checkout() {
                       <p className="text-xs text-muted-foreground">Payez en espèces à la réception</p>
                     </div>
                   </label>
+                  <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "stripe" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                    <RadioGroupItem value="stripe" id="stripe" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Carte bancaire (Stripe)</p>
+                      <p className="text-xs text-muted-foreground">Visa, Mastercard, paiement sécurisé</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "fedapay" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                    <RadioGroupItem value="fedapay" id="fedapay" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Mobile Money (FedaPay)</p>
+                      <p className="text-xs text-muted-foreground">MTN MoMo, Moov Money, paiement local</p>
+                    </div>
+                  </label>
                   <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "mobile_money" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
                     <RadioGroupItem value="mobile_money" id="mobile_money" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Mobile Money</p>
-                      <p className="text-xs text-muted-foreground">MTN MoMo, Orange Money, Wave</p>
+                      <p className="text-sm font-medium text-foreground">Mobile Money (manuel)</p>
+                      <p className="text-xs text-muted-foreground">Transfert direct, confirmation par le vendeur</p>
                     </div>
                   </label>
                   <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "whatsapp" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
