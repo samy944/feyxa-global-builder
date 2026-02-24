@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { OtpVerifyDialog } from "@/components/security/OtpVerifyDialog";
 import {
   Wallet,
   Clock,
@@ -15,12 +17,15 @@ import {
   Loader2,
   TrendingUp,
   Banknote,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function DashboardWallet() {
   const { store } = useStore();
+  const { user } = useAuth();
   const [payoutAmount, setPayoutAmount] = useState("");
   const [requesting, setRequesting] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
 
   const formatPrice = (amount: number, currency = "XOF") =>
     currency === "XOF"
@@ -76,9 +81,15 @@ export default function DashboardWallet() {
     enabled: !!store?.id,
   });
 
-  const handleRequestPayout = async () => {
+  const initiateWithdrawal = () => {
     const amount = parseFloat(payoutAmount);
     if (!amount || amount <= 0 || !store?.id) return;
+    // Always require OTP for withdrawals
+    setShowOtp(true);
+  };
+
+  const handleRequestPayout = async () => {
+    const amount = parseFloat(payoutAmount);
 
     setRequesting(true);
     try {
@@ -189,10 +200,12 @@ export default function DashboardWallet() {
               />
             </div>
             <Button
-              onClick={handleRequestPayout}
+              onClick={initiateWithdrawal}
               disabled={requesting || !payoutAmount || parseFloat(payoutAmount) <= 0}
+              className="gap-1.5"
             >
-              {requesting ? <Loader2 size={16} className="animate-spin" /> : "Demander"}
+              {requesting ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
+              Demander
             </Button>
           </div>
           {(wallet?.balance_available ?? 0) > 0 && (
@@ -281,6 +294,20 @@ export default function DashboardWallet() {
           )}
         </CardContent>
       </Card>
+
+      {/* OTP verification for withdrawal */}
+      {user && (
+        <OtpVerifyDialog
+          open={showOtp}
+          onOpenChange={setShowOtp}
+          userId={user.id}
+          email={user.email!}
+          purpose="withdrawal"
+          title="Vérification retrait"
+          description="Pour votre sécurité, entrez le code OTP envoyé à votre email pour confirmer ce retrait."
+          onVerified={handleRequestPayout}
+        />
+      )}
     </div>
   );
 }

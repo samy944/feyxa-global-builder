@@ -846,6 +846,45 @@ export type Database = {
           },
         ]
       }
+      login_activity: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          device_info: Json | null
+          failure_reason: string | null
+          id: string
+          ip_address: string | null
+          success: boolean
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_info?: Json | null
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_info?: Json | null
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       marketplace_categories: {
         Row: {
           created_at: string
@@ -1193,6 +1232,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      otp_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          max_attempts: number
+          purpose: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          max_attempts?: number
+          purpose?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          max_attempts?: number
+          purpose?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       payout_requests: {
         Row: {
@@ -2129,6 +2204,92 @@ export type Database = {
         }
         Relationships: []
       }
+      user_security_settings: {
+        Row: {
+          created_at: string
+          id: string
+          require_2fa_withdrawal: boolean
+          two_factor_enabled: boolean
+          two_factor_method: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          require_2fa_withdrawal?: boolean
+          two_factor_enabled?: boolean
+          two_factor_method?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          require_2fa_withdrawal?: boolean
+          two_factor_enabled?: boolean
+          two_factor_method?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vendor_kyc: {
+        Row: {
+          created_at: string
+          id: string
+          id_document_type: string | null
+          id_document_url: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          selfie_url: string | null
+          status: Database["public"]["Enums"]["kyc_status"]
+          store_id: string | null
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_document_type?: string | null
+          id_document_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: Database["public"]["Enums"]["kyc_status"]
+          store_id?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_document_type?: string | null
+          id_document_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: Database["public"]["Enums"]["kyc_status"]
+          store_id?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_kyc_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_transactions: {
         Row: {
           amount: number
@@ -2314,6 +2475,14 @@ export type Database = {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
       }
+      check_login_rate_limit: {
+        Args: {
+          _identifier: string
+          _max_attempts?: number
+          _window_minutes?: number
+        }
+        Returns: boolean
+      }
       create_escrow_for_order: {
         Args: { _commission_rate?: number; _order_id: string }
         Returns: string
@@ -2405,6 +2574,7 @@ export type Database = {
       discount_type: "percentage" | "fixed"
       escrow_status: "held" | "released" | "refunded" | "disputed"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
+      kyc_status: "not_started" | "pending" | "approved" | "rejected"
       landing_status: "draft" | "published" | "archived"
       order_status:
         | "new"
@@ -2581,6 +2751,7 @@ export const Constants = {
       discount_type: ["percentage", "fixed"],
       escrow_status: ["held", "released", "refunded", "disputed"],
       invitation_status: ["pending", "accepted", "expired", "revoked"],
+      kyc_status: ["not_started", "pending", "approved", "rejected"],
       landing_status: ["draft", "published", "archived"],
       order_status: [
         "new",

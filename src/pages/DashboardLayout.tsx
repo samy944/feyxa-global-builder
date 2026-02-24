@@ -4,6 +4,7 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
 import { OrderRealtimeListener } from "@/components/dashboard/OrderRealtimeListener";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { EmailVerificationBanner } from "@/components/security/EmailVerificationBanner";
 import { useStore } from "@/hooks/useStore";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Menu, X } from "lucide-react";
@@ -82,6 +83,7 @@ export default function DashboardLayout() {
           </div>
         </header>
 
+        <EmailVerificationBanner />
         <main className="flex-1">
           <Outlet />
         </main>
