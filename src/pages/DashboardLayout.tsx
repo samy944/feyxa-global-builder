@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
 import { OrderRealtimeListener } from "@/components/dashboard/OrderRealtimeListener";
@@ -7,13 +7,15 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { EmailVerificationBanner } from "@/components/security/EmailVerificationBanner";
 import { useStore } from "@/hooks/useStore";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ShieldAlert } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const isMobile = useIsMobile();
-  const { store } = useStore();
+  const { store, isImpersonating, stopImpersonating } = useStore();
+  const navigate = useNavigate();
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -82,6 +84,27 @@ export default function DashboardLayout() {
             <NotificationBell />
           </div>
         </header>
+
+        {/* Admin impersonation banner */}
+        {isImpersonating && store && (
+          <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20">
+            <div className="flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+              <ShieldAlert size={16} />
+              <span>Mode support — Boutique : <strong>{store.name}</strong></span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+              onClick={() => {
+                stopImpersonating();
+                navigate("/admin/stores");
+              }}
+            >
+              Quitter le mode support
+            </Button>
+          </div>
+        )}
 
         <EmailVerificationBanner />
         <main className="flex-1">

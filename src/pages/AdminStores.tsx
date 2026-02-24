@@ -11,7 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Search, Ban, CheckCircle, Store } from "lucide-react";
+import { Loader2, Search, Ban, CheckCircle, Store, LogIn } from "lucide-react";
+import { useStore } from "@/hooks/useStore";
+import { useNavigate } from "react-router-dom";
 
 interface StoreRow {
   id: string;
@@ -34,6 +36,8 @@ export default function AdminStores() {
   const [banDialog, setBanDialog] = useState<{ store: StoreRow; action: "ban" | "unban" } | null>(null);
   const [banReason, setBanReason] = useState("");
   const [processing, setProcessing] = useState(false);
+  const { impersonateStore } = useStore();
+  const navigate = useNavigate();
 
   useEffect(() => { fetchStores(); }, []);
 
@@ -158,6 +162,17 @@ export default function AdminStores() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={async () => {
+                          await impersonateStore(store.id);
+                          navigate("/dashboard");
+                          toast.success(`Accès à "${store.name}" en mode support`);
+                        }}
+                      >
+                        <LogIn size={14} className="mr-1" /> Accéder
+                      </Button>
                       {!store.is_banned && (
                         <Button size="sm" variant="outline" onClick={() => toggleActive(store)}>
                           {store.is_active ? "Désactiver" : "Activer"}
