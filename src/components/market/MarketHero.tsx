@@ -115,7 +115,7 @@ export function MarketHero() {
     <section
       ref={heroRef}
       className="relative flex flex-col items-center justify-center text-center overflow-hidden"
-      style={{ minHeight: "80vh" }}
+      style={{ minHeight: "88vh" }}
     >
       {/* ── Background layers ── */}
       {/* Base gradient */}
@@ -175,7 +175,7 @@ export function MarketHero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8"
+          className="mb-10"
         >
           <span
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium"
@@ -232,12 +232,12 @@ export function MarketHero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-7 mx-auto"
+          className="mt-8 mx-auto"
         >
           <span
             style={{
-              color: "rgba(255,255,255,0.45)",
-              fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
+              color: "rgba(255,255,255,0.4)",
+              fontSize: "clamp(1.0625rem, 1.5vw, 1.3125rem)",
               fontWeight: 400,
               lineHeight: 1.7,
               maxWidth: "460px",
@@ -256,9 +256,9 @@ export function MarketHero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-14 w-full mx-auto"
+          className="mt-16 w-full mx-auto"
         >
-          <div className="mx-auto" style={{ maxWidth: "min(75%, 640px)" }}>
+          <div className="mx-auto" style={{ maxWidth: "min(80%, 680px)" }}>
             <MarketSearch />
           </div>
         </motion.div>

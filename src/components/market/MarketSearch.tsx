@@ -31,13 +31,15 @@ export function MarketSearch({ placeholder = "Rechercher un produit, une marqueâ
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-13 pl-11 pr-5 text-sm transition-all duration-150 focus:outline-none"
+        className="w-full pl-12 pr-6 text-[0.9375rem] transition-all duration-150 ease-out focus:outline-none"
         style={{
           background: "rgba(255,255,255,0.03)",
           border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "0.75rem",
+          borderRadius: "0.875rem",
           color: "#FFFFFF",
           fontWeight: 400,
+          height: "3.25rem",
+          letterSpacing: "0.01em",
         }}
         onFocus={(e) => {
           e.currentTarget.style.borderColor = "rgba(71,210,30,0.35)";
