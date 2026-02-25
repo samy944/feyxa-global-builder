@@ -1,5 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -30,84 +28,73 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!RESEND_API_KEY) {
+      console.error("RESEND_API_KEY not configured");
+      return new Response(JSON.stringify({ error: "Email service not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Generate HTML email content
     const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .container { max-width: 480px; margin: 40px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 32px 24px; text-align: center; }
-    .header h1 { color: #ffffff; font-size: 22px; margin: 0; font-weight: 600; }
-    .body { padding: 32px 24px; }
-    .body p { color: #3f3f46; font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
-    .otp-box { background: #f4f4f5; border: 2px dashed #d4d4d8; border-radius: 10px; padding: 24px; text-align: center; margin: 24px 0; }
-    .otp-code { font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #1a1a2e; font-family: 'SF Mono', 'Fira Code', monospace, sans-serif; }
-    .label { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; margin-bottom: 16px; }
-    .footer { padding: 20px 24px; background: #fafafa; border-top: 1px solid #f0f0f0; }
-    .footer p { color: #a1a1aa; font-size: 12px; line-height: 1.5; margin: 0; text-align: center; }
-  </style>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>🔐 Feyxa — Code de vérification</h1>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:480px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg,#0E0E11 0%,#1a1a2e 100%);padding:32px 24px;text-align:center;">
+      <span style="display:inline-block;background:#E5FB26;border-radius:8px;width:36px;height:36px;line-height:36px;font-weight:bold;font-size:16px;color:#0E0E11;">F</span>
+      <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.04em;margin-left:10px;vertical-align:middle;">FEYXA</span>
     </div>
-    <div class="body">
-      <span class="label">${label || "Vérification"}</span>
-      <p>Bonjour,</p>
-      <p>Voici votre code de vérification à usage unique :</p>
-      <div class="otp-box">
-        <div class="otp-code">${otp}</div>
+    <div style="padding:32px 24px;">
+      <span style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:4px 12px;border-radius:6px;font-size:13px;font-weight:500;margin-bottom:16px;">${label || "Vérification"}</span>
+      <p style="color:#3f3f46;font-size:15px;line-height:1.6;margin:0 0 16px;">Bonjour,</p>
+      <p style="color:#3f3f46;font-size:15px;line-height:1.6;margin:0 0 16px;">Voici votre code de vérification à usage unique :</p>
+      <div style="background:#f4f4f5;border:2px dashed #d4d4d8;border-radius:10px;padding:24px;text-align:center;margin:24px 0;">
+        <div style="font-size:36px;font-weight:700;letter-spacing:8px;color:#0E0E11;font-family:'SF Mono','Fira Code',monospace,sans-serif;">${otp}</div>
       </div>
-      <p>Ce code expire dans <strong>10 minutes</strong>. Ne le partagez avec personne.</p>
-      <p>Si vous n'avez pas demandé ce code, ignorez simplement cet email.</p>
+      <p style="color:#3f3f46;font-size:15px;line-height:1.6;margin:0 0 16px;">Ce code expire dans <strong>10 minutes</strong>. Ne le partagez avec personne.</p>
+      <p style="color:#3f3f46;font-size:15px;line-height:1.6;margin:0 0 16px;">Si vous n'avez pas demandé ce code, ignorez simplement cet email.</p>
     </div>
-    <div class="footer">
-      <p>Cet email a été envoyé automatiquement par Feyxa.<br>© ${new Date().getFullYear()} Feyxa. Tous droits réservés.</p>
+    <div style="padding:20px 24px;background:#fafafa;border-top:1px solid #f0f0f0;">
+      <p style="color:#a1a1aa;font-size:12px;line-height:1.5;margin:0;text-align:center;">Cet email a été envoyé automatiquement par Feyxa.<br>© ${new Date().getFullYear()} Feyxa. Tous droits réservés.</p>
     </div>
   </div>
 </body>
 </html>`;
 
-    // Send email using Lovable's email API
-    const response = await fetch("https://api.lovable.dev/api/v1/email", {
+    const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        to: email,
+        from: "Feyxa <onboarding@resend.dev>",
+        to: [email],
         subject: `${otp} — Votre code Feyxa (${label || "Vérification"})`,
         html: htmlContent,
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Lovable email API error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "Failed to send email", details: errorText }), {
+    if (!res.ok) {
+      const errorBody = await res.text();
+      console.error("Resend API error:", res.status, errorBody);
+      return new Response(JSON.stringify({ error: "Failed to send email", details: errorBody }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log(`OTP email sent successfully to ${email}`);
+    const result = await res.json();
+    console.log(`OTP email sent to ${email} via Resend:`, result.id);
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, id: result.id }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
