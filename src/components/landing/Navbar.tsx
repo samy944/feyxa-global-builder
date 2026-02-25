@@ -103,12 +103,12 @@ export function Navbar() {
                 </Link>
               )
             )}
-            <div className="flex flex-col gap-2 pt-2">
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/login">{t.navbar.login}</Link>
+            <div className="flex flex-col gap-2 pt-3 border-t border-border">
+              <Button variant="ghost" size="sm" asChild className="justify-start">
+                <Link to="/login" onClick={() => setOpen(false)}>{t.navbar.login}</Link>
               </Button>
-              <Button variant="hero" size="sm" asChild>
-                <Link to="/signup">{t.navbar.signup}</Link>
+              <Button variant="hero" size="sm" asChild className="justify-start">
+                <Link to="/signup" onClick={() => setOpen(false)}>{t.navbar.signup}</Link>
               </Button>
             </div>
           </div>

@@ -310,6 +310,7 @@ export function MarketNavbar() {
                 ) : (
                   <>
                     <MobileLink label={t.navbar.login} to="/login" onClick={() => setMobileOpen(false)} />
+                    <MobileLink label={t.navbar.signup} to="/signup" onClick={() => setMobileOpen(false)} />
                   </>
                 )}
               </div>
