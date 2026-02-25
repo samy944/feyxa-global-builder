@@ -116,6 +116,9 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
 
   // Categories
   const [categories, setCategories] = useState<MarketCategory[]>([]);
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [creatingCategory, setCreatingCategory] = useState(false);
 
   // Variants
   const [hasVariants, setHasVariants] = useState(false);
@@ -706,21 +709,78 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
                 </div>
 
                 {isMarketplace && (
-                  <div className="space-y-1.5 pt-1 border-t border-border">
+                  <div className="space-y-2 pt-1 border-t border-border">
                     <Label className="text-sm">Catégorie marketplace *</Label>
-                    <Select
-                      value={watch("marketplace_category_id") || ""}
-                      onValueChange={(v) => setValue("marketplace_category_id", v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choisir une catégorie..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {!showNewCategory ? (
+                      <>
+                        <Select
+                          value={watch("marketplace_category_id") || ""}
+                          onValueChange={(v) => {
+                            if (v === "__other__") {
+                              setShowNewCategory(true);
+                            } else {
+                              setValue("marketplace_category_id", v);
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choisir une catégorie..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            ))}
+                            <SelectItem value="__other__">+ Autre (créer une catégorie)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Nom de la nouvelle catégorie"
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={!newCategoryName.trim() || creatingCategory}
+                            onClick={async () => {
+                              if (!newCategoryName.trim()) return;
+                              setCreatingCategory(true);
+                              const slug = newCategoryName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+                              const { data: inserted, error } = await supabase.from("marketplace_categories").insert({
+                                name: newCategoryName.trim(),
+                                slug: slug || `cat-${Date.now()}`,
+                              }).select("id, name").single();
+                              setCreatingCategory(false);
+                              if (error) {
+                                toast.error("Erreur lors de la création de la catégorie");
+                                return;
+                              }
+                              if (inserted) {
+                                setCategories((prev) => [...prev, inserted]);
+                                setValue("marketplace_category_id", inserted.id);
+                                setNewCategoryName("");
+                                setShowNewCategory(false);
+                                toast.success("Catégorie créée !");
+                              }
+                            }}
+                          >
+                            {creatingCategory ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                          </Button>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => { setShowNewCategory(false); setNewCategoryName(""); }}
+                        >
+                          ← Retour aux catégories existantes
+                        </button>
+                      </div>
+                    )}
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Info size={10} /> Choisissez la catégorie la plus pertinente pour la visibilité
                     </p>
