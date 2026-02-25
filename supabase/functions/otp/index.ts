@@ -90,16 +90,20 @@ Deno.serve(async (req) => {
       // For now, we'll use a simple approach - the OTP is returned to the client
       // In production, this should be sent via email service
       
-      console.log(`OTP for ${email} (${purpose}): ${otp}`);
+      console.log(`OTP generated for ${email} (${purpose})`);
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "Code envoyé",
-          // In dev/demo mode, include OTP. Remove in production!
-          _dev_otp: otp,
+          message: "Code de vérification envoyé",
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { 
+          headers: { 
+            ...corsHeaders, 
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+          } 
+        }
       );
     }
 
