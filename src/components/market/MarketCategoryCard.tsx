@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 import modeVetements from "@/assets/categories/mode-vetements.jpg";
 import electronique from "@/assets/categories/electronique.jpg";
@@ -28,38 +29,43 @@ interface MarketCategoryCardProps {
   index?: number;
 }
 
-export function MarketCategoryCard({ name, slug, image_url }: MarketCategoryCardProps) {
+export function MarketCategoryCard({ name, slug, image_url, productCount, index = 0 }: MarketCategoryCardProps) {
   const imgSrc = image_url || categoryImages[slug];
 
   return (
-    <Link
-      to={`/market/category/${slug}`}
-      className="group flex flex-col items-center gap-3.5 py-5 px-2 transition-opacity duration-200 hover:opacity-80"
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.05, 0.3), duration: 0.4 }}
     >
-      <div
-        className="h-20 w-20 overflow-hidden"
-        style={{ borderRadius: "1.25rem", background: "#1A1A1F" }}
+      <Link
+        to={`/market/category/${slug}`}
+        className="group block rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg relative"
+        style={{ border: "1px solid rgba(255,255,255,0.06)", aspectRatio: "4/3" }}
       >
         {imgSrc ? (
           <img
             src={imgSrc}
             alt={name}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
           />
         ) : (
-          <div className="h-full w-full flex items-center justify-center">
-            <span style={{ color: "#FFFFFF", fontWeight: 600, fontSize: "1.25rem" }}>
-              {name.charAt(0)}
-            </span>
+          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#1A1A1F" }}>
+            <span className="text-2xl font-bold" style={{ color: "hsl(var(--primary))" }}>{name.charAt(0)}</span>
           </div>
         )}
-      </div>
-      <span
-        className="text-sm text-center"
-        style={{ color: "#C5CED6", fontWeight: 500 }}
-      >
-        {name}
-      </span>
-    </Link>
+        {/* Overlay */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)" }} />
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <h3 className="text-sm font-semibold" style={{ color: "#FFFFFF" }}>{name}</h3>
+          {productCount !== undefined && productCount > 0 && (
+            <p className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+              {productCount} produit{productCount !== 1 ? "s" : ""}
+            </p>
+          )}
+        </div>
+      </Link>
+    </motion.div>
   );
 }
