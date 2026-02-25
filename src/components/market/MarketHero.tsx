@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { MarketSearch } from "./MarketSearch";
 import { ShoppingBag, Star, Zap } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 /* ─── Floating mini-card ─── */
 function FloatingCard({
@@ -83,6 +84,7 @@ function StatBadge({ icon: Icon, label, value }: { icon: any; label: string; val
 }
 
 export function MarketHero() {
+  const { t } = useTranslation();
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const titleY = useTransform(scrollYProgress, [0, 1], [0, 60]);
@@ -157,11 +159,11 @@ export function MarketHero() {
       </FloatingCard>
 
       <FloatingCard className="top-[30%] right-[6%] hidden lg:block" delay={0.5} duration={22} x={-10} y={8}>
-        <StatBadge icon={Star} label="Avis vérifiés" value="12 400+" />
+        <StatBadge icon={Star} label={t.market.verifiedReviews} value="12 400+" />
       </FloatingCard>
 
       <FloatingCard className="bottom-[22%] left-[10%] hidden lg:block" delay={0.8} duration={24} x={6} y={-6}>
-        <StatBadge icon={Zap} label="Livraison" value="24h" />
+        <StatBadge icon={Zap} label={t.market.deliveryTime} value="24h" />
       </FloatingCard>
 
       <FloatingCard className="bottom-[18%] right-[9%] hidden lg:block" delay={1.0} duration={19} x={-8} y={10}>
@@ -186,7 +188,7 @@ export function MarketHero() {
             }}
           >
             <ShoppingBag size={12} />
-            Marketplace Afrique
+            {t.market.heroBadge}
           </span>
         </motion.div>
 
@@ -208,7 +210,7 @@ export function MarketHero() {
               lineHeight: 1.02,
             }}
           >
-            Commerce
+            {t.market.heroTitle1}
           </span>
           <span
             style={{
@@ -222,7 +224,7 @@ export function MarketHero() {
               WebkitTextFillColor: "transparent",
             }}
           >
-            nouvelle génération.
+            {t.market.heroTitle2}
           </span>
         </motion.h1>
 
@@ -246,7 +248,7 @@ export function MarketHero() {
               letterSpacing: "0.01em",
             }}
           >
-            Découvrez des produits d'exception auprès de vendeurs vérifiés à travers l'Afrique.
+            {t.market.heroSubtitle}
           </span>
         </motion.p>
 

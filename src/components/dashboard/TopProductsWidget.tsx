@@ -4,6 +4,7 @@ import { useStore } from "@/hooks/useStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Loader2, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "@/lib/i18n";
 
 interface TopProduct {
   product_id: string;
@@ -15,6 +16,7 @@ interface TopProduct {
 
 export default function TopProductsWidget() {
   const { store } = useStore();
+  const { t } = useTranslation();
   const [products, setProducts] = useState<TopProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -96,10 +98,10 @@ export default function TopProductsWidget() {
       <CardHeader className="pb-3 flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <Trophy size={16} className="text-primary" />
-          <CardTitle className="text-base">Top produits (7 jours)</CardTitle>
+          <CardTitle className="text-base">{t.dashboard.topProductsDays}</CardTitle>
         </div>
         <Link to="/dashboard/products" className="text-xs text-primary hover:underline flex items-center gap-1">
-          Tout voir <ArrowRight size={12} />
+          {t.dashboard.viewAll} <ArrowRight size={12} />
         </Link>
       </CardHeader>
       <CardContent className="pt-0">
@@ -108,7 +110,7 @@ export default function TopProductsWidget() {
             <Loader2 className="animate-spin text-muted-foreground" size={18} />
           </div>
         ) : products.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">Aucune vente cette semaine.</p>
+          <p className="text-sm text-muted-foreground py-6 text-center">{t.dashboard.noSalesThisWeek}</p>
         ) : (
           <div className="space-y-3">
             {products.map((product, i) => (
@@ -121,7 +123,7 @@ export default function TopProductsWidget() {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground truncate">{product.product_name}</p>
-                  <p className="text-xs text-muted-foreground">{product.total_qty} vendus</p>
+                  <p className="text-xs text-muted-foreground">{product.total_qty} {t.common.sold}</p>
                 </div>
                 <span className="text-sm font-semibold text-foreground whitespace-nowrap">
                   {product.total_revenue.toLocaleString("fr-FR")} {store?.currency || "XOF"}
