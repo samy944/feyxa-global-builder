@@ -44,6 +44,7 @@ const HANDLER_MAP: Record<string, string[]> = {
   "order.completed": [
     "ranking.recalculate_product",
     "risk.recalculate_seller",
+    "inventory.recalculate",
   ],
   "review.added": [
     "ranking.recalculate_product",
@@ -52,6 +53,10 @@ const HANDLER_MAP: Record<string, string[]> = {
     "ranking.recalculate_product",
     "risk.recalculate_seller",
     "risk.recalculate_buyer",
+    "inventory.recalculate",
+  ],
+  "stock.updated": [
+    "inventory.recalculate",
   ],
 };
 
@@ -239,6 +244,18 @@ async function runHandler(
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${key4}` },
           body: JSON.stringify({ product_ids: productIds }),
+        });
+        return { success: true };
+      }
+
+      case "inventory.recalculate": {
+        const pids = payload?.product_ids || (payload?.product_id ? [payload.product_id] : [aggregateId]);
+        const url5 = Deno.env.get("SUPABASE_URL")!;
+        const key5 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        await fetch(`${url5}/functions/v1/calculate-inventory`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key5}` },
+          body: JSON.stringify({ product_ids: pids }),
         });
         return { success: true };
       }

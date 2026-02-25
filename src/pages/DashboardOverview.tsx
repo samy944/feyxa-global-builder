@@ -5,6 +5,7 @@ import RecentOrdersWidget from "@/components/dashboard/RecentOrdersWidget";
 import TopProductsWidget from "@/components/dashboard/TopProductsWidget";
 import LowStockWidget from "@/components/dashboard/LowStockWidget";
 import KpiCardsWidget from "@/components/dashboard/KpiCardsWidget";
+import InventoryIntelligenceWidget from "@/components/dashboard/InventoryIntelligenceWidget";
 import { useTranslation } from "@/lib/i18n";
 
 export default function DashboardOverview() {
@@ -36,6 +37,7 @@ export default function DashboardOverview() {
       </div>
 
       <LowStockWidget />
+      <InventoryIntelligenceWidget />
     </div>
   );
 }
