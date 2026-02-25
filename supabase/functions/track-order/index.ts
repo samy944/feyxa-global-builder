@@ -8,12 +8,37 @@ const corsHeaders = {
 
 const selectFields = "id, order_number, status, total, subtotal, currency, shipping_phone, shipping_city, shipping_quarter, shipping_address, notes, payment_method, created_at, store_id, customer_email, order_items(id, product_name, quantity, unit_price, total), stores!inner(name, slug, logo_url)";
 
+// Simple in-memory rate limiter
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= RATE_LIMIT_MAX;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Rate limit by IP
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (!checkRateLimit(`track_order_${clientIp}`)) {
+      return new Response(
+        JSON.stringify({ error: "Trop de tentatives. Réessayez dans 15 minutes." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const body = await req.json();
     const { order_number, phone, email, token } = body;
 
