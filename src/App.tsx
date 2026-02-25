@@ -75,6 +75,7 @@ import AdminEmail from "./pages/AdminEmail";
 import AdminBranding from "./pages/AdminBranding";
 import AdminAccounting from "./pages/AdminAccounting";
 import AdminEmailTemplates from "./pages/AdminEmailTemplates";
+import AdminInfraMonitor from "./pages/AdminInfraMonitor";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import StartStore from "./pages/StartStore";
@@ -169,6 +170,7 @@ const App = () => (
               <Route path="branding" element={<AdminBranding />} />
               <Route path="email-templates" element={<AdminEmailTemplates />} />
               <Route path="accounting" element={<AdminAccounting />} />
+              <Route path="infra" element={<AdminInfraMonitor />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
             <Route path="/admin/invite" element={<AcceptAdminInvite />} />

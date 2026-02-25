@@ -16,6 +16,7 @@ import {
   Palette,
   FileText,
   Calculator,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ const links = [
   { to: "/admin/email", icon: Mail, label: "Email" },
   { to: "/admin/branding", icon: Palette, label: "Branding" },
   { to: "/admin/email-templates", icon: FileText, label: "Templates email" },
+  { to: "/admin/infra", icon: Activity, label: "Infrastructure" },
   { to: "/admin/settings", icon: Settings, label: "Paramètres" },
 ];
 

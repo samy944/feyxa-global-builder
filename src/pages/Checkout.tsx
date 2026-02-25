@@ -226,11 +226,6 @@ export default function Checkout() {
         const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
         if (itemsError) throw itemsError;
 
-        // 5. Escrow
-        if (paymentMethod !== "cod") {
-          await supabase.rpc("create_escrow_for_order", { _order_id: orderId });
-        }
-
         completed.push({
           orderNumber,
           orderId,
@@ -244,22 +239,30 @@ export default function Checkout() {
           currency: storeItems[0].currency,
         });
 
-        // Email
-        if (customerEmail) {
-          supabase.functions.invoke("send-order-confirmation", {
-            body: {
-              order_id: orderId,
+        // 5. Emit event to Infrastructure Engine — handles escrow, email, stock, notification
+        supabase.functions.invoke("process-event", {
+          body: {
+            event_type: "order.created",
+            aggregate_id: orderId,
+            store_id: storeId,
+            payload: {
               order_number: orderNumber,
               tracking_token: trackingToken,
-              email: customerEmail,
-              customer_name: `${result.data.firstName} ${result.data.lastName || ""}`.trim(),
-              store_name: storeItems[0].storeName,
               total: orderTotal,
               currency: storeItems[0].currency,
-              items: storeItems.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
+              customer_email: customerEmail,
+              customer_name: `${result.data.firstName} ${result.data.lastName || ""}`.trim(),
+              store_name: storeItems[0].storeName,
+              payment_method: paymentMethod,
+              items: storeItems.map((i) => ({
+                product_id: i.productId,
+                name: i.name,
+                quantity: i.quantity,
+                price: i.price,
+              })),
             },
-          }).catch((err) => console.error("Email send error:", err));
-        }
+          },
+        }).catch((err) => console.error("Event bus error:", err));
 
         createOrderAttribution(orderId, storeId).catch(() => {});
         clearStore(storeId);

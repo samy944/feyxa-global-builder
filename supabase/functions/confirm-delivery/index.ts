@@ -23,7 +23,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { token, otp, method } = body;
 
-    // Validate inputs
     if (!token && !otp) {
       return new Response(
         JSON.stringify({ error: "Token ou OTP requis" }),
@@ -31,7 +30,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate token format
     if (token && (typeof token !== "string" || token.length < 10 || token.length > 500)) {
       return new Response(
         JSON.stringify({ error: "Token invalide" }),
@@ -39,7 +37,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate OTP format (typically 6 digits)
     if (otp && (typeof otp !== "string" || !/^[0-9]{4,8}$/.test(otp))) {
       return new Response(
         JSON.stringify({ error: "Format OTP invalide" }),
@@ -47,7 +44,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate method
     if (method && !["qr", "otp"].includes(method)) {
       return new Response(
         JSON.stringify({ error: "Méthode invalide" }),
@@ -63,7 +59,6 @@ Deno.serve(async (req) => {
     let confirmation: any = null;
 
     if (method === "otp" && otp) {
-      // OTP flow: hash the OTP and find match
       const otpHash = await sha256(otp);
       const { data, error } = await adminClient
         .from("delivery_confirmations")
@@ -73,11 +68,9 @@ Deno.serve(async (req) => {
         .gt("expires_at", new Date().toISOString())
         .limit(1)
         .maybeSingle();
-
       if (error) throw error;
       confirmation = data;
     } else if (token) {
-      // QR token flow: hash and find
       const tokenHash = await sha256(token);
       const { data, error } = await adminClient
         .from("delivery_confirmations")
@@ -87,17 +80,13 @@ Deno.serve(async (req) => {
         .gt("expires_at", new Date().toISOString())
         .limit(1)
         .maybeSingle();
-
       if (error) throw error;
       confirmation = data;
     }
 
     if (!confirmation) {
       return new Response(
-        JSON.stringify({
-          error: "Token invalide, expiré ou déjà utilisé",
-          status: "invalid",
-        }),
+        JSON.stringify({ error: "Token invalide, expiré ou déjà utilisé", status: "invalid" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -106,58 +95,41 @@ Deno.serve(async (req) => {
     const order = confirmation.orders;
 
     // Mark confirmation as used
-    const { error: updateErr } = await adminClient
+    await adminClient
       .from("delivery_confirmations")
-      .update({
-        used_at: new Date().toISOString(),
-        method: method === "otp" ? "otp" : "qr",
-      })
+      .update({ used_at: new Date().toISOString(), method: method === "otp" ? "otp" : "qr" })
       .eq("id", confirmation.id);
 
-    if (updateErr) throw updateErr;
+    // Emit delivery.confirmed event → Infrastructure Engine handles order status, escrow, audit
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Update order status to delivered
-    const { error: orderErr } = await adminClient
-      .from("orders")
-      .update({ status: "delivered" })
-      .eq("id", orderId);
-
-    if (orderErr) throw orderErr;
-
-    // Try to release escrow if exists
-    const { data: escrow } = await adminClient
-      .from("escrow_records")
-      .select("id, status")
-      .eq("order_id", orderId)
-      .eq("status", "held")
-      .maybeSingle();
-
-    let escrowReleased = false;
-    if (escrow) {
-      const { data: released } = await adminClient.rpc("release_escrow", {
-        _escrow_id: escrow.id,
-      });
-      escrowReleased = !!released;
-    }
-
-    // Audit log
-    await adminClient.from("audit_logs").insert({
-      store_id: confirmation.store_id,
-      action: "delivery_confirmed",
-      target_type: "order",
-      target_id: orderId,
-      metadata: {
-        method: method === "otp" ? "otp" : "qr",
-        confirmation_id: confirmation.id,
-        escrow_released: escrowReleased,
+    const eventResp = await fetch(`${supabaseUrl}/functions/v1/process-event`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceKey}`,
       },
+      body: JSON.stringify({
+        event_type: "delivery.confirmed",
+        aggregate_type: "delivery",
+        aggregate_id: orderId,
+        store_id: confirmation.store_id,
+        payload: {
+          order_number: order.order_number,
+          method: method === "otp" ? "otp" : "qr",
+          confirmation_id: confirmation.id,
+        },
+      }),
     });
+
+    const eventResult = await eventResp.json();
 
     return new Response(
       JSON.stringify({
         success: true,
         order_number: order.order_number,
-        escrow_released: escrowReleased,
+        escrow_released: eventResult?.success || false,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

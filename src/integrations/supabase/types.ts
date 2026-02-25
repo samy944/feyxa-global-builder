@@ -747,6 +747,103 @@ export type Database = {
           },
         ]
       }
+      event_handlers_log: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          event_id: string
+          handler_name: string
+          id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          event_id: string
+          handler_name: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          event_id?: string
+          handler_name?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_handlers_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events_log: {
+        Row: {
+          aggregate_id: string
+          aggregate_type: string
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          idempotency_key: string
+          max_retries: number
+          next_retry_at: string
+          payload: Json
+          processed_at: string | null
+          retry_count: number
+          status: string
+          store_id: string | null
+        }
+        Insert: {
+          aggregate_id: string
+          aggregate_type: string
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          idempotency_key: string
+          max_retries?: number
+          next_retry_at?: string
+          payload?: Json
+          processed_at?: string | null
+          retry_count?: number
+          status?: string
+          store_id?: string | null
+        }
+        Update: {
+          aggregate_id?: string
+          aggregate_type?: string
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          idempotency_key?: string
+          max_retries?: number
+          next_retry_at?: string
+          payload?: Json
+          processed_at?: string | null
+          retry_count?: number
+          status?: string
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_log_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           category: string
