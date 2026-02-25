@@ -80,7 +80,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { action, user_id, email, code, purpose = "login_2fa" } = await req.json();
+    const body = await req.json();
+    const { action, user_id, email, code, purpose = "login_2fa" } = body;
 
     if (action === "generate") {
       if (!user_id || !email) {
@@ -219,7 +220,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "log_login") {
-      const { ip_address, user_agent, success: loginSuccess, failure_reason } = await req.json().catch(() => ({}));
+      const { ip_address, user_agent, success: loginSuccess, failure_reason } = body;
       
       await supabaseAdmin.from("login_activity").insert({
         user_id,
