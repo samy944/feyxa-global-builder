@@ -33,17 +33,18 @@ export default function Login() {
   const [pendingUser, setPendingUser] = useState<{ id: string; email: string } | null>(null);
   const [oauthLoading, setOauthLoading] = useState<"google" | "apple" | null>(null);
   const [oauthError, setOauthError] = useState<{ provider: string; message: string } | null>(null);
+  const [is2faPending, setIs2faPending] = useState(false);
 
   // Handle OAuth callback routing
   useOAuthCallback();
 
   const showAppleFirst = useMemo(() => isIOS(), []);
 
-  // Redirect already-authenticated users away from login
+  // Redirect already-authenticated users away from login (skip if 2FA pending)
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading || !user || is2faPending) return;
     redirectByRole(user.id);
-  }, [user, authLoading]);
+  }, [user, authLoading, is2faPending]);
 
   const logLoginActivity = async (userId: string, success: boolean, failureReason?: string) => {
     try {
@@ -122,9 +123,12 @@ export default function Login() {
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) { setLoading(false); navigate("/market"); return; }
 
-    // Check 2FA
+    // Check 2FA — sign out first to prevent session from being usable until OTP verified
     const { data: securitySettings } = await supabase.from("user_security_settings").select("two_factor_enabled").eq("user_id", authUser.id).maybeSingle();
     if (securitySettings?.two_factor_enabled) {
+      setIs2faPending(true);
+      // Sign out to prevent the active session from bypassing 2FA
+      await supabase.auth.signOut();
       setPendingUser({ id: authUser.id, email: authUser.email! });
       setShow2fa(true);
       setLoading(false);
@@ -298,11 +302,27 @@ export default function Login() {
       {pendingUser && (
         <OtpVerifyDialog
           open={show2fa}
-          onOpenChange={(open) => { if (!open) { supabase.auth.signOut(); setPendingUser(null); } setShow2fa(open); }}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPendingUser(null);
+              setIs2faPending(false);
+            }
+            setShow2fa(open);
+          }}
           userId={pendingUser.id}
           email={pendingUser.email}
           purpose="login_2fa"
-          onVerified={async () => { setPendingUser(null); await proceedAfterAuth(); }}
+          onVerified={async () => {
+            // Re-authenticate after successful OTP
+            const { error } = await signIn(email, password);
+            setIs2faPending(false);
+            setPendingUser(null);
+            if (error) {
+              toast.error(translateAuthError(error.message));
+              return;
+            }
+            await proceedAfterAuth();
+          }}
         />
       )}
     </div>
