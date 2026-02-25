@@ -3,14 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-
-const navLinks = [
-  { label: "Fonctionnalités", href: "#features" },
-  { label: "Témoignages", href: "#testimonials" },
-  { label: "Tarifs", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
-  { label: "Market", href: "/market" },
-];
+import { useTranslation } from "@/lib/i18n";
 
 const scrollToHash = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
   if (!href.startsWith("#")) return;
@@ -21,6 +14,14 @@ const scrollToHash = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
+
+  const navLinks = [
+    { label: t.navbar.features, href: "#features" },
+    { label: t.navbar.pricing, href: "#pricing" },
+    { label: t.navbar.faq, href: "#faq" },
+    { label: t.navbar.marketplace, href: "/market" },
+  ];
 
   return (
     <motion.header
@@ -62,10 +63,10 @@ export function Navbar() {
 
         <div className="hidden md:flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/login">Connexion</Link>
+            <Link to="/login">{t.navbar.login}</Link>
           </Button>
           <Button variant="hero" size="sm" asChild>
-            <Link to="/signup">Créer ma boutique</Link>
+            <Link to="/signup">{t.navbar.signup}</Link>
           </Button>
         </div>
 
@@ -102,9 +103,14 @@ export function Navbar() {
                 </Link>
               )
             )}
-            <Button variant="hero" size="sm" asChild>
-              <Link to="/signup">Créer ma boutique</Link>
-            </Button>
+            <div className="flex flex-col gap-2 pt-2">
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/login">{t.navbar.login}</Link>
+              </Button>
+              <Button variant="hero" size="sm" asChild>
+                <Link to="/signup">{t.navbar.signup}</Link>
+              </Button>
+            </div>
           </div>
         </motion.div>
       )}

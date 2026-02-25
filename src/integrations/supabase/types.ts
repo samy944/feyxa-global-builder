@@ -1652,6 +1652,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          preferred_language: string
           selected_city_id: string | null
           selected_country_id: string | null
           updated_at: string
@@ -1662,6 +1663,7 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          preferred_language?: string
           selected_city_id?: string | null
           selected_country_id?: string | null
           updated_at?: string
@@ -1672,6 +1674,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          preferred_language?: string
           selected_city_id?: string | null
           selected_country_id?: string | null
           updated_at?: string
