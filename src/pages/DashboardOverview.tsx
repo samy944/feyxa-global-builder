@@ -8,8 +8,8 @@ import KpiCardsWidget from "@/components/dashboard/KpiCardsWidget";
 import { useTranslation } from "@/lib/i18n";
 
 export default function DashboardOverview() {
-  const { t, language } = useTranslation();
-  const locale = language === "fr" ? "fr-FR" : "en-US";
+  const { t, lang } = useTranslation();
+  const locale = lang === "fr" ? "fr-FR" : "en-US";
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-10">
