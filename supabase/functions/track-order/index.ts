@@ -12,14 +12,26 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { order_number, phone } = await req.json();
+    const body = await req.json();
+    const { order_number, phone } = body;
 
-    if (!order_number || !phone) {
+    // Validate order_number
+    if (!order_number || typeof order_number !== "string" || order_number.length < 3 || order_number.length > 50) {
       return new Response(
-        JSON.stringify({ error: "order_number and phone required" }),
+        JSON.stringify({ error: "Numéro de commande invalide" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Validate phone
+    if (!phone || typeof phone !== "string" || !/^\+?[0-9]{8,15}$/.test(phone.replace(/\s/g, ""))) {
+      return new Response(
+        JSON.stringify({ error: "Numéro de téléphone invalide" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const cleanPhone = phone.replace(/\s/g, "");
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -29,8 +41,8 @@ Deno.serve(async (req) => {
     const { data: order, error: orderErr } = await sb
       .from("orders")
       .select("id, order_number, status, total, subtotal, currency, shipping_phone, shipping_city, shipping_quarter, shipping_address, notes, payment_method, created_at, store_id, order_items(id, product_name, quantity, unit_price, total), stores!inner(name, slug, logo_url)")
-      .eq("order_number", order_number)
-      .eq("shipping_phone", phone)
+      .eq("order_number", order_number.trim())
+      .eq("shipping_phone", cleanPhone)
       .maybeSingle();
 
     if (orderErr) throw orderErr;
@@ -41,7 +53,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get escrow info
+    // Get escrow info (limited fields only)
     const { data: escrow } = await sb
       .from("escrow_records")
       .select("id, status, release_at")
@@ -54,7 +66,7 @@ Deno.serve(async (req) => {
     );
   } catch (err: any) {
     console.error("Track order error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: "Erreur interne" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

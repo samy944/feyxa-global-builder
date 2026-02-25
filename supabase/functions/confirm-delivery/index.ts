@@ -20,11 +20,37 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, otp, method } = await req.json();
+    const body = await req.json();
+    const { token, otp, method } = body;
 
+    // Validate inputs
     if (!token && !otp) {
       return new Response(
         JSON.stringify({ error: "Token ou OTP requis" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate token format
+    if (token && (typeof token !== "string" || token.length < 10 || token.length > 500)) {
+      return new Response(
+        JSON.stringify({ error: "Token invalide" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate OTP format (typically 6 digits)
+    if (otp && (typeof otp !== "string" || !/^[0-9]{4,8}$/.test(otp))) {
+      return new Response(
+        JSON.stringify({ error: "Format OTP invalide" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate method
+    if (method && !["qr", "otp"].includes(method)) {
+      return new Response(
+        JSON.stringify({ error: "Méthode invalide" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -138,7 +164,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error(err);
     return new Response(
-      JSON.stringify({ error: err.message || "Internal error" }),
+      JSON.stringify({ error: "Erreur interne" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

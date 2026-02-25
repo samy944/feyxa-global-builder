@@ -6,20 +6,52 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const ALLOWED_EVENT_TYPES = [
+  "page_view", "view_content", "add_to_cart", "remove_from_cart",
+  "begin_checkout", "purchase", "search", "wishlist_add",
+  "click", "scroll", "session_start", "session_end",
+];
+
+const ALLOWED_CURRENCIES = ["XOF", "XAF", "EUR", "USD", "GNF", "NGN"];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { store_id, event_type, value, currency } = await req.json();
+    const body = await req.json();
+    const { store_id, event_type, value, currency } = body;
 
-    if (!store_id || !event_type) {
-      return new Response(JSON.stringify({ error: "Missing store_id or event_type" }), {
+    // Validate store_id format (UUID)
+    if (!store_id || typeof store_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(store_id)) {
+      return new Response(JSON.stringify({ error: "Invalid store_id" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Validate event_type
+    if (!event_type || typeof event_type !== "string" || !ALLOWED_EVENT_TYPES.includes(event_type)) {
+      return new Response(JSON.stringify({ error: "Invalid event_type" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate value
+    const numValue = Number(value) || 0;
+    if (numValue < 0 || numValue > 1_000_000_000) {
+      return new Response(JSON.stringify({ error: "Value out of range" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate currency
+    const safeCurrency = (typeof currency === "string" && ALLOWED_CURRENCIES.includes(currency.toUpperCase()))
+      ? currency.toUpperCase()
+      : "XOF";
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -28,18 +60,17 @@ Deno.serve(async (req) => {
 
     const today = new Date().toISOString().split("T")[0];
 
-    // Upsert: increment count and add value
     const { error } = await supabase.rpc("upsert_tracking_event", {
       _store_id: store_id,
       _event_type: event_type,
       _event_date: today,
-      _value: value || 0,
-      _currency: currency || "XOF",
+      _value: numValue,
+      _currency: safeCurrency,
     });
 
     if (error) {
       console.error("Error upserting tracking event:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
+      return new Response(JSON.stringify({ error: "Failed to record event" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

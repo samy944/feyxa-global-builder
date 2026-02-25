@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.96.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,14 +6,48 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-serve(async (req) => {
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Non autorisé" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await supabase.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Non autorisé" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { image_base64, mime_type = "image/jpeg" } = await req.json();
 
-    if (!image_base64) {
+    if (!image_base64 || typeof image_base64 !== "string") {
       return new Response(JSON.stringify({ error: "No image provided" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate mime type
+    if (!ALLOWED_MIME_TYPES.includes(mime_type)) {
+      return new Response(JSON.stringify({ error: "Type d'image non supporté" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -103,9 +136,10 @@ Réponds UNIQUEMENT avec le JSON, sans markdown ni explication.`,
     }
 
     // Step 2: Search products using extracted keywords
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
     const keywords = analysis.keywords || [];
     if (keywords.length === 0) {
@@ -115,14 +149,24 @@ Réponds UNIQUEMENT avec le JSON, sans markdown ni explication.`,
       );
     }
 
-    // Build OR filter: search by name ilike any keyword
-    // Also try to match category
-    const orConditions = keywords
+    // Sanitize keywords to prevent injection in ilike
+    const sanitizedKeywords = keywords
+      .filter((kw: string) => typeof kw === "string" && kw.length > 0 && kw.length <= 100)
+      .map((kw: string) => kw.replace(/[%_\\]/g, ""));
+
+    const orConditions = sanitizedKeywords
       .map((kw: string) => `name.ilike.%${kw}%,description.ilike.%${kw}%`)
       .join(",");
 
+    if (!orConditions) {
+      return new Response(
+        JSON.stringify({ products: [], analysis, message: "Aucun mot-clé valide." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // First: try category + keyword match
-    let query = supabase
+    let query = adminClient
       .from("products")
       .select(
         "id, name, slug, price, compare_at_price, images, avg_rating, review_count, stores!inner(name, slug, city, currency)"
@@ -135,8 +179,8 @@ Réponds UNIQUEMENT avec le JSON, sans markdown ni explication.`,
 
     // Try matching category first
     let categorySlug = analysis.category;
-    if (categorySlug) {
-      const { data: catData } = await supabase
+    if (categorySlug && typeof categorySlug === "string" && categorySlug.length <= 50) {
+      const { data: catData } = await adminClient
         .from("marketplace_categories")
         .select("id")
         .eq("slug", categorySlug)
@@ -160,7 +204,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown ni explication.`,
 
     // If not enough results, broaden search without category filter
     if (results.length < 4) {
-      const broadQuery = supabase
+      const broadQuery = adminClient
         .from("products")
         .select(
           "id, name, slug, price, compare_at_price, images, avg_rating, review_count, stores!inner(name, slug, city, currency)"
@@ -201,7 +245,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown ni explication.`,
   } catch (e) {
     console.error("visual-search error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Erreur interne" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
