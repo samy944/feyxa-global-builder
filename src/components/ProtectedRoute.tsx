@@ -15,7 +15,7 @@ export function AuthRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) return <Navigate to="/start" replace />;
+  if (!user) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
 }
@@ -35,7 +35,7 @@ export function VendorRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) return <Navigate to="/start" replace />;
+  if (!user) return <Navigate to="/login" replace />;
 
   // If user is a client-only (not vendor), redirect to marketplace
   if (!isVendor) return <Navigate to="/market" replace />;
