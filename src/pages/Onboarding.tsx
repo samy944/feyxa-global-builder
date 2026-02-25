@@ -194,6 +194,9 @@ export default function Onboarding() {
     
     if (data.smartTemplate === "one_product") {
       window.location.href = `/store/${slug}/lp`;
+    } else if (data.smartTemplate === "skip" || !data.smartTemplate) {
+      // No products generated — redirect to products page to add first product
+      window.location.href = "/dashboard/products?welcome=1";
     } else {
       window.location.href = "/dashboard";
     }
