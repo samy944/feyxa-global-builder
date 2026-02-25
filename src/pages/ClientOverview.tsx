@@ -3,13 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
 import { motion } from "framer-motion";
-import { Package, Heart, ShoppingBag, TrendingUp, ArrowRight } from "lucide-react";
+import { Package, Heart, ShoppingBag, ArrowRight, Rocket, Store } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 export default function ClientOverview() {
   const { user } = useAuth();
   const { count: wishlistCount } = useWishlist();
+  const { isVendor } = useUserRole();
   const [orderCount, setOrderCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -99,6 +101,31 @@ export default function ClientOverview() {
           </Link>
         </Button>
       </div>
+
+      {/* Become vendor CTA */}
+      {!isVendor && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-xl border-2 border-primary/15 bg-gradient-to-br from-primary/5 to-transparent p-6 space-y-3"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Rocket size={20} className="text-primary" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Vous avez quelque chose à vendre ?</h3>
+              <p className="text-xs text-muted-foreground">Créez votre boutique en ligne gratuitement.</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" className="border-primary/20 text-primary hover:bg-primary/5" asChild>
+            <Link to="/account/become-vendor">
+              <Store size={14} className="mr-1" /> Devenir vendeur <ArrowRight size={12} className="ml-1" />
+            </Link>
+          </Button>
+        </motion.div>
+      )}
     </>
   );
 }

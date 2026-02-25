@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   ChevronRight,
   Store,
+  Rocket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarketNavbar } from "@/components/market/MarketNavbar";
@@ -81,10 +82,16 @@ export default function ClientDashboard() {
             </nav>
           </div>
           <div className="p-4 space-y-2 border-t border-border">
-            {isVendor && (
+            {isVendor ? (
               <Button variant="outline" size="sm" className="w-full justify-start" asChild>
                 <Link to="/dashboard">
                   <Store size={16} className="mr-2" /> Dashboard vendeur
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" className="w-full justify-start text-primary border-primary/20 hover:bg-primary/5" asChild>
+                <Link to="/account/become-vendor">
+                  <Rocket size={16} className="mr-2" /> Devenir vendeur
                 </Link>
               </Button>
             )}
