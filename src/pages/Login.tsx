@@ -1,13 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { OtpVerifyDialog } from "@/components/security/OtpVerifyDialog";
 import { translateAuthError } from "@/lib/translate-auth-error";
 import { useTranslation } from "@/lib/i18n";
+import { useOAuthCallback } from "@/hooks/useOAuthCallback";
+
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+function parseOAuthError(error: any): string {
+  const msg = error?.message || String(error);
+  if (msg.includes("popup")) return "popupBlocked";
+  if (msg.includes("cancel") || msg.includes("denied")) return "cancelled";
+  if (msg.includes("redirect")) return "redirectError";
+  if (msg.includes("disabled") || msg.includes("provider")) return "providerDisabled";
+  return "generic";
+}
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -19,18 +31,18 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [show2fa, setShow2fa] = useState(false);
   const [pendingUser, setPendingUser] = useState<{ id: string; email: string } | null>(null);
+  const [oauthLoading, setOauthLoading] = useState<"google" | "apple" | null>(null);
+  const [oauthError, setOauthError] = useState<{ provider: string; message: string } | null>(null);
+
+  // Handle OAuth callback routing
+  useOAuthCallback();
+
+  const showAppleFirst = useMemo(() => isIOS(), []);
 
   const logLoginActivity = async (userId: string, success: boolean, failureReason?: string) => {
     try {
       await supabase.functions.invoke("otp", {
-        body: {
-          action: "log_login",
-          user_id: userId,
-          ip_address: null,
-          user_agent: navigator.userAgent,
-          success,
-          failure_reason: failureReason,
-        },
+        body: { action: "log_login", user_id: userId, ip_address: null, user_agent: navigator.userAgent, success, failure_reason: failureReason },
       });
     } catch {}
   };
@@ -46,6 +58,30 @@ export default function Login() {
       navigate(store ? "/dashboard" : "/onboarding");
     } else {
       navigate("/account");
+    }
+  };
+
+  const handleOAuth = async (provider: "google" | "apple") => {
+    setOauthLoading(provider);
+    setOauthError(null);
+    try {
+      const { error } = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
+      if (error) {
+        const errType = parseOAuthError(error);
+        const errMessages: Record<string, string> = {
+          popupBlocked: t.auth.oauthPopupBlocked,
+          cancelled: t.auth.oauthCancelled,
+          redirectError: t.auth.oauthRedirectError,
+          providerDisabled: t.auth.oauthProviderDisabled,
+          generic: t.auth.oauthGenericError,
+        };
+        setOauthError({ provider, message: errMessages[errType] || errMessages.generic });
+        setOauthLoading(null);
+      }
+      // If no error, redirect is happening — keep loading state
+    } catch (err) {
+      setOauthError({ provider, message: t.auth.oauthGenericError });
+      setOauthLoading(null);
     }
   };
 
@@ -66,6 +102,79 @@ export default function Login() {
     await proceedAfterAuth();
     setLoading(false);
   };
+
+  const OAuthButton = ({ provider, icon, label, badge }: { provider: "google" | "apple"; icon: React.ReactNode; label: string; badge?: string }) => {
+    const isLoading = oauthLoading === provider;
+    const hasError = oauthError?.provider === provider;
+
+    return (
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => handleOAuth(provider)}
+          disabled={oauthLoading !== null}
+          className="w-full h-12 flex items-center justify-center gap-2.5 text-sm transition-all duration-200 hover:opacity-90 disabled:opacity-50 relative"
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            border: hasError ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "0.625rem",
+            color: "#FFFFFF",
+            fontWeight: 500,
+          }}
+        >
+          {isLoading ? (
+            <Loader2 size={18} className="animate-spin" style={{ color: "#9CA3AF" }} />
+          ) : (
+            icon
+          )}
+          {isLoading ? t.auth.oauthLoading : label}
+          {badge && !isLoading && (
+            <span className="absolute right-3 text-[10px] px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.08)", color: "#9CA3AF" }}>
+              {badge}
+            </span>
+          )}
+        </button>
+        {hasError && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.15)" }}>
+            <p className="text-xs flex-1" style={{ color: "#FCA5A5" }}>{oauthError!.message}</p>
+            <button
+              onClick={() => { setOauthError(null); handleOAuth(provider); }}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-opacity hover:opacity-80"
+              style={{ color: "#FFFFFF", background: "rgba(255,255,255,0.08)" }}
+            >
+              <RefreshCw size={12} />
+              {t.auth.oauthRetry}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const googleIcon = (
+    <svg viewBox="0 0 24 24" style={{ width: 18, height: 18 }}>
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+  );
+
+  const appleIcon = (
+    <svg viewBox="0 0 24 24" style={{ width: 18, height: 18 }} fill="currentColor">
+      <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+    </svg>
+  );
+
+  const oauthButtons = showAppleFirst
+    ? [
+        <OAuthButton key="apple" provider="apple" icon={appleIcon} label={t.auth.continueWithApple} badge={t.auth.recommendedOnIos} />,
+        <OAuthButton key="google" provider="google" icon={googleIcon} label={t.auth.continueWithGoogle} />,
+      ]
+    : [
+        <OAuthButton key="google" provider="google" icon={googleIcon} label={t.auth.continueWithGoogle} />,
+        <OAuthButton key="apple" provider="apple" icon={appleIcon} label={t.auth.continueWithApple} />,
+      ];
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0E0E11" }}>
@@ -90,30 +199,10 @@ export default function Login() {
         </div>
 
         <div className="p-8" style={{ background: "#141419", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "1rem" }}>
-          {/* Google */}
-          <button type="button" onClick={async () => {
-            const { error } = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-            if (error) toast.error(t.auth.errorGoogle + " : " + (error as any).message);
-          }} className="w-full h-12 flex items-center justify-center gap-2.5 text-sm transition-opacity duration-200 hover:opacity-90" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.625rem", color: "#FFFFFF", fontWeight: 500 }}>
-            <svg viewBox="0 0 24 24" style={{ width: 18, height: 18 }}>
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            {t.auth.continueWithGoogle}
-          </button>
-
-          {/* Apple */}
-          <button type="button" onClick={async () => {
-            const { error } = await lovable.auth.signInWithOAuth("apple", { redirect_uri: window.location.origin });
-            if (error) toast.error(t.auth.errorApple + " : " + (error as any).message);
-          }} className="w-full h-12 flex items-center justify-center gap-2.5 text-sm transition-opacity duration-200 hover:opacity-90 mt-3" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.625rem", color: "#FFFFFF", fontWeight: 500 }}>
-            <svg viewBox="0 0 24 24" style={{ width: 18, height: 18 }} fill="currentColor">
-              <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-            </svg>
-            {t.auth.continueWithApple}
-          </button>
+          {/* OAuth buttons */}
+          <div className="space-y-3">
+            {oauthButtons}
+          </div>
 
           {/* Divider */}
           <div className="relative my-7">
@@ -146,6 +235,7 @@ export default function Login() {
             </div>
 
             <button type="submit" disabled={loading} className="w-full h-12 flex items-center justify-center gap-2 text-sm transition-opacity duration-200 hover:opacity-90 disabled:opacity-50" style={{ background: "hsl(var(--primary))", color: "#0E0E11", borderRadius: "0.625rem", fontWeight: 600, border: "none", marginTop: "1.75rem" }}>
+              {loading ? <Loader2 size={16} className="animate-spin" /> : null}
               {loading ? t.auth.connecting : t.auth.login}
               {!loading && <ArrowRight size={16} />}
             </button>
