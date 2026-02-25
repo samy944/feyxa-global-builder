@@ -22,6 +22,53 @@ async function hashCode(code: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function sendOtpEmail(email: string, otp: string, purpose: string): Promise<boolean> {
+  const purposeLabels: Record<string, string> = {
+    login_2fa: "Connexion",
+    withdrawal: "Retrait de fonds",
+    email_verify: "Vérification email",
+  };
+  const label = purposeLabels[purpose] || "Vérification";
+
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    console.error("LOVABLE_API_KEY not configured");
+    return false;
+  }
+
+  // Use Lovable AI to generate and send the email via the completions endpoint
+  // We'll use Supabase Auth admin email instead
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  // Send email using Supabase Auth admin API (magic link workaround won't work)
+  // Instead, use the Supabase built-in email sending via the auth.admin API
+  // The best approach: use Resend or similar, but since we have LOVABLE_API_KEY,
+  // we can use the Lovable email API
+
+  try {
+    // Use fetch to call Lovable's email sending capability
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-otp-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({ email, otp, label }),
+    });
+
+    if (!response.ok) {
+      // Fallback: log the OTP for debugging (remove in production)
+      console.error("Failed to send email via send-otp-email function", await response.text());
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Email sending error:", err);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -77,25 +124,18 @@ Deno.serve(async (req) => {
         expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
       });
 
-      // Send OTP via email using Supabase Auth
-      // We use a workaround: send via the built-in email service
-      const purposeLabels: Record<string, string> = {
-        login_2fa: "connexion",
-        withdrawal: "retrait",
-        email_verify: "vérification email",
-      };
+      // Send OTP via email
+      const emailSent = await sendOtpEmail(email, otp, purpose);
 
-      // Use Supabase Auth admin to send an email
-      // Since we can't send custom emails easily, we'll use the Lovable AI to send
-      // For now, we'll use a simple approach - the OTP is returned to the client
-      // In production, this should be sent via email service
-      
-      console.log(`OTP generated for ${email} (${purpose})`);
+      console.log(`OTP generated for ${email} (${purpose}) - email sent: ${emailSent}`);
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "Code de vérification envoyé",
+          message: emailSent 
+            ? "Code de vérification envoyé par email" 
+            : "Code généré mais l'envoi par email a échoué",
+          email_sent: emailSent,
         }),
         { 
           headers: { 
@@ -131,7 +171,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!otpRecord) {
-        // Increment attempts on latest OTP
         const { data: latestOtp } = await supabaseAdmin
           .from("otp_codes")
           .select("id, attempts, max_attempts")
@@ -179,7 +218,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Action: log_login - Log login activity
     if (action === "log_login") {
       const { ip_address, user_agent, success: loginSuccess, failure_reason } = await req.json().catch(() => ({}));
       
