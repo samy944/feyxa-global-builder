@@ -6,6 +6,7 @@ import {
   Megaphone,
   ShieldCheck,
   Sparkles,
+  ArrowUpRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -15,6 +16,7 @@ interface Feature {
   desc: string;
   stat: string;
   statLabel: string;
+  span?: string;
 }
 
 const features: Feature[] = [
@@ -24,6 +26,7 @@ const features: Feature[] = [
     desc: "Créez votre boutique, importez vos produits et commencez à vendre. Zéro code, zéro prise de tête.",
     stat: "5 min",
     statLabel: "pour lancer",
+    span: "md:col-span-2",
   },
   {
     icon: BarChart3,
@@ -45,6 +48,7 @@ const features: Feature[] = [
     desc: "Liens trackés, pixels intégrés et attribution multi-canal pour scaler vos campagnes.",
     stat: "∞",
     statLabel: "de reach",
+    span: "md:col-span-2",
   },
   {
     icon: ShieldCheck,
@@ -64,7 +68,7 @@ const features: Feature[] = [
 
 const containerVariants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.1 } },
+  show: { transition: { staggerChildren: 0.08 } },
 };
 
 const itemVariants = {
@@ -79,7 +83,6 @@ const itemVariants = {
 export function FeaturesSection() {
   return (
     <section id="features" className="relative overflow-hidden py-28 lg:py-36">
-      {/* Background effects */}
       <div className="absolute inset-0 -z-10">
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full opacity-[0.03]"
@@ -111,21 +114,19 @@ export function FeaturesSection() {
           </p>
         </motion.div>
 
-        {/* Bento grid */}
+        {/* Bento grid — asymmetric DBC-style */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: "-60px" }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5"
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5"
         >
-          {features.map((f, i) => (
+          {features.map((f) => (
             <motion.div
               key={f.title}
               variants={itemVariants}
-              className={`group relative rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-7 transition-all duration-300 hover:border-primary/30 hover:bg-card/80 ${
-                i === 0 ? "md:col-span-2 lg:col-span-1" : ""
-              }`}
+              className={`group relative rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-7 transition-all duration-300 hover:border-primary/30 hover:bg-card/80 ${f.span || ""}`}
             >
               {/* Hover glow */}
               <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{
@@ -135,16 +136,19 @@ export function FeaturesSection() {
               <div className="relative z-10 flex flex-col h-full">
                 {/* Top row: icon + stat */}
                 <div className="flex items-start justify-between mb-5">
-                  <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary transition-transform duration-300 group-hover:scale-110">
-                    <f.icon size={20} strokeWidth={1.8} />
+                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary transition-transform duration-300 group-hover:scale-110 group-hover:shadow-glow">
+                    <f.icon size={22} strokeWidth={1.8} />
                   </div>
-                  <div className="text-right">
-                    <span className="block text-2xl font-heading font-bold text-foreground leading-none">
-                      {f.stat}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground uppercase tracking-wider">
-                      {f.statLabel}
-                    </span>
+                  <div className="text-right flex items-center gap-2">
+                    <div>
+                      <span className="block text-3xl font-heading font-bold text-foreground leading-none">
+                        {f.stat}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground uppercase tracking-wider">
+                        {f.statLabel}
+                      </span>
+                    </div>
+                    <ArrowUpRight size={16} className="text-muted-foreground/30 group-hover:text-primary transition-colors" />
                   </div>
                 </div>
 
