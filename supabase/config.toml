@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.calculate-inventory]
 verify_jwt = false
+
+[functions.calculate-financing]
+verify_jwt = false

@@ -36,6 +36,7 @@ import MarketProduct from "./pages/MarketProduct";
 import MarketVendor from "./pages/MarketVendor";
 import Checkout from "./pages/Checkout";
 import DashboardWallet from "./pages/DashboardWallet";
+import DashboardCapital from "./pages/DashboardCapital";
 import DashboardAccounting from "./pages/DashboardAccounting";
 import DashboardInsights from "./pages/DashboardInsights";
 import DashboardTrends from "./pages/DashboardTrends";
@@ -123,6 +124,7 @@ const App = () => (
               <Route path="orders/:orderId" element={<DashboardOrderDetail />} />
               <Route path="customers" element={<DashboardCustomers />} />
               <Route path="wallet" element={<DashboardWallet />} />
+              <Route path="capital" element={<DashboardCapital />} />
               <Route path="accounting" element={<DashboardAccounting />} />
               <Route path="insights" element={<DashboardInsights />} />
               <Route path="trends" element={<DashboardTrends />} />
