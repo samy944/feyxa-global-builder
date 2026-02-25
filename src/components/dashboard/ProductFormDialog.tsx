@@ -297,9 +297,24 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
     return parts.length > 0 ? parts.join(" / ") : "";
   };
 
+  // --- Validation: check completeness for publishing ---
+  const canPublish = () => {
+    const name = watch("name");
+    const desc = watch("description");
+    const p = Number(watch("price"));
+    const stock = Number(watch("stock_quantity"));
+    return !!(name && name.length >= 2 && desc && desc.length >= 10 && p > 0 && stock > 0 && images.length >= 1);
+  };
+
   // --- Submit ---
   const onSubmit = async (data: FormData) => {
     if (!store) { toast.error("Boutique introuvable"); return; }
+
+    // Block publishing if form is incomplete
+    if ((data.is_published || data.is_marketplace_published) && !canPublish()) {
+      toast.error("Pour publier, complétez : nom, description (min 10 car.), prix, stock, et au moins 1 image.");
+      return;
+    }
 
     if (hasVariants && variants.length > 0) {
       for (const v of variants) {
@@ -632,6 +647,23 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
 
             {/* ── TAB: Publishing ── */}
             <TabsContent value="publishing" className="space-y-5 mt-0">
+              {/* Completeness check */}
+              {!canPublish() && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-destructive flex items-center gap-1.5">
+                    <Info size={14} /> Formulaire incomplet
+                  </p>
+                  <ul className="text-xs text-muted-foreground space-y-1 ml-5 list-disc">
+                    {(!watch("name") || watch("name").length < 2) && <li>Nom du produit (min 2 caractères)</li>}
+                    {(!watch("description") || watch("description").length < 10) && <li>Description (min 10 caractères)</li>}
+                    {Number(watch("price")) <= 0 && <li>Prix de vente supérieur à 0</li>}
+                    {Number(watch("stock_quantity")) <= 0 && <li>Stock supérieur à 0</li>}
+                    {images.length < 1 && <li>Au moins 1 image</li>}
+                  </ul>
+                  <p className="text-xs text-muted-foreground">Complétez ces champs pour pouvoir publier votre produit.</p>
+                </div>
+              )}
+
               {/* Publish toggle */}
               <div className="rounded-xl border border-border p-4 flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -640,7 +672,16 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
                   </p>
                   <p className="text-xs text-muted-foreground">Le produit sera visible sur votre vitrine en ligne</p>
                 </div>
-                <Switch checked={isPublished} onCheckedChange={(v) => setValue("is_published", v)} />
+                <Switch
+                  checked={isPublished}
+                  onCheckedChange={(v) => {
+                    if (v && !canPublish()) {
+                      toast.error("Complétez toutes les informations requises avant de publier.");
+                      return;
+                    }
+                    setValue("is_published", v);
+                  }}
+                />
               </div>
 
               {/* Marketplace toggle */}
@@ -652,7 +693,16 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
                     </p>
                     <p className="text-xs text-muted-foreground">Vendez sur Feyxa Market pour atteindre plus de clients</p>
                   </div>
-                  <Switch checked={isMarketplace} onCheckedChange={(v) => setValue("is_marketplace_published", v)} />
+                  <Switch
+                    checked={isMarketplace}
+                    onCheckedChange={(v) => {
+                      if (v && !canPublish()) {
+                        toast.error("Complétez toutes les informations requises avant de publier.");
+                        return;
+                      }
+                      setValue("is_marketplace_published", v);
+                    }}
+                  />
                 </div>
 
                 {isMarketplace && (

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, MessageCircle, PackageCheck } from "lucide-react";
+import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, PackageCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import { trackInitiateCheckout, trackPurchase } from "@/lib/tracking";
@@ -102,35 +102,6 @@ export default function Checkout() {
     return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
   };
 
-  const buildWhatsAppMessage = (order: CompletedOrder, data: CustomerForm) => {
-    const itemLines = order.items
-      .map((i) => `• ${i.name} × ${i.quantity} — ${formatPrice(i.price * i.quantity, order.currency)}`)
-      .join("\n");
-
-    return [
-      `🛒 Nouvelle commande Feyxa Market`,
-      `━━━━━━━━━━━━━━━━━━━━━━`,
-      `📦 Commande: ${order.orderNumber}`,
-      ``,
-      `👤 Client: ${data.firstName} ${data.lastName || ""}`.trim(),
-      `📞 Tél: ${data.phone}`,
-      `📍 ${delivery.cityName}${delivery.quarter ? `, ${delivery.quarter}` : ""}`,
-      delivery.address ? `🏠 ${delivery.address}` : "",
-      ``,
-      `📋 Articles:`,
-      itemLines,
-      ``,
-      `💰 Sous-total: ${formatPrice(order.subtotal, order.currency)}`,
-      order.shippingCost > 0 ? `🚚 Livraison (${delivery.shippingMode}): ${formatPrice(order.shippingCost, order.currency)}` : "",
-      `💎 Total: ${formatPrice(order.total, order.currency)}`,
-      `💳 Paiement: ${paymentMethod === "cod" ? "À la livraison" : paymentMethod === "stripe" ? "Carte bancaire" : paymentMethod === "fedapay" ? "Mobile Money (FedaPay)" : paymentMethod === "mobile_money" ? "Mobile Money" : "WhatsApp"}`,
-      delivery.notes ? `\n📝 Notes: ${delivery.notes}` : "",
-      ``,
-      `Merci de confirmer cette commande ! 🙏`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-  };
 
   const handleConfirmReceipt = async (order: CompletedOrder) => {
     setConfirmingOrder(order.orderId);
@@ -404,18 +375,6 @@ export default function Checkout() {
                       <span>Total</span>
                       <span>{formatPrice(order.total, order.currency)}</span>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-1"
-                      onClick={() => {
-                        const msg = encodeURIComponent(buildWhatsAppMessage(order, form));
-                        window.open(`https://wa.me/?text=${msg}`, "_blank");
-                      }}
-                    >
-                      <MessageCircle size={14} />
-                      Envoyer au vendeur via WhatsApp
-                    </Button>
                     {confirmedOrders.has(order.orderId) ? (
                       <div className="flex items-center gap-2 text-xs text-primary mt-1 justify-center">
                         <CheckCircle2 size={14} /> Réception confirmée
@@ -567,13 +526,6 @@ export default function Checkout() {
                     <div>
                       <p className="text-sm font-medium text-foreground">Mobile Money (manuel)</p>
                       <p className="text-xs text-muted-foreground">Transfert direct, confirmation par le vendeur</p>
-                    </div>
-                  </label>
-                  <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "whatsapp" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
-                    <RadioGroupItem value="whatsapp" id="whatsapp" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Confirmer via WhatsApp</p>
-                      <p className="text-xs text-muted-foreground">Envoyez votre commande au vendeur par WhatsApp</p>
                     </div>
                   </label>
                 </RadioGroup>
