@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const ALLOWED_EVENT_TYPES = [
   "page_view", "view_content", "add_to_cart", "remove_from_cart",
-  "begin_checkout", "purchase", "search", "wishlist_add",
+  "begin_checkout", "initiate_checkout", "purchase", "search", "wishlist_add",
   "click", "scroll", "session_start", "session_end",
 ];
 
