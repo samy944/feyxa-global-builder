@@ -205,7 +205,7 @@ export function MarketNavbar() {
 
           {/* CTA */}
           <Link
-            to="/signup"
+            to="/start"
             className="px-5 py-2 text-xs font-semibold tracking-wide uppercase transition-all duration-200 hover:opacity-90"
             style={{
               background: "hsl(var(--primary))",
@@ -317,7 +317,7 @@ export function MarketNavbar() {
 
               {/* CTA */}
               <Link
-                to="/signup"
+                to="/start"
                 className="mx-3 text-center py-3 text-sm font-semibold rounded-lg transition-opacity duration-200 hover:opacity-90"
                 style={{
                   background: "hsl(var(--primary))",
