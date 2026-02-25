@@ -39,6 +39,11 @@ interface CompletedOrder {
 
 export default function Checkout() {
   const { items, itemsByStore, totalPrice, clearStore } = useCart();
+  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUser(data.user ? { id: data.user.id } : null));
+  }, []);
   const [form, setForm] = useState<ShippingForm>({
     firstName: "",
     lastName: "",
@@ -164,6 +169,7 @@ export default function Checkout() {
           _city: result.data.city,
           _quarter: result.data.quarter || null,
           _address: result.data.address || null,
+          _user_id: currentUser?.id || null,
         });
         if (custErr) throw custErr;
 
