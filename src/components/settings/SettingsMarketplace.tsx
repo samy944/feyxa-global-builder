@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useStore } from "@/hooks/useStore";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,19 +103,11 @@ export default function SettingsMarketplace() {
       </div>
 
       <div>
-        <label className="text-sm font-medium text-foreground mb-1.5 block">Commission marketplace (%)</label>
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            value={settings.marketplace_commission_rate}
-            onChange={(e) => setSettings({ ...settings, marketplace_commission_rate: e.target.value })}
-            className="w-24"
-            min="0"
-            max="50"
-          />
-          <span className="text-sm text-muted-foreground">%</span>
+        <label className="text-sm font-medium text-foreground mb-1.5 block">Commission marketplace</label>
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
+          <span className="text-lg font-bold text-foreground">{settings.marketplace_commission_rate}%</span>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">Commission prélevée sur chaque vente via le marketplace (système escrow).</p>
+        <p className="text-xs text-muted-foreground mt-1">Taux de commission défini par la plateforme Feyxa. Ce taux n'est pas modifiable.</p>
       </div>
 
       <Button onClick={handleSave} disabled={saving}>

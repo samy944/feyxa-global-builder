@@ -3,19 +3,32 @@ import { Link } from "react-router-dom";
 const footerLinks = [
   {
     title: "Produit",
-    links: ["Fonctionnalités", "Tarifs", "Sécurité", "Changelog"],
+    links: [
+      { label: "Fonctionnalités", href: "/#features" },
+      { label: "Tarifs", href: "/#pricing" },
+      { label: "FAQ", href: "/#faq" },
+    ],
   },
   {
-    title: "Ressources",
-    links: ["Documentation", "API", "Blog", "Status"],
+    title: "Marketplace",
+    links: [
+      { label: "Explorer", href: "/market" },
+      { label: "Créer une boutique", href: "/signup" },
+    ],
   },
   {
     title: "Entreprise",
-    links: ["À propos", "Carrières", "Contact", "Partenaires"],
+    links: [
+      { label: "À propos", href: "/#features" },
+      { label: "Contact", href: "mailto:contact@feyxa.app" },
+    ],
   },
   {
     title: "Légal",
-    links: ["Confidentialité", "CGU", "Cookies", "GDPR"],
+    links: [
+      { label: "Confidentialité", href: "/#" },
+      { label: "CGU", href: "/#" },
+    ],
   },
 ];
 
@@ -41,9 +54,9 @@ export function Footer() {
               <h4 className="font-semibold text-sm text-foreground mb-4">{section.title}</h4>
               <ul className="space-y-2">
                 {section.links.map((link) => (
-                  <li key={link}>
-                    <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
-                      {link}
+                  <li key={link.label}>
+                    <a href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200">
+                      {link.label}
                     </a>
                   </li>
                 ))}

@@ -6,6 +6,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowRight, ShoppingBag, Store } from "lucide-react";
 import { toast } from "sonner";
+import { translateAuthError } from "@/lib/translate-auth-error";
 
 export default function Signup() {
   const { signUp } = useAuth();
@@ -27,10 +28,10 @@ export default function Signup() {
     const { error } = await signUp(email, password, fullName, accountType);
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(translateAuthError(error.message));
     } else {
       toast.success("Compte créé avec succès !");
-      navigate(accountType === "vendor" ? "/onboarding" : "/market");
+      navigate(accountType === "vendor" ? "/onboarding" : "/dashboard");
     }
   };
 
