@@ -8,7 +8,7 @@ import { MarketProductCard } from "@/components/market/MarketProductCard";
 import { MarketSectionHeader } from "@/components/market/MarketSectionHeader";
 import { MarketProductSkeleton, MarketStoreSkeleton } from "@/components/market/MarketStoreSkeleton";
 import { useLocation } from "@/hooks/useLocation";
-import { Loader2, ArrowRight, Star, MapPin, TrendingUp, Sparkles, Grid3X3, Clock, Percent, Store as StoreIcon } from "lucide-react";
+import { ArrowRight, Star, MapPin, TrendingUp, Grid3X3, Clock, Percent, Store as StoreIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface MarketProduct {
@@ -20,6 +20,8 @@ interface MarketProduct {
   images: any;
   stock_quantity: number;
   created_at?: string;
+  avg_rating?: number | null;
+  review_count?: number | null;
   stores: {
     name: string;
     slug: string;
@@ -80,14 +82,6 @@ export default function MarketHome() {
     fetchProducts(0);
   }, [query, country?.id]);
 
-  const getPublishedIds = async () => {
-    const { data: listings } = await supabase
-      .from("marketplace_listings")
-      .select("product_id")
-      .eq("status", "published");
-    return (listings || []).map((l) => l.product_id);
-  };
-
   const fetchCategories = async () => {
     const { data } = await supabase
       .from("marketplace_categories")
@@ -109,25 +103,22 @@ export default function MarketHome() {
       const storesWithCounts = await Promise.all(
         data.map(async (store) => {
           const { count } = await supabase
-            .from("marketplace_listings")
+            .from("products")
             .select("id", { count: "exact", head: true })
             .eq("store_id", store.id)
-            .eq("status", "published");
+            .eq("is_published", true)
+            .gt("stock_quantity", 0);
           return { ...store, productCount: count || 0 };
         })
       );
-      setFeaturedStores(storesWithCounts.filter((s) => s.productCount > 0));
+      setFeaturedStores(storesWithCounts);
     }
   };
 
   const fetchTrendingProducts = async () => {
-    const publishedIds = await getPublishedIds();
-    if (publishedIds.length === 0) { setTrendingProducts([]); return; }
-
     const { data } = await supabase
       .from("products")
-      .select("id, name, slug, price, compare_at_price, images, stock_quantity, stores!inner(name, slug, city, currency)")
-      .in("id", publishedIds)
+      .select("id, name, slug, price, compare_at_price, images, stock_quantity, avg_rating, review_count, stores!inner(name, slug, city, currency)")
       .eq("is_published", true)
       .gt("stock_quantity", 0)
       .eq("stores.is_active", true)
@@ -138,13 +129,9 @@ export default function MarketHome() {
   };
 
   const fetchNewProducts = async () => {
-    const publishedIds = await getPublishedIds();
-    if (publishedIds.length === 0) { setNewProducts([]); return; }
-
     const { data } = await supabase
       .from("products")
       .select("id, name, slug, price, compare_at_price, images, stock_quantity, created_at, stores!inner(name, slug, city, currency)")
-      .in("id", publishedIds)
       .eq("is_published", true)
       .gt("stock_quantity", 0)
       .eq("stores.is_active", true)
@@ -155,13 +142,9 @@ export default function MarketHome() {
   };
 
   const fetchDealProducts = async () => {
-    const publishedIds = await getPublishedIds();
-    if (publishedIds.length === 0) { setDealProducts([]); return; }
-
     const { data } = await supabase
       .from("products")
       .select("id, name, slug, price, compare_at_price, images, stock_quantity, stores!inner(name, slug, city, currency)")
-      .in("id", publishedIds)
       .eq("is_published", true)
       .gt("stock_quantity", 0)
       .not("compare_at_price", "is", null)
@@ -169,7 +152,6 @@ export default function MarketHome() {
       .eq("stores.is_banned", false)
       .order("created_at", { ascending: false })
       .limit(8);
-    // Filter only real deals
     if (data) {
       setDealProducts(
         (data as unknown as MarketProduct[]).filter(
@@ -183,76 +165,24 @@ export default function MarketHome() {
     if (offset === 0) setLoading(true);
     else setLoadingMore(true);
 
-    if (country) {
-      let q = supabase
-        .from("product_listings")
-        .select("id, price, currency_code, stock_qty, product_id, products!inner(id, name, slug, images, compare_at_price, is_published, stores!inner(name, slug, city, currency, is_active, is_banned))")
-        .eq("country_id", country.id)
-        .eq("is_available", true)
-        .gt("stock_qty", 0)
-        .eq("products.is_published", true)
-        .eq("products.stores.is_active", true)
-        .eq("products.stores.is_banned", false)
-        .order("created_at", { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
+    let q = supabase
+      .from("products")
+      .select("id, name, slug, price, compare_at_price, images, stock_quantity, avg_rating, review_count, stores!inner(name, slug, city, currency)")
+      .eq("is_published", true)
+      .gt("stock_quantity", 0)
+      .eq("stores.is_active", true)
+      .eq("stores.is_banned", false)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1);
 
-      if (query) q = q.ilike("products.name", `%${query}%`);
+    if (query) q = q.ilike("name", `%${query}%`);
 
-      const { data } = await q;
+    const { data } = await q;
+    const np = (data || []) as unknown as MarketProduct[];
 
-      const publishedIds = new Set(await getPublishedIds());
-
-      const newProducts = ((data || []) as any[])
-        .filter((l: any) => publishedIds.has(l.products.id))
-        .map((l: any) => ({
-          id: l.products.id,
-          name: l.products.name,
-          slug: l.products.slug,
-          price: l.price,
-          compare_at_price: l.products.compare_at_price,
-          images: l.products.images,
-          stock_quantity: l.stock_qty,
-          stores: {
-            name: l.products.stores.name,
-            slug: l.products.stores.slug,
-            city: l.products.stores.city,
-            currency: l.currency_code,
-          },
-        }));
-
-      if (offset === 0) setProducts(newProducts);
-      else setProducts((prev) => [...prev, ...newProducts]);
-      setHasMore(newProducts.length === PAGE_SIZE);
-    } else {
-      const publishedIds = await getPublishedIds();
-      if (publishedIds.length === 0) {
-        if (offset === 0) setProducts([]);
-        setHasMore(false);
-        setLoading(false);
-        setLoadingMore(false);
-        return;
-      }
-
-      let q = supabase
-        .from("products")
-        .select("id, name, slug, price, compare_at_price, images, stock_quantity, stores!inner(name, slug, city, currency)")
-        .in("id", publishedIds)
-        .eq("is_published", true)
-        .gt("stock_quantity", 0)
-        .eq("stores.is_active", true)
-        .eq("stores.is_banned", false)
-        .order("created_at", { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
-
-      if (query) q = q.ilike("name", `%${query}%`);
-
-      const { data } = await q;
-      const np = (data || []) as unknown as MarketProduct[];
-
-      if (offset === 0) setProducts(np);
-      else setProducts((prev) => [...prev, ...np]);
-      setHasMore(np.length === PAGE_SIZE);
-    }
+    if (offset === 0) setProducts(np);
+    else setProducts((prev) => [...prev, ...np]);
+    setHasMore(np.length === PAGE_SIZE);
 
     setLoading(false);
     setLoadingMore(false);
@@ -281,7 +211,6 @@ export default function MarketHome() {
 
   return (
     <MarketLayout>
-      {/* ── Hero ── */}
       <MarketHero />
 
       {!query ? (
@@ -289,13 +218,7 @@ export default function MarketHome() {
           {/* ── Trending Products ── */}
           <section style={{ background: sectionBg1, padding: "3.5rem 0 4rem" }}>
             <div className="container">
-              <MarketSectionHeader
-                icon={TrendingUp}
-                iconColor="#EF4444"
-                iconBg="rgba(239,68,68,0.1)"
-                title="Produits populaires"
-                linkTo="/market#all-products"
-              />
+              <MarketSectionHeader icon={TrendingUp} iconColor="#EF4444" iconBg="rgba(239,68,68,0.1)" title="Produits populaires" linkTo="/market#all-products" />
               {sectionsLoading ? (
                 <MarketProductSkeleton count={4} />
               ) : trendingProducts.length > 0 ? (
@@ -310,33 +233,19 @@ export default function MarketHome() {
           {(sectionsLoading || featuredStores.length > 0) && (
             <section style={{ background: sectionBg2, padding: "3.5rem 0 4rem" }}>
               <div className="container">
-                <MarketSectionHeader
-                  icon={StoreIcon}
-                  title="Boutiques en vedette"
-                />
+                <MarketSectionHeader icon={StoreIcon} title="Boutiques en vedette" />
                 {sectionsLoading ? (
                   <MarketStoreSkeleton />
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {featuredStores.map((store, i) => (
-                      <motion.div
-                        key={store.id}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.05, duration: 0.4 }}
-                      >
+                      <motion.div key={store.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05, duration: 0.4 }}>
                         <Link
                           to={`/market/vendor/${store.slug}`}
                           className="flex items-center gap-4 p-5 rounded-xl transition-all duration-300 hover:bg-white/[0.03] group"
-                          style={{
-                            border: "1px solid rgba(255,255,255,0.06)",
-                            background: "rgba(255,255,255,0.02)",
-                          }}
+                          style={{ border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}
                         >
-                          <div
-                            className="h-14 w-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
-                            style={{ background: "rgba(255,255,255,0.06)" }}
-                          >
+                          <div className="h-14 w-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
                             {store.logo_url ? (
                               <img src={store.logo_url} alt={store.name} className="h-full w-full object-cover" />
                             ) : (
@@ -346,9 +255,7 @@ export default function MarketHome() {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold truncate" style={{ color: "rgba(255,255,255,0.9)" }}>
-                              {store.name}
-                            </h3>
+                            <h3 className="text-sm font-semibold truncate" style={{ color: "rgba(255,255,255,0.9)" }}>{store.name}</h3>
                             <div className="flex items-center gap-3 mt-1">
                               {store.city && (
                                 <span className="flex items-center gap-1 text-[11px]" style={{ color: "#6B7280" }}>
@@ -374,10 +281,7 @@ export default function MarketHome() {
           {categories.length > 0 && (
             <section style={{ background: sectionBg1, padding: "3.5rem 0 4rem" }}>
               <div className="container">
-                <MarketSectionHeader
-                  icon={Grid3X3}
-                  title="Catégories principales"
-                />
+                <MarketSectionHeader icon={Grid3X3} title="Catégories principales" />
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {categories.map((cat, i) => (
                     <MarketCategoryCard key={cat.id} {...cat} index={i} />
@@ -391,13 +295,7 @@ export default function MarketHome() {
           {(sectionsLoading || newProducts.length > 0) && (
             <section style={{ background: sectionBg2, padding: "3.5rem 0 4rem" }}>
               <div className="container">
-                <MarketSectionHeader
-                  icon={Clock}
-                  iconColor="#3B82F6"
-                  iconBg="rgba(59,130,246,0.1)"
-                  title="Nouveautés"
-                  linkTo="/market#all-products"
-                />
+                <MarketSectionHeader icon={Clock} iconColor="#3B82F6" iconBg="rgba(59,130,246,0.1)" title="Nouveautés" linkTo="/market#all-products" />
                 {sectionsLoading ? (
                   <MarketProductSkeleton count={4} />
                 ) : (
@@ -413,13 +311,7 @@ export default function MarketHome() {
           {(sectionsLoading || dealProducts.length > 0) && (
             <section style={{ background: sectionBg1, padding: "3.5rem 0 4rem" }}>
               <div className="container">
-                <MarketSectionHeader
-                  icon={Percent}
-                  iconColor="#F59E0B"
-                  iconBg="rgba(245,158,11,0.1)"
-                  title="Meilleures offres"
-                  linkTo="/market#all-products"
-                />
+                <MarketSectionHeader icon={Percent} iconColor="#F59E0B" iconBg="rgba(245,158,11,0.1)" title="Meilleures offres" linkTo="/market#all-products" />
                 {sectionsLoading ? (
                   <MarketProductSkeleton count={4} />
                 ) : (
@@ -436,11 +328,7 @@ export default function MarketHome() {
       {/* ── All Products / Search Results ── */}
       <section id="all-products" style={{ background: sectionBg2, padding: "3.5rem 0 5rem" }}>
         <div className="container">
-          <MarketSectionHeader
-            icon={Star}
-            title={query ? `Résultats pour « ${query} »` : "Tous les produits"}
-          />
-
+          <MarketSectionHeader icon={Star} title={query ? `Résultats pour « ${query} »` : "Tous les produits"} />
           {loading ? (
             <MarketProductSkeleton />
           ) : products.length === 0 ? (
@@ -458,14 +346,12 @@ export default function MarketHome() {
                     onClick={() => fetchProducts(products.length)}
                     disabled={loadingMore}
                     className="inline-flex items-center gap-2 px-8 py-3 text-sm font-medium transition-all duration-200 hover:bg-white/[0.04] disabled:opacity-50 rounded-lg"
-                    style={{
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      background: "transparent",
-                      color: "#FFFFFF",
-                    }}
+                    style={{ border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#FFFFFF" }}
                   >
-                    {loadingMore && <Loader2 size={15} className="animate-spin" />}
-                    {loadingMore ? "Chargement…" : "Voir plus"}
+                    {loadingMore ? (
+                      <span className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    ) : null}
+                    Voir plus de produits
                   </button>
                 </div>
               )}
