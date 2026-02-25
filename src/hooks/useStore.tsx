@@ -49,8 +49,10 @@ export function useStore() {
     refetch();
   }, [refetch]);
 
+  const userId = user?.id;
+
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setStore(null);
       setStores([]);
       setLoading(false);
@@ -67,13 +69,13 @@ export function useStore() {
       const { data: ownedStores } = await supabase
         .from("stores")
         .select("*")
-        .eq("owner_id", user.id)
+        .eq("owner_id", userId)
         .order("created_at", { ascending: true });
 
       const { data: memberStores } = await supabase
         .from("store_members")
         .select("store_id")
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
       const memberStoreIds = (memberStores || [])
         .map((m) => m.store_id)
@@ -124,7 +126,7 @@ export function useStore() {
     };
 
     fetchStores();
-  }, [user, refreshKey]);
+  }, [userId, refreshKey]);
 
   return {
     store,
