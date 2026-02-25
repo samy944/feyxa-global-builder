@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
-import { Plus, Search, Filter, Image as ImageIcon, Loader2, Pencil, Trash2, MoreHorizontal, Link2, Package } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Search, Filter, Image as ImageIcon, Loader2, Pencil, Trash2, MoreHorizontal, Package, CheckSquare, Eye, EyeOff, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
 import { toast } from "sonner";
 import ProductFormDialog, { type ProductToEdit } from "@/components/dashboard/ProductFormDialog";
 import { TrackingLinkGenerator } from "@/components/dashboard/TrackingLinkGenerator";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +64,12 @@ export default function DashboardProducts() {
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Auto-open product form when arriving from onboarding with ?welcome=1
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkActioning, setBulkActioning] = useState(false);
+
   useEffect(() => {
     if (searchParams.get("welcome") === "1") {
       setDialogOpen(true);
@@ -81,56 +87,76 @@ export default function DashboardProducts() {
       .order("created_at", { ascending: false });
     setProducts(data ?? []);
     setLoading(false);
+    setSelectedIds(new Set());
   }, [store]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const handleEdit = (p: Product) => {
     setEditProduct({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: p.price,
-      compare_at_price: p.compare_at_price,
-      cost_price: p.cost_price,
-      stock_quantity: p.stock_quantity,
-      description: p.description,
-      sku: p.sku,
-      barcode: p.barcode,
-      weight_grams: p.weight_grams,
-      is_published: p.is_published,
-      is_marketplace_published: p.is_marketplace_published,
-      marketplace_category_id: p.marketplace_category_id,
-      images: p.images,
-      tags: p.tags,
-      low_stock_threshold: p.low_stock_threshold,
+      id: p.id, name: p.name, slug: p.slug, price: p.price, compare_at_price: p.compare_at_price,
+      cost_price: p.cost_price, stock_quantity: p.stock_quantity, description: p.description,
+      sku: p.sku, barcode: p.barcode, weight_grams: p.weight_grams, is_published: p.is_published,
+      is_marketplace_published: p.is_marketplace_published, marketplace_category_id: p.marketplace_category_id,
+      images: p.images, tags: p.tags, low_stock_threshold: p.low_stock_threshold,
     });
     setDialogOpen(true);
   };
 
-  const handleCreate = () => {
-    setEditProduct(null);
-    setDialogOpen(true);
-  };
+  const handleCreate = () => { setEditProduct(null); setDialogOpen(true); };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     const { error } = await supabase.from("products").delete().eq("id", deleteTarget.id);
     setDeleting(false);
-    if (error) {
-      console.error(error);
-      toast.error("Erreur lors de la suppression");
-    } else {
-      toast.success("Produit supprimé");
-      fetchProducts();
-    }
+    if (error) { toast.error("Erreur lors de la suppression"); }
+    else { toast.success("Produit supprimé"); fetchProducts(); }
     setDeleteTarget(null);
   };
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Bulk actions
+  const filtered = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((p) => p.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const bulkPublish = async (publish: boolean) => {
+    setBulkActioning(true);
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase.from("products").update({ is_published: publish }).in("id", ids);
+    setBulkActioning(false);
+    if (error) { toast.error("Erreur lors de la mise à jour"); }
+    else { toast.success(`${ids.length} produit(s) ${publish ? "publiés" : "dépubliés"}`); fetchProducts(); }
+  };
+
+  const bulkDelete = async () => {
+    setBulkDeleting(true);
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase.from("products").delete().in("id", ids);
+    setBulkDeleting(false);
+    if (error) { toast.error("Erreur lors de la suppression"); }
+    else { toast.success(`${ids.length} produit(s) supprimé(s)`); fetchProducts(); }
+    setBulkDeleteOpen(false);
+  };
+
+  const hasSelection = selectedIds.size > 0;
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -164,6 +190,40 @@ export default function DashboardProducts() {
         </Button>
       </div>
 
+      {/* ── Bulk Action Bar ── */}
+      <AnimatePresence>
+        {hasSelection && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center gap-3 p-3 rounded-lg border border-primary/30 bg-primary/5"
+          >
+            <CheckSquare size={16} className="text-primary shrink-0" />
+            <span className="text-sm font-medium text-foreground">
+              {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
+            </span>
+            <div className="flex items-center gap-2 ml-auto">
+              <Button variant="outline" size="sm" onClick={() => bulkPublish(true)} disabled={bulkActioning}>
+                <Eye size={14} />
+                Publier
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => bulkPublish(false)} disabled={bulkActioning}>
+                <EyeOff size={14} />
+                Dépublier
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)} disabled={bulkActioning}>
+                <Trash2 size={14} />
+                Supprimer
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                <X size={14} />
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={24} className="animate-spin text-muted-foreground" />
@@ -195,6 +255,12 @@ export default function DashboardProducts() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-muted-foreground text-xs border-b border-border">
+                <th className="p-4 w-10">
+                  <Checkbox
+                    checked={allFilteredSelected}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="text-left font-medium p-4">Produit</th>
                 <th className="text-left font-medium p-4">Prix</th>
                 <th className="text-left font-medium p-4">Stock</th>
@@ -206,14 +272,21 @@ export default function DashboardProducts() {
               {filtered.map((p, i) => {
                 const status = getStatus(p);
                 const firstImage = Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null;
+                const isSelected = selectedIds.has(p.id);
                 return (
                   <motion.tr
                     key={p.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.03 }}
-                    className="border-b border-border last:border-0 hover:bg-secondary/50 transition-colors"
+                    className={`border-b border-border last:border-0 transition-colors ${isSelected ? "bg-primary/5" : "hover:bg-secondary/50"}`}
                   >
+                    <td className="p-4">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(p.id)}
+                      />
+                    </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center overflow-hidden">
@@ -283,13 +356,9 @@ export default function DashboardProducts() {
         </div>
       )}
 
-      <ProductFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSuccess={fetchProducts}
-        product={editProduct}
-      />
+      <ProductFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={fetchProducts} product={editProduct} />
 
+      {/* Single delete dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -300,13 +369,28 @@ export default function DashboardProducts() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleting && <Loader2 size={14} className="animate-spin mr-2" />}
               Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk delete dialog */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer {selectedIds.size} produit{selectedIds.size > 1 ? "s" : ""} ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Tous les produits sélectionnés seront définitivement supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={bulkDelete} disabled={bulkDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {bulkDeleting && <Loader2 size={14} className="animate-spin mr-2" />}
+              Supprimer tout
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
