@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Plus, Search, Filter, Image as ImageIcon, Loader2, Pencil, Trash2, MoreHorizontal, Link2 } from "lucide-react";
+import { Plus, Search, Filter, Image as ImageIcon, Loader2, Pencil, Trash2, MoreHorizontal, Link2, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
 import { toast } from "sonner";
@@ -53,6 +54,7 @@ function getStatus(p: Product) {
 
 export default function DashboardProducts() {
   const { store } = useStore();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -60,6 +62,14 @@ export default function DashboardProducts() {
   const [editProduct, setEditProduct] = useState<ProductToEdit | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Auto-open product form when arriving from onboarding with ?welcome=1
+  useEffect(() => {
+    if (searchParams.get("welcome") === "1") {
+      setDialogOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const fetchProducts = useCallback(async () => {
     if (!store) return;
@@ -159,8 +169,26 @@ export default function DashboardProducts() {
           <Loader2 size={24} className="animate-spin text-muted-foreground" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground text-sm">
-          {products.length === 0 ? "Aucun produit. Ajoutez votre premier produit !" : "Aucun résultat."}
+        <div className="text-center py-20 space-y-4">
+          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Package size={28} className="text-primary" />
+          </div>
+          <div>
+            <p className="text-foreground font-semibold text-lg">
+              {products.length === 0 ? "Ajoutez votre premier produit" : "Aucun résultat"}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+              {products.length === 0
+                ? "Créez votre catalogue en ajoutant des produits. Vous pourrez les modifier à tout moment."
+                : "Essayez avec d'autres mots-clés."}
+            </p>
+          </div>
+          {products.length === 0 && (
+            <Button variant="hero" size="sm" onClick={handleCreate}>
+              <Plus size={16} />
+              Ajouter un produit
+            </Button>
+          )}
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-x-auto">
