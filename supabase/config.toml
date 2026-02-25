@@ -57,6 +57,12 @@ verify_jwt = false
 [functions.clone-landing]
 verify_jwt = false
 
+[functions.process-event]
+verify_jwt = false
+
+[functions.retry-failed-events]
+verify_jwt = false
+
 [functions.create-checkout-session]
 verify_jwt = false
 
