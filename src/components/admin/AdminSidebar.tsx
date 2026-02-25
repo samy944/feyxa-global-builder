@@ -15,6 +15,7 @@ import {
   Mail,
   Palette,
   FileText,
+  Calculator,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const links = [
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
   { to: "/admin/orders", icon: ShoppingCart, label: "Commandes" },
   { to: "/admin/payouts", icon: Wallet, label: "Retraits" },
+  { to: "/admin/accounting", icon: Calculator, label: "Comptabilité" },
   { to: "/admin/tickets", icon: MessageSquare, label: "Tickets" },
   { to: "/admin/returns", icon: RotateCcw, label: "Retours" },
   { to: "/admin/reviews", icon: Star, label: "Avis" },

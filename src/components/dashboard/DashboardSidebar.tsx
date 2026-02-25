@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutGrid, Package, ShoppingCart, Users, BarChart2, Settings, Megaphone, Truck, Cpu,
-  ChevronLeft, Wallet, FileText, Lightbulb, TrendingUp, Store, MessageSquare, RotateCcw, Shield,
+  ChevronLeft, Wallet, FileText, Lightbulb, TrendingUp, Store, MessageSquare, RotateCcw, Shield, Calculator,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -31,6 +31,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     { icon: BarChart2, label: t.dashboard.analytics, path: "/dashboard/analytics" },
     { icon: Cpu, label: t.dashboard.ai, path: "/dashboard/ai" },
     { icon: Wallet, label: t.dashboard.wallet, path: "/dashboard/wallet" },
+    { icon: Calculator, label: "Comptabilité", path: "/dashboard/accounting" },
     { icon: Lightbulb, label: t.dashboard.insights, path: "/dashboard/insights" },
     { icon: TrendingUp, label: t.dashboard.trends, path: "/dashboard/trends" },
     { icon: FileText, label: t.dashboard.landings, path: "/dashboard/landings" },

@@ -2698,6 +2698,56 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          expense_date: string
+          id: string
+          label: string
+          notes: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          expense_date?: string
+          id?: string
+          label: string
+          notes?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          expense_date?: string
+          id?: string
+          label?: string
+          notes?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_expenses_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_kyc: {
         Row: {
           created_at: string
