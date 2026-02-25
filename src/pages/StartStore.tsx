@@ -23,7 +23,7 @@ function parseOAuthError(error: any): string {
 }
 
 export default function StartStore() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
   useOAuthCallback();
@@ -32,14 +32,34 @@ export default function StartStore() {
   const [oauthError, setOauthError] = useState<{ provider: string; message: string } | null>(null);
   const showAppleFirst = useMemo(() => isIOS(), []);
 
-  // If user is already logged in, redirect to onboarding
+  // If user is already logged in, check if they have a store and redirect accordingly
   useEffect(() => {
-    if (user) {
-      // Store intent
-      localStorage.setItem("post_auth_redirect", "/onboarding");
-      navigate("/onboarding");
-    }
-  }, [user, navigate]);
+    if (authLoading || !user) return;
+
+    const checkAndRedirect = async () => {
+      // Ensure vendor role
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+
+      const hasVendorRole = roles?.some((r) => r.role === "vendor");
+      if (!hasVendorRole) {
+        await supabase.from("user_roles").insert({ user_id: user.id, role: "vendor" });
+      }
+
+      const { data: store } = await supabase
+        .from("stores")
+        .select("id")
+        .eq("owner_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      navigate(store ? "/dashboard" : "/onboarding", { replace: true });
+    };
+
+    checkAndRedirect();
+  }, [user, authLoading, navigate]);
 
   const handleOAuth = async (provider: "google" | "apple") => {
     // Store intent for post-auth redirect
@@ -70,6 +90,15 @@ export default function StartStore() {
     localStorage.setItem("post_auth_redirect", "/onboarding");
     navigate("/signup?intent=vendor");
   };
+
+  // Show loader while checking auth state
+  if (authLoading || user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0E0E11" }}>
+        <Loader2 className="animate-spin text-primary" size={24} />
+      </div>
+    );
+  }
 
   const googleIcon = (
     <svg viewBox="0 0 24 24" className="h-5 w-5">

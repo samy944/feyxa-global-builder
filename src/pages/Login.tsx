@@ -22,7 +22,7 @@ function parseOAuthError(error: any): string {
 }
 
 export default function Login() {
-  const { signIn } = useAuth();
+  const { user, loading: authLoading, signIn } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
@@ -39,6 +39,12 @@ export default function Login() {
 
   const showAppleFirst = useMemo(() => isIOS(), []);
 
+  // Redirect already-authenticated users away from login
+  useEffect(() => {
+    if (authLoading || !user) return;
+    redirectByRole(user.id);
+  }, [user, authLoading]);
+
   const logLoginActivity = async (userId: string, success: boolean, failureReason?: string) => {
     try {
       await supabase.functions.invoke("otp", {
@@ -47,27 +53,38 @@ export default function Login() {
     } catch {}
   };
 
+  const redirectByRole = async (userId: string) => {
+    // Check for post-auth redirect intent first
+    const postAuthRedirect = localStorage.getItem("post_auth_redirect");
+    if (postAuthRedirect) {
+      localStorage.removeItem("post_auth_redirect");
+      navigate(postAuthRedirect, { replace: true });
+      return;
+    }
+
+    // Check admin role
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "marketplace_admin" as any });
+    if (isAdmin) {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
+    // Check vendor role
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId).in("role", ["client", "vendor"]);
+    const isVendor = roles?.some((r) => r.role === "vendor");
+    if (isVendor) {
+      const { data: store } = await supabase.from("stores").select("id").eq("owner_id", userId).limit(1).maybeSingle();
+      navigate(store ? "/dashboard" : "/onboarding", { replace: true });
+    } else {
+      navigate("/account", { replace: true });
+    }
+  };
+
   const proceedAfterAuth = async () => {
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) { navigate("/market"); return; }
     await logLoginActivity(authUser.id, true);
-
-    // Check for post-auth redirect intent
-    const postAuthRedirect = localStorage.getItem("post_auth_redirect");
-    if (postAuthRedirect) {
-      localStorage.removeItem("post_auth_redirect");
-      navigate(postAuthRedirect);
-      return;
-    }
-
-    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", authUser.id).in("role", ["client", "vendor"]);
-    const isVendor = roles?.some((r) => r.role === "vendor");
-    if (isVendor) {
-      const { data: store } = await supabase.from("stores").select("id").eq("owner_id", authUser.id).limit(1).maybeSingle();
-      navigate(store ? "/dashboard" : "/onboarding");
-    } else {
-      navigate("/account");
-    }
+    await redirectByRole(authUser.id);
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
@@ -87,7 +104,6 @@ export default function Login() {
         setOauthError({ provider, message: errMessages[errType] || errMessages.generic });
         setOauthLoading(null);
       }
-      // If no error, redirect is happening — keep loading state
     } catch (err) {
       setOauthError({ provider, message: t.auth.oauthGenericError });
       setOauthLoading(null);
@@ -98,9 +114,15 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     const { error } = await signIn(email, password);
-    if (error) { setLoading(false); toast.error(translateAuthError(error.message)); return; }
+    if (error) {
+      setLoading(false);
+      toast.error(translateAuthError(error.message));
+      return;
+    }
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) { setLoading(false); navigate("/market"); return; }
+
+    // Check 2FA
     const { data: securitySettings } = await supabase.from("user_security_settings").select("two_factor_enabled").eq("user_id", authUser.id).maybeSingle();
     if (securitySettings?.two_factor_enabled) {
       setPendingUser({ id: authUser.id, email: authUser.email! });
@@ -111,6 +133,22 @@ export default function Login() {
     await proceedAfterAuth();
     setLoading(false);
   };
+
+  // Don't render form if already authenticated (avoid flash)
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0E0E11" }}>
+        <Loader2 className="animate-spin text-primary" size={24} />
+      </div>
+    );
+  }
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0E0E11" }}>
+        <Loader2 className="animate-spin text-primary" size={24} />
+      </div>
+    );
+  }
 
   const OAuthButton = ({ provider, icon, label, badge }: { provider: "google" | "apple"; icon: React.ReactNode; label: string; badge?: string }) => {
     const isLoading = oauthLoading === provider;

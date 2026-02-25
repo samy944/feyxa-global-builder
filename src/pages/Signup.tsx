@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,9 +22,15 @@ function parseOAuthError(error: any): string {
 }
 
 export default function Signup() {
-  const { signUp } = useAuth();
+  const { user, loading: authLoading, signUp } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  // Redirect already-authenticated users away from signup
+  useEffect(() => {
+    if (authLoading || !user) return;
+    navigate("/account", { replace: true });
+  }, [user, authLoading, navigate]);
 
   // Handle OAuth callback routing
   useOAuthCallback();
@@ -150,6 +156,15 @@ export default function Signup() {
         <OAuthButton key="google" provider="google" icon={googleIcon} label={t.auth.continueWithGoogle} />,
         <OAuthButton key="apple" provider="apple" icon={appleIcon} label={t.auth.continueWithApple} />,
       ];
+
+  // Show loader if already authenticated (redirect is happening)
+  if (authLoading || user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary" size={24} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-hero flex items-center justify-center p-4">
