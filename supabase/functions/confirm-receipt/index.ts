@@ -12,8 +12,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { order_id, order_number, phone } = await req.json();
+    const body = await req.json();
+    const { order_id, order_number, phone } = body;
 
+    // Validate inputs
     if (!order_id && (!order_number || !phone)) {
       return new Response(
         JSON.stringify({ error: "order_id or (order_number + phone) required" }),
@@ -21,16 +23,42 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const sb = createClient(supabaseUrl, serviceKey);
+    // Validate order_id format if provided
+    if (order_id && (typeof order_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id))) {
+      return new Response(
+        JSON.stringify({ error: "Format order_id invalide" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate order_number if provided
+    if (order_number && (typeof order_number !== "string" || order_number.length < 3 || order_number.length > 50)) {
+      return new Response(
+        JSON.stringify({ error: "Numéro de commande invalide" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate phone if provided
+    if (phone && (typeof phone !== "string" || !/^\+?[0-9]{8,15}$/.test(phone.replace(/\s/g, "")))) {
+      return new Response(
+        JSON.stringify({ error: "Numéro de téléphone invalide" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
     // Find the order
     let query = sb.from("orders").select("id, shipping_phone, status");
     if (order_id) {
       query = query.eq("id", order_id);
     } else {
-      query = query.eq("order_number", order_number).eq("shipping_phone", phone);
+      const cleanPhone = phone.replace(/\s/g, "");
+      query = query.eq("order_number", order_number.trim()).eq("shipping_phone", cleanPhone);
     }
 
     const { data: order, error: orderErr } = await query.maybeSingle();
@@ -73,7 +101,7 @@ Deno.serve(async (req) => {
     );
   } catch (err: any) {
     console.error("Confirm receipt error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: "Erreur interne" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
