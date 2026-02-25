@@ -2686,18 +2686,32 @@ export type Database = {
         }
         Returns: string
       }
-      upsert_checkout_customer: {
-        Args: {
-          _address?: string
-          _city?: string
-          _first_name: string
-          _last_name?: string
-          _phone?: string
-          _quarter?: string
-          _store_id: string
-        }
-        Returns: string
-      }
+      upsert_checkout_customer:
+        | {
+            Args: {
+              _address?: string
+              _city?: string
+              _first_name: string
+              _last_name?: string
+              _phone?: string
+              _quarter?: string
+              _store_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _address?: string
+              _city?: string
+              _first_name: string
+              _last_name?: string
+              _phone?: string
+              _quarter?: string
+              _store_id: string
+              _user_id?: string
+            }
+            Returns: string
+          }
       upsert_tracking_event: {
         Args: {
           _currency?: string
