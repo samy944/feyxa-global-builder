@@ -1,133 +1,167 @@
 
 
-# Plan : IA Design Elite + Generation d'Images + Landing Multi-Pages
+# Plan: Feyxa Infrastructure Engine — Event Bus & 5 Moteurs
 
-## Problemes identifies
+## Contexte actuel
 
-1. **L'IA utilise `gemini-3-flash-preview`** (modele rapide mais basique) pour le design -- resultat moyen
-2. **Aucune generation d'images** -- l'IA ne genere jamais de visuels, elle se contente de texte/JSON
-3. **Les landing pages sont mono-page** -- pas de notion de pages multiples (ex: Accueil, A propos, Contact, etc.)
+Aujourd'hui, la logique métier est dispersée : le checkout crée la commande, appelle l'escrow, envoie l'email, crée l'attribution — tout dans le même fichier `Checkout.tsx`. Les edge functions (confirm-delivery, escrow-auto-release) contiennent aussi de la logique en dur. Il n'y a pas de bus d'événements central, pas de retry, pas de suivi unifié des workflows.
 
 ---
 
-## Chantier 1 : IA Design de niveau superieur
+## Architecture cible
 
-### Changements
-
-- **Upgrade du modele** : Passer de `google/gemini-3-flash-preview` a `google/gemini-3-pro-preview` dans la edge function `design-landing` pour des designs plus sophistiques et creatifs
-- **Enrichir le system prompt** avec des references de design premium (Apple, Stripe, Airbnb), des regles de typographie avancees, des ratios de contraste, et des palettes harmonieuses basees sur la theorie des couleurs
-- **Ajouter des exemples "few-shot"** dans le prompt : inclure 2-3 exemples de JSON de sortie exceptionnels pour guider l'IA vers un resultat haut de gamme
-
-### Fichiers concernes
-- `supabase/functions/design-landing/index.ts` -- upgrade modele + prompts enrichis
-
----
-
-## Chantier 2 : Generation d'images IA
-
-### Architecture
-
-L'IA generera des images hero, produit et d'ambiance en utilisant le modele `google/gemini-2.5-flash-image` (generation d'images via l'API Lovable AI). Les images seront stockees dans le bucket `store-assets` existant.
-
-### Nouvelle Edge Function : `generate-landing-images`
-
-- Recoit le prompt de design + contexte (nom boutique, produit, ambiance)
-- Appelle `google/gemini-2.5-flash-image` avec `modalities: ["image", "text"]`
-- Decode le base64 retourne, upload dans le bucket `store-assets`
-- Retourne les URLs publiques des images generees
-
-### Integration dans le workflow
-
-- **Option 1 (automatique)** : Apres la generation du design, un second appel genere les images pour les sections hero, gallery, before-after
-- **Option 2 (manuelle)** : Bouton "Generer une image IA" dans l'editeur de chaque section ayant un champ image (hero, image, gallery, before-after)
-- Les deux options seront implementees
-
-### Modifications dans l'editeur
-
-- Ajout d'un bouton "Generer avec l'IA" a cote de chaque champ `ImageUploader` dans le panneau de proprietes
-- Dialog de prompt pour decrire l'image souhaitee
-- Preview de l'image generee avant insertion
-
-### Fichiers concernes
-- Nouveau : `supabase/functions/generate-landing-images/index.ts`
-- Modifie : `supabase/functions/design-landing/index.ts` -- appel optionnel de generation d'images
-- Modifie : `src/pages/DashboardLandingEditor.tsx` -- bouton "Generer image IA" dans le panneau de proprietes
-- Nouveau : `src/components/dashboard/AiImageDialog.tsx` -- dialog de generation d'image
+```text
+┌─────────────────────────────────────────────────────────┐
+│                    EVENT BUS (events_log)                │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
+│  │ order.*  │  │payment.* │  │delivery.*│  ...          │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘              │
+│       │              │              │                    │
+│  ┌────▼────┐   ┌─────▼────┐  ┌─────▼─────┐             │
+│  │Commerce │   │ Fintech  │  │ Logistics │             │
+│  │ Engine  │   │ Engine   │  │  Engine   │             │
+│  └─────────┘   └──────────┘  └───────────┘             │
+│       ┌────────────┐    ┌──────────────────┐           │
+│       │ Trust &    │    │  Intelligence    │           │
+│       │ Compliance │    │  Engine          │           │
+│       └────────────┘    └──────────────────┘           │
+└─────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Chantier 3 : Landing Pages Multi-Pages
+## Etape 1 — Base de données : Table `events_log`
 
-### Concept
-
-Chaque landing page pourra avoir plusieurs **sous-pages** (ex: Accueil, A propos, Tarifs, Contact, FAQ). Le header affichera la navigation entre ces pages, et chaque page aura ses propres sections.
-
-### Schema de donnees
-
-Nouvelle table `landing_subpages` :
+Nouvelle table centrale pour tous les événements système :
 
 | Colonne | Type | Description |
 |---------|------|-------------|
-| id | uuid | Cle primaire |
-| landing_page_id | uuid | FK vers landing_pages |
-| title | text | Nom de la page (ex: "A propos") |
-| slug | text | Sous-slug (ex: "about") |
-| sections | jsonb | Sections de cette sous-page |
-| sort_order | integer | Ordre dans la navigation |
-| is_home | boolean | Page d'accueil par defaut |
-| created_at | timestamptz | Date de creation |
+| `id` | uuid PK | Identifiant unique |
+| `event_type` | text | Ex: `order.created`, `payment.paid` |
+| `aggregate_type` | text | `order`, `payment`, `delivery`, `payout`, `ticket` |
+| `aggregate_id` | uuid | ID de l'entité concernée |
+| `store_id` | uuid | Boutique liée (nullable pour events admin) |
+| `payload` | jsonb | Données de l'événement |
+| `idempotency_key` | text UNIQUE | Clé pour éviter les doublons |
+| `status` | text | `pending` → `processing` → `completed` / `failed` |
+| `retry_count` | int | Nombre de tentatives |
+| `max_retries` | int | Maximum de retries (défaut: 3) |
+| `next_retry_at` | timestamptz | Prochaine tentative planifiée |
+| `error_message` | text | Dernière erreur |
+| `processed_at` | timestamptz | Date de traitement |
+| `created_at` | timestamptz | Date de création |
 
-Les politiques RLS seront liees a celles de `landing_pages` (le vendeur proprietaire peut CRUD).
+Table `event_handlers_log` pour tracer chaque handler :
 
-### Changements dans l'editeur
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `id` | uuid PK | |
+| `event_id` | uuid FK → events_log | |
+| `handler_name` | text | Ex: `fintech.create_escrow`, `logistics.notify` |
+| `status` | text | `success` / `failed` / `skipped` |
+| `duration_ms` | int | Temps d'exécution |
+| `error_message` | text | |
+| `created_at` | timestamptz | |
 
-- **Onglets de pages** en haut de l'editeur : barre d'onglets avec les sous-pages + bouton "+" pour en ajouter
-- Chaque onglet charge ses propres sections dans le canvas
-- Le header de la landing publique affichera automatiquement les liens vers les sous-pages
-- La page d'accueil existante (`landing_pages.sections`) sera migree comme sous-page `is_home = true`
-
-### Routage public
-
-- `/lp/:slug` -- page d'accueil de la landing
-- `/lp/:slug/:subpage` -- sous-page specifique
-
-### Fichiers concernes
-- Migration SQL : creation de `landing_subpages` + RLS
-- Modifie : `src/pages/DashboardLandingEditor.tsx` -- onglets de pages, gestion multi-pages
-- Modifie : `src/pages/LandingPagePublic.tsx` -- support des sous-pages
-- Modifie : `src/components/landing/LandingSectionRenderer.tsx` -- navigation header dynamique
-- Modifie : `src/App.tsx` -- nouvelle route `/lp/:slug/:subpage`
-
----
-
-## Ordre d'implementation
-
-1. **Chantier 1** -- Upgrade IA design (rapide, impact immediat)
-2. **Chantier 2** -- Generation d'images IA (nouvelle edge function + integration editeur)
-3. **Chantier 3** -- Multi-pages (migration DB + refonte editeur + routage)
+RLS: lecture par store members + marketplace admins. Insertion via service_role uniquement.
 
 ---
 
-## Details techniques
+## Etape 2 — Edge Function : `process-event`
 
-### Edge Function `generate-landing-images`
+Une edge function centrale qui :
 
-```text
-POST /generate-landing-images
-Body: { prompt: string, storeId: string, count: number }
-Response: { images: [{ url: string, alt: string }] }
+1. Reçoit un event_type + payload
+2. Génère l'idempotency_key (ex: `order.created:{order_id}`)
+3. Insère dans `events_log` (skip si idempotency_key existe déjà)
+4. Dispatch vers les handlers selon l'event_type
+5. Log chaque handler dans `event_handlers_log`
+6. Met à jour le statut de l'event
+
+**Mapping V1 des handlers :**
+
+| Event | Handlers déclenchés |
+|-------|-------------------|
+| `order.created` | `fintech.create_escrow`, `commerce.decrement_stock`, `commerce.send_confirmation_email`, `commerce.create_notification` |
+| `payment.paid` | `fintech.update_payment_status`, `commerce.update_order_status` |
+| `delivery.delivered` | `logistics.mark_delivered`, `fintech.release_escrow` |
+| `delivery.confirmed` | `fintech.release_escrow`, `trust.audit_log` |
+| `payout.requested` | `fintech.process_payout`, `trust.audit_log` |
+| `ticket.created` | `trust.create_notification`, `trust.auto_assign` |
+
+---
+
+## Etape 3 — Edge Function : `retry-failed-events`
+
+Cron job (toutes les 5 minutes) qui :
+1. Sélectionne les events en `failed` avec `retry_count < max_retries` et `next_retry_at <= now()`
+2. Réappelle `process-event` pour chaque
+3. Incrémente retry_count, applique backoff exponentiel (5min, 15min, 45min)
+
+---
+
+## Etape 4 — Fonction helper `emit_event`
+
+Fonction PostgreSQL `emit_event(_event_type, _aggregate_type, _aggregate_id, _store_id, _payload)` qui :
+1. Insère dans `events_log`
+2. Appelle `net.http_post` vers l'edge function `process-event`
+
+Cette fonction sera appelée depuis :
+- Le checkout (remplacer la logique inline)
+- Les triggers de changement de statut
+- Les edge functions existantes
+
+---
+
+## Etape 5 — Refactoring du Checkout
+
+Simplifier `Checkout.tsx` : après l'insertion de la commande et des items, émettre un seul appel :
+
+```typescript
+await supabase.functions.invoke("process-event", {
+  body: {
+    event_type: "order.created",
+    aggregate_id: orderId,
+    store_id: storeId,
+    payload: { order_number, total, currency, customer_email, items, payment_method }
+  }
+});
 ```
 
-Utilise `google/gemini-2.5-flash-image` avec `modalities: ["image", "text"]`.
-Les images base64 sont uploadees dans `store-assets/{storeId}/ai-generated/` via le SDK Supabase Storage (service role).
+Tout le reste (escrow, email, attribution, notification, stock) sera géré par les handlers.
 
-### Migration SQL pour `landing_subpages`
+---
 
-- Table avec FK vers `landing_pages(id)` ON DELETE CASCADE
-- RLS : SELECT/INSERT/UPDATE/DELETE restreint au vendeur proprietaire via jointure sur `landing_pages.store_id` et `stores.user_id`
-- Index sur `(landing_page_id, sort_order)`
+## Etape 6 — Dashboard Monitoring
 
-### Retrocompatibilite
+Nouvelle page `DashboardInfraMonitor` (accessible admin uniquement) affichant :
+- Events récents avec statut (pending/completed/failed)
+- Taux de succès par type d'event
+- Events en retry
+- Filtres par type, statut, store
+- Détail d'un event avec ses handler logs
 
-Les landing pages existantes (mono-page) continueront de fonctionner normalement. Les sections actuelles de `landing_pages.sections` resteront la source de verite pour les pages sans sous-pages. La migration vers le multi-pages sera opt-in.
+---
+
+## Détails techniques
+
+- **Idempotency** : clé composite `{event_type}:{aggregate_id}` avec contrainte UNIQUE, empêchant les doublons
+- **Retry avec backoff** : `next_retry_at = now() + (5 * 3^retry_count) minutes`
+- **Timeout** : chaque handler a un timeout de 10s, loggé si dépassé
+- **Sécurité** : `process-event` vérifie le JWT ou le service_role. `retry-failed-events` est appelé en cron avec service_role
+- **Extensions requises** : `pg_net` (déjà activée pour le cron existant)
+
+## Fichiers impactés
+
+| Action | Fichier |
+|--------|---------|
+| Créer | Migration SQL (events_log, event_handlers_log, emit_event function) |
+| Créer | `supabase/functions/process-event/index.ts` |
+| Créer | `supabase/functions/retry-failed-events/index.ts` |
+| Créer | `src/pages/AdminInfraMonitor.tsx` |
+| Modifier | `src/pages/Checkout.tsx` (simplifier post-order logic) |
+| Modifier | `supabase/functions/confirm-delivery/index.ts` (émettre event) |
+| Modifier | `src/App.tsx` (ajouter route admin) |
+| Modifier | `src/components/admin/AdminSidebar.tsx` (ajouter lien) |
+| Modifier | `supabase/config.toml` (process-event, retry-failed-events) |
 
