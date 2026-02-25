@@ -2181,6 +2181,42 @@ export type Database = {
           },
         ]
       }
+      risk_score_history: {
+        Row: {
+          change_reason: string
+          changed_by: string | null
+          created_at: string
+          factors: Json
+          id: string
+          new_score: number
+          previous_score: number | null
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          change_reason?: string
+          changed_by?: string | null
+          created_at?: string
+          factors?: Json
+          id?: string
+          new_score: number
+          previous_score?: number | null
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          change_reason?: string
+          changed_by?: string | null
+          created_at?: string
+          factors?: Json
+          id?: string
+          new_score?: number
+          previous_score?: number | null
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
       saved_addresses: {
         Row: {
           address: string | null
@@ -2243,6 +2279,136 @@ export type Database = {
             columns: ["country_id"]
             isOneToOne: false
             referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seller_reputation: {
+        Row: {
+          avg_rating: number
+          created_at: string
+          delivery_speed_score: number
+          id: string
+          product_quality_score: number
+          ranking_score: number
+          reputation_score: number
+          response_time_hours: number
+          store_id: string
+          total_reviews: number
+          total_sales: number
+          updated_at: string
+          verified_badge: boolean
+        }
+        Insert: {
+          avg_rating?: number
+          created_at?: string
+          delivery_speed_score?: number
+          id?: string
+          product_quality_score?: number
+          ranking_score?: number
+          reputation_score?: number
+          response_time_hours?: number
+          store_id: string
+          total_reviews?: number
+          total_sales?: number
+          updated_at?: string
+          verified_badge?: boolean
+        }
+        Update: {
+          avg_rating?: number
+          created_at?: string
+          delivery_speed_score?: number
+          id?: string
+          product_quality_score?: number
+          ranking_score?: number
+          reputation_score?: number
+          response_time_hours?: number
+          store_id?: string
+          total_reviews?: number
+          total_sales?: number
+          updated_at?: string
+          verified_badge?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_reputation_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seller_risk_scores: {
+        Row: {
+          admin_override_by: string | null
+          admin_override_reason: string | null
+          admin_override_score: number | null
+          cancellation_rate: number
+          created_at: string
+          dispute_rate: number
+          factors: Json
+          id: string
+          last_calculated_at: string
+          late_shipment_rate: number
+          manual_review: boolean
+          payouts_frozen: boolean
+          return_rate: number
+          score: number
+          sla_compliance: number
+          store_id: string
+          total_orders: number
+          updated_at: string
+          visibility_reduced: boolean
+        }
+        Insert: {
+          admin_override_by?: string | null
+          admin_override_reason?: string | null
+          admin_override_score?: number | null
+          cancellation_rate?: number
+          created_at?: string
+          dispute_rate?: number
+          factors?: Json
+          id?: string
+          last_calculated_at?: string
+          late_shipment_rate?: number
+          manual_review?: boolean
+          payouts_frozen?: boolean
+          return_rate?: number
+          score?: number
+          sla_compliance?: number
+          store_id: string
+          total_orders?: number
+          updated_at?: string
+          visibility_reduced?: boolean
+        }
+        Update: {
+          admin_override_by?: string | null
+          admin_override_reason?: string | null
+          admin_override_score?: number | null
+          cancellation_rate?: number
+          created_at?: string
+          dispute_rate?: number
+          factors?: Json
+          id?: string
+          last_calculated_at?: string
+          late_shipment_rate?: number
+          manual_review?: boolean
+          payouts_frozen?: boolean
+          return_rate?: number
+          score?: number
+          sla_compliance?: number
+          store_id?: string
+          total_orders?: number
+          updated_at?: string
+          visibility_reduced?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_risk_scores_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -2743,6 +2909,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_risk_scores: {
+        Row: {
+          admin_override_by: string | null
+          admin_override_reason: string | null
+          admin_override_score: number | null
+          cod_disabled: boolean
+          cod_failure_rate: number
+          created_at: string
+          dispute_rate: number
+          factors: Json
+          id: string
+          last_calculated_at: string
+          manual_review: boolean
+          payment_failure_rate: number
+          return_rate: number
+          score: number
+          total_orders: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_override_by?: string | null
+          admin_override_reason?: string | null
+          admin_override_score?: number | null
+          cod_disabled?: boolean
+          cod_failure_rate?: number
+          created_at?: string
+          dispute_rate?: number
+          factors?: Json
+          id?: string
+          last_calculated_at?: string
+          manual_review?: boolean
+          payment_failure_rate?: number
+          return_rate?: number
+          score?: number
+          total_orders?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_override_by?: string | null
+          admin_override_reason?: string | null
+          admin_override_score?: number | null
+          cod_disabled?: boolean
+          cod_failure_rate?: number
+          created_at?: string
+          dispute_rate?: number
+          factors?: Json
+          id?: string
+          last_calculated_at?: string
+          manual_review?: boolean
+          payment_failure_rate?: number
+          return_rate?: number
+          score?: number
+          total_orders?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
