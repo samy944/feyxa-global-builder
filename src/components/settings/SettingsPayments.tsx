@@ -8,7 +8,7 @@ import { Save, Loader2, Wallet } from "lucide-react";
 const PAYMENT_METHODS = [
   { key: "cod", name: "Paiement à la livraison (COD)", desc: "Le client paie en espèces à la réception", default: true },
   { key: "mobile_money", name: "Mobile Money (MTN/Orange/Wave)", desc: "Paiement via mobile money", default: true },
-  { key: "whatsapp", name: "WhatsApp Pay", desc: "Commande via WhatsApp avec confirmation vendeur", default: true },
+  { key: "whatsapp", name: "WhatsApp Pay", desc: "Commande via WhatsApp avec confirmation vendeur", default: false },
   { key: "stripe", name: "Stripe", desc: "Paiement par carte bancaire internationale", default: false },
   { key: "paystack", name: "Paystack", desc: "Paiement en ligne pour l'Afrique", default: false },
 ];
