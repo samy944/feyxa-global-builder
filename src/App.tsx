@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { LanguageProvider } from "@/lib/i18n";
 import { CartProvider } from "@/hooks/useCart";
 import { CartDrawer } from "@/components/market/CartDrawer";
 import { ThemeProvider } from "@/hooks/useTheme";
@@ -77,6 +78,7 @@ const App = () => (
   <ThemeProvider>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <LanguageProvider>
       <LocationProvider>
       <CartProvider>
       <TooltipProvider>
@@ -167,6 +169,7 @@ const App = () => (
       </TooltipProvider>
       </CartProvider>
       </LocationProvider>
+      </LanguageProvider>
     </AuthProvider>
   </QueryClientProvider>
   </ThemeProvider>
