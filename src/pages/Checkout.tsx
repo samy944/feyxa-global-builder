@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, MessageCircle, PackageCheck } from "lucide-react";
@@ -14,19 +13,16 @@ import { Link } from "react-router-dom";
 import { z } from "zod";
 import { trackInitiateCheckout, trackPurchase } from "@/lib/tracking";
 import { createOrderAttribution } from "@/lib/marketing-session";
+import DeliverySection, { DeliveryData } from "@/components/checkout/DeliverySection";
 
-const shippingSchema = z.object({
+const customerSchema = z.object({
   firstName: z.string().trim().min(1, "Prénom requis").max(100),
   lastName: z.string().trim().max(100).optional(),
   email: z.string().trim().email("Email invalide").max(255).optional().or(z.literal("")),
   phone: z.string().trim().min(8, "Numéro de téléphone invalide").max(20),
-  city: z.string().trim().min(1, "Ville requise").max(100),
-  quarter: z.string().trim().max(100).optional(),
-  address: z.string().trim().max(500).optional(),
-  notes: z.string().trim().max(500).optional(),
 });
 
-type ShippingForm = z.infer<typeof shippingSchema>;
+type CustomerForm = z.infer<typeof customerSchema>;
 
 interface CompletedOrder {
   orderNumber: string;
@@ -36,6 +32,8 @@ interface CompletedOrder {
   storeSlug: string;
   items: CartItem[];
   subtotal: number;
+  shippingCost: number;
+  total: number;
   currency: string;
 }
 
@@ -46,22 +44,34 @@ export default function Checkout() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUser(data.user ? { id: data.user.id } : null));
   }, []);
-  const [form, setForm] = useState<ShippingForm>({
+
+  const [form, setForm] = useState<CustomerForm>({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
-    city: "",
-    quarter: "",
-    address: "",
-    notes: "",
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof ShippingForm, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof CustomerForm, string>>>({});
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [submitting, setSubmitting] = useState(false);
   const [completedOrders, setCompletedOrders] = useState<CompletedOrder[]>([]);
   const [confirmedOrders, setConfirmedOrders] = useState<Set<string>>(new Set());
   const [confirmingOrder, setConfirmingOrder] = useState<string | null>(null);
+
+  // Delivery data from DeliverySection
+  const [delivery, setDelivery] = useState<DeliveryData>({
+    countryId: "",
+    countryName: "",
+    cityId: "",
+    cityName: "",
+    quarter: "",
+    address: "",
+    notes: "",
+    latitude: null,
+    longitude: null,
+    shippingMode: "standard",
+    shippingFee: 0,
+  });
 
   const mainCurrency = items[0]?.currency ?? "XOF";
   const formatPrice = (p: number, cur?: string) => {
@@ -69,7 +79,12 @@ export default function Checkout() {
     return c === "XOF" ? `${p.toLocaleString("fr-FR")} FCFA` : `€${p.toFixed(2)}`;
   };
 
-  const updateField = (field: keyof ShippingForm, value: string) => {
+  // Total weight from cart items (if weight_grams stored — for now 0)
+  const totalWeight = 0;
+
+  const grandTotal = totalPrice + delivery.shippingFee;
+
+  const updateField = (field: keyof CustomerForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
@@ -87,7 +102,7 @@ export default function Checkout() {
     return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
   };
 
-  const buildWhatsAppMessage = (order: CompletedOrder, data: ShippingForm) => {
+  const buildWhatsAppMessage = (order: CompletedOrder, data: CustomerForm) => {
     const itemLines = order.items
       .map((i) => `• ${i.name} × ${i.quantity} — ${formatPrice(i.price * i.quantity, order.currency)}`)
       .join("\n");
@@ -99,15 +114,17 @@ export default function Checkout() {
       ``,
       `👤 Client: ${data.firstName} ${data.lastName || ""}`.trim(),
       `📞 Tél: ${data.phone}`,
-      `📍 ${data.city}${data.quarter ? `, ${data.quarter}` : ""}`,
-      data.address ? `🏠 ${data.address}` : "",
+      `📍 ${delivery.cityName}${delivery.quarter ? `, ${delivery.quarter}` : ""}`,
+      delivery.address ? `🏠 ${delivery.address}` : "",
       ``,
       `📋 Articles:`,
       itemLines,
       ``,
-      `💰 Total: ${formatPrice(order.subtotal, order.currency)}`,
+      `💰 Sous-total: ${formatPrice(order.subtotal, order.currency)}`,
+      order.shippingCost > 0 ? `🚚 Livraison (${delivery.shippingMode}): ${formatPrice(order.shippingCost, order.currency)}` : "",
+      `💎 Total: ${formatPrice(order.total, order.currency)}`,
       `💳 Paiement: ${paymentMethod === "cod" ? "À la livraison" : paymentMethod === "stripe" ? "Carte bancaire" : paymentMethod === "fedapay" ? "Mobile Money (FedaPay)" : paymentMethod === "mobile_money" ? "Mobile Money" : "WhatsApp"}`,
-      data.notes ? `\n📝 Notes: ${data.notes}` : "",
+      delivery.notes ? `\n📝 Notes: ${delivery.notes}` : "",
       ``,
       `Merci de confirmer cette commande ! 🙏`,
     ]
@@ -118,13 +135,13 @@ export default function Checkout() {
   const handleConfirmReceipt = async (order: CompletedOrder) => {
     setConfirmingOrder(order.orderId);
     try {
-      const { data, error } = await supabase.functions.invoke("confirm-receipt", {
+      const { error } = await supabase.functions.invoke("confirm-receipt", {
         body: { order_id: order.orderId },
       });
       if (error) throw error;
       setConfirmedOrders((prev) => new Set([...prev, order.orderId]));
       toast({ title: "Réception confirmée !", description: "Les fonds ont été libérés au vendeur." });
-    } catch (err: any) {
+    } catch {
       toast({ title: "Erreur", description: "Impossible de confirmer la réception.", variant: "destructive" });
     } finally {
       setConfirmingOrder(null);
@@ -132,26 +149,35 @@ export default function Checkout() {
   };
 
   const handleSubmit = async () => {
-    const result = shippingSchema.safeParse(form);
+    // Validate customer info
+    const result = customerSchema.safeParse(form);
     if (!result.success) {
       const fieldErrors: typeof errors = {};
       result.error.errors.forEach((e) => {
-        const field = e.path[0] as keyof ShippingForm;
+        const field = e.path[0] as keyof CustomerForm;
         fieldErrors[field] = e.message;
       });
       setErrors(fieldErrors);
       return;
     }
 
+    // Validate delivery
+    if (!delivery.cityName) {
+      toast({ title: "Ville requise", description: "Veuillez sélectionner une ville de livraison.", variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
     const completed: CompletedOrder[] = [];
 
-    // Fire InitiateCheckout event
-    trackInitiateCheckout(totalPrice, mainCurrency, items.reduce((s, i) => s + i.quantity, 0));
+    trackInitiateCheckout(grandTotal, mainCurrency, items.reduce((s, i) => s + i.quantity, 0));
 
     try {
-      for (const [storeId, storeItems] of Object.entries(itemsByStore)) {
-        // 1. Decrement stock atomically
+      const storeEntries = Object.entries(itemsByStore);
+      const feePerStore = storeEntries.length > 1 ? Math.round(delivery.shippingFee / storeEntries.length) : delivery.shippingFee;
+
+      for (const [storeId, storeItems] of storeEntries) {
+        // 1. Decrement stock
         for (const item of storeItems) {
           const { data: stockOk, error: stockErr } = await supabase.rpc("decrement_stock", {
             _product_id: item.productId,
@@ -175,19 +201,21 @@ export default function Checkout() {
           _first_name: result.data.firstName,
           _last_name: result.data.lastName || null,
           _phone: result.data.phone,
-          _city: result.data.city,
-          _quarter: result.data.quarter || null,
-          _address: result.data.address || null,
+          _city: delivery.cityName,
+          _quarter: delivery.quarter || null,
+          _address: delivery.address || null,
           _user_id: currentUser?.id || null,
         });
         if (custErr) throw custErr;
 
-        // 3. Create order with client-generated UUID
+        // 3. Create order
         const orderNumber = generateOrderNumber();
         const orderId = crypto.randomUUID();
         const trackingToken = generateTrackingToken();
         const subtotal = storeItems.reduce((s, i) => s + i.price * i.quantity, 0);
-        const customerEmail = result.data.email && result.data.email.trim() ? result.data.email.trim() : null;
+        const storeShipping = feePerStore;
+        const orderTotal = subtotal + storeShipping;
+        const customerEmail = result.data.email?.trim() || null;
 
         const { error: orderError } = await supabase
           .from("orders")
@@ -197,23 +225,25 @@ export default function Checkout() {
             order_number: orderNumber,
             customer_id: customerId,
             subtotal,
-            total: subtotal,
+            shipping_cost: storeShipping,
+            total: orderTotal,
             currency: storeItems[0].currency,
             shipping_phone: result.data.phone,
-            shipping_city: result.data.city,
-            shipping_quarter: result.data.quarter || null,
-            shipping_address: result.data.address || null,
-            notes: result.data.notes || null,
+            shipping_city: delivery.cityName,
+            shipping_quarter: delivery.quarter || null,
+            shipping_address: delivery.address || null,
+            notes: delivery.notes || null,
             payment_method: paymentMethod,
             payment_status: paymentMethod === "cod" ? "cod" : "pending",
             status: "new",
             tracking_token: trackingToken,
             customer_email: customerEmail,
+            shipping_mode: delivery.shippingMode,
           } as any);
 
         if (orderError) throw orderError;
 
-        // 4. Create order items
+        // 4. Order items
         const orderItems = storeItems.map((item) => ({
           order_id: orderId,
           product_id: item.productId,
@@ -222,11 +252,10 @@ export default function Checkout() {
           unit_price: item.price,
           total: item.price * item.quantity,
         }));
-
         const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
         if (itemsError) throw itemsError;
 
-        // 5. Create escrow record (holds funds until delivery confirmed)
+        // 5. Escrow
         if (paymentMethod !== "cod") {
           await supabase.rpc("create_escrow_for_order", { _order_id: orderId });
         }
@@ -239,10 +268,12 @@ export default function Checkout() {
           storeSlug: storeItems[0].storeSlug,
           items: storeItems,
           subtotal,
+          shippingCost: storeShipping,
+          total: orderTotal,
           currency: storeItems[0].currency,
         });
 
-        // Send confirmation email if email provided
+        // Email
         if (customerEmail) {
           supabase.functions.invoke("send-order-confirmation", {
             body: {
@@ -252,22 +283,20 @@ export default function Checkout() {
               email: customerEmail,
               customer_name: `${result.data.firstName} ${result.data.lastName || ""}`.trim(),
               store_name: storeItems[0].storeName,
-              total: subtotal,
+              total: orderTotal,
               currency: storeItems[0].currency,
               items: storeItems.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
             },
           }).catch((err) => console.error("Email send error:", err));
         }
 
-        // Create order attribution from marketing session
         createOrderAttribution(orderId, storeId).catch(() => {});
-
         clearStore(storeId);
       }
 
-      // If online payment (Stripe or FedaPay), redirect to payment page
+      // Online payment redirect
       if (paymentMethod === "stripe" || paymentMethod === "fedapay") {
-        const totalAmount = completed.reduce((s, o) => s + o.subtotal, 0);
+        const totalAmount = completed.reduce((s, o) => s + o.total, 0);
         const orderIds = completed.map((o) => o.orderId);
         try {
           const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
@@ -284,14 +313,12 @@ export default function Checkout() {
             }
           );
           if (checkoutError) throw checkoutError;
-          if (checkoutData?.url) {
-            window.open(checkoutData.url, "_blank");
-          }
+          if (checkoutData?.url) window.open(checkoutData.url, "_blank");
         } catch (payErr: any) {
           console.error("Payment redirect error:", payErr);
           toast({
             title: "Commande créée",
-            description: "La commande est créée mais le paiement en ligne n'a pas pu être initié. Contactez le vendeur.",
+            description: "Le paiement en ligne n'a pas pu être initié.",
             variant: "destructive",
           });
         }
@@ -299,12 +326,11 @@ export default function Checkout() {
 
       setCompletedOrders(completed);
 
-      // Fire Purchase event for each completed order
       completed.forEach((order) => {
         trackPurchase({
           orderId: order.orderId,
           orderNumber: order.orderNumber,
-          value: order.subtotal,
+          value: order.total,
           currency: order.currency,
           items: order.items.map((i) => ({
             id: i.productId,
@@ -352,7 +378,6 @@ export default function Checkout() {
                   : "Votre commande a été envoyée au vendeur."}
               </p>
 
-              {/* Order cards per vendor */}
               <div className="space-y-4 text-left">
                 {completedOrders.map((order) => (
                   <div key={order.orderNumber} className="bg-secondary rounded-xl p-5 space-y-3">
@@ -369,11 +394,16 @@ export default function Checkout() {
                         <span className="font-medium text-foreground">{formatPrice(item.price * item.quantity, order.currency)}</span>
                       </div>
                     ))}
+                    {order.shippingCost > 0 && (
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>🚚 Livraison</span>
+                        <span>{formatPrice(order.shippingCost, order.currency)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm font-semibold border-t border-border/50 pt-2">
                       <span>Total</span>
-                      <span>{formatPrice(order.subtotal, order.currency)}</span>
+                      <span>{formatPrice(order.total, order.currency)}</span>
                     </div>
-                    {/* WhatsApp button per vendor */}
                     <Button
                       variant="outline"
                       size="sm"
@@ -386,7 +416,6 @@ export default function Checkout() {
                       <MessageCircle size={14} />
                       Envoyer au vendeur via WhatsApp
                     </Button>
-                    {/* Confirm receipt button */}
                     {confirmedOrders.has(order.orderId) ? (
                       <div className="flex items-center gap-2 text-xs text-primary mt-1 justify-center">
                         <CheckCircle2 size={14} /> Réception confirmée
@@ -474,8 +503,9 @@ export default function Checkout() {
           <div className="grid lg:grid-cols-5 gap-10">
             {/* Form */}
             <div className="lg:col-span-3 space-y-8">
+              {/* Customer info */}
               <div className="space-y-4">
-                <h2 className="font-heading text-lg tracking-wide text-foreground">LIVRAISON</h2>
+                <h2 className="font-heading text-lg tracking-wide text-foreground">INFORMATIONS CLIENT</h2>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="firstName">Prénom *</Label>
@@ -497,26 +527,15 @@ export default function Checkout() {
                   <Input id="phone" type="tel" value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+229 97 00 00 00" />
                   {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="city">Ville *</Label>
-                    <Input id="city" value={form.city} onChange={(e) => updateField("city", e.target.value)} placeholder="Cotonou" />
-                    {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="quarter">Quartier</Label>
-                    <Input id="quarter" value={form.quarter} onChange={(e) => updateField("quarter", e.target.value)} placeholder="Ganhi" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="address">Adresse / Repère</Label>
-                  <Input id="address" value={form.address} onChange={(e) => updateField("address", e.target.value)} placeholder="Près du marché Dantokpa…" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea id="notes" value={form.notes} onChange={(e) => updateField("notes", e.target.value)} placeholder="Instructions spéciales…" rows={2} />
-                </div>
               </div>
+
+              {/* Delivery Section */}
+              <DeliverySection
+                storeIds={Object.keys(itemsByStore)}
+                userId={currentUser?.id || null}
+                onDeliveryChange={setDelivery}
+                totalWeight={totalWeight}
+              />
 
               {/* Payment */}
               <div className="space-y-4">
@@ -582,18 +601,27 @@ export default function Checkout() {
                         </span>
                       </div>
                     ))}
-                    <div className="flex justify-between text-sm border-t border-border/50 pt-2">
-                      <span className="text-muted-foreground">Sous-total</span>
-                      <span className="font-semibold text-foreground">
-                        {formatPrice(storeItems.reduce((s, i) => s + i.price * i.quantity, 0))}
-                      </span>
-                    </div>
                   </div>
                 ))}
 
+                <div className="border-t border-border pt-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Sous-total</span>
+                    <span className="font-medium text-foreground">{formatPrice(totalPrice)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      🚚 Livraison {delivery.shippingMode === "express" && <span className="text-xs text-primary">(Express)</span>}
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {delivery.shippingFee > 0 ? formatPrice(delivery.shippingFee) : delivery.cityName ? "Gratuit" : "—"}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="border-t border-border pt-4 flex justify-between">
                   <span className="font-heading text-foreground tracking-wide">TOTAL</span>
-                  <span className="text-xl font-bold text-foreground">{formatPrice(totalPrice)}</span>
+                  <span className="text-xl font-bold text-foreground">{formatPrice(grandTotal)}</span>
                 </div>
 
                 {Object.keys(itemsByStore).length > 1 && (

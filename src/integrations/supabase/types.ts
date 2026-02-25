@@ -1198,6 +1198,7 @@ export type Database = {
           shipping_address: string | null
           shipping_city: string | null
           shipping_cost: number
+          shipping_mode: string | null
           shipping_phone: string | null
           shipping_quarter: string | null
           status: Database["public"]["Enums"]["order_status"]
@@ -1222,6 +1223,7 @@ export type Database = {
           shipping_address?: string | null
           shipping_city?: string | null
           shipping_cost?: number
+          shipping_mode?: string | null
           shipping_phone?: string | null
           shipping_quarter?: string | null
           status?: Database["public"]["Enums"]["order_status"]
@@ -1246,6 +1248,7 @@ export type Database = {
           shipping_address?: string | null
           shipping_city?: string | null
           shipping_cost?: number
+          shipping_mode?: string | null
           shipping_phone?: string | null
           shipping_quarter?: string | null
           status?: Database["public"]["Enums"]["order_status"]
@@ -1835,6 +1838,72 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_addresses: {
+        Row: {
+          address: string | null
+          city_id: string | null
+          city_name: string | null
+          country_id: string | null
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          latitude: number | null
+          longitude: number | null
+          notes: string | null
+          quarter: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          city_id?: string | null
+          city_name?: string | null
+          country_id?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          quarter?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          city_id?: string | null
+          city_name?: string | null
+          country_id?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          quarter?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_addresses_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_addresses_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
             referencedColumns: ["id"]
           },
         ]
