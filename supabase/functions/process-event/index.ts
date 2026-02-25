@@ -287,15 +287,19 @@ Deno.serve(async (req) => {
     }
 
     // 4. Update event status
+    const now = new Date().toISOString();
     const nextRetry = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    const updatePayload: Record<string, any> = {
+      status: allSuccess ? "completed" : "failed",
+      processed_at: allSuccess ? now : null,
+      error_message: allSuccess ? null : lastError,
+    };
+    if (!allSuccess) {
+      updatePayload.next_retry_at = nextRetry;
+    }
     await admin
       .from("events_log")
-      .update({
-        status: allSuccess ? "completed" : "failed",
-        processed_at: allSuccess ? new Date().toISOString() : null,
-        error_message: allSuccess ? null : lastError,
-        next_retry_at: allSuccess ? null : nextRetry,
-      })
+      .update(updatePayload)
       .eq("id", eventId);
 
     return new Response(
