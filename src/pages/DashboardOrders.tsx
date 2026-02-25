@@ -259,16 +259,6 @@ export default function DashboardOrders() {
                 </div>
 
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border flex-wrap">
-                  {phone && (
-                    <Button variant="outline" size="sm" className="text-xs" asChild>
-                      <a
-                        href={`https://wa.me/${phone.replace(/\s/g, "")}?text=Bonjour ${customerName}, votre commande %23${order.order_number} est ${(statusConfig[order.status]?.label || order.status).toLowerCase()}.`}
-                        target="_blank" rel="noopener"
-                      >
-                        📱 WhatsApp
-                      </a>
-                    </Button>
-                  )}
                    <Button
                     variant="ghost"
                     size="sm"

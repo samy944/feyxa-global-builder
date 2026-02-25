@@ -470,7 +470,7 @@ export default function DashboardOrderDetail() {
                   <Textarea
                     value={internalNote}
                     onChange={(e) => setInternalNote(e.target.value)}
-                    placeholder="Ex: Client contacté par WhatsApp, livraison reportée..."
+                    placeholder="Ex: Client contacté, livraison reportée..."
                     className="text-sm min-h-[60px] bg-secondary/30"
                     rows={2}
                   />
@@ -571,17 +571,6 @@ export default function DashboardOrderDetail() {
             </div>
 
             {/* Quick actions */}
-            {phone && (
-              <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-                <a
-                  href={`https://wa.me/${phone.replace(/\s/g, "")}?text=Bonjour ${customerName}, votre commande %23${order.order_number} est ${(statusConfig[order.status]?.label || order.status).toLowerCase()}.`}
-                  target="_blank"
-                  rel="noopener"
-                >
-                  📱 Contacter via WhatsApp
-                </a>
-              </Button>
-            )}
 
             <Button
               variant="outline"

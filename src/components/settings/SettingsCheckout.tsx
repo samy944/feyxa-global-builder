@@ -84,7 +84,7 @@ export default function SettingsCheckout() {
 
       <div className="space-y-2">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Champs requis</p>
-        <Toggle label="Numéro de téléphone" desc="Obligatoire pour WhatsApp et la livraison" checked={settings.require_phone} onChange={(v) => setSettings({ ...settings, require_phone: v })} />
+        <Toggle label="Numéro de téléphone" desc="Obligatoire pour la livraison" checked={settings.require_phone} onChange={(v) => setSettings({ ...settings, require_phone: v })} />
         <Toggle label="Ville" desc="Aide à calculer les frais de livraison" checked={settings.require_city} onChange={(v) => setSettings({ ...settings, require_city: v })} />
         <Toggle label="Quartier / Repère" desc="Indispensable pour les livraisons en Afrique de l'Ouest" checked={settings.require_quarter} onChange={(v) => setSettings({ ...settings, require_quarter: v })} />
         <Toggle label="Adresse complète" desc="Adresse détaillée (optionnel dans la plupart des villes)" checked={settings.require_address} onChange={(v) => setSettings({ ...settings, require_address: v })} />
@@ -92,7 +92,7 @@ export default function SettingsCheckout() {
 
       <div className="space-y-2">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Options</p>
-        <Toggle label="Confirmation WhatsApp" desc="Envoyer un message WhatsApp après chaque commande" checked={settings.whatsapp_confirmation} onChange={(v) => setSettings({ ...settings, whatsapp_confirmation: v })} />
+        <Toggle label="Notification de commande" desc="Envoyer une notification après chaque commande" checked={settings.whatsapp_confirmation} onChange={(v) => setSettings({ ...settings, whatsapp_confirmation: v })} />
         <Toggle label="Paiement à la livraison (COD)" desc="Permettre le paiement en espèces à la réception" checked={settings.cod_enabled} onChange={(v) => setSettings({ ...settings, cod_enabled: v })} />
       </div>
 

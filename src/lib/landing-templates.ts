@@ -31,7 +31,7 @@ export type SectionType =
   | "tabs"
   | "trust-badges"
   | "announcement-bar"
-  | "whatsapp-button"
+  
   | "sticky-cta"
   | "before-after"
   | "gallery"
@@ -86,7 +86,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
   { type: "cta", label: "CTA Final", icon: "🚀", category: "conversion", defaultData: { title: "Prêt à commander ?", subtitle: "Ne ratez pas cette offre.", ctaText: "Commander" } },
   { type: "pricing", label: "Tarifs / Offre", icon: "💰", category: "conversion", defaultData: { title: "Nos offres", items: [{ name: "Standard", price: 10000, features: ["Feature 1"], highlight: false }] } },
   { type: "countdown", label: "Compte à rebours", icon: "⏰", category: "conversion", defaultData: { title: "Offre limitée", endDate: new Date(Date.now() + 86400000).toISOString() } },
-  { type: "lead-capture", label: "Capture Lead", icon: "📧", category: "conversion", defaultData: { title: "Restez informé", placeholder: "Votre email ou WhatsApp", buttonText: "S'inscrire", incentive: "🎁 -10% offert" } },
+  { type: "lead-capture", label: "Capture Lead", icon: "📧", category: "conversion", defaultData: { title: "Restez informé", placeholder: "Votre email", buttonText: "S'inscrire", incentive: "🎁 -10% offert" } },
   { type: "waitlist", label: "Waitlist", icon: "📋", category: "conversion", defaultData: { title: "Rejoignez la waitlist", placeholder: "Votre email", buttonText: "Me notifier", spotsText: "Places limitées" } },
   { type: "sticky-cta", label: "CTA Sticky", icon: "📌", category: "conversion", defaultData: { text: "Commander maintenant", ctaText: "Acheter", price: "" } },
   { type: "guarantee", label: "Garantie", icon: "🛡️", category: "conversion", defaultData: { title: "Garantie satisfait ou remboursé", text: "Remboursement sous 30 jours.", icon: "🛡️" } },
@@ -103,7 +103,7 @@ export const BLOCK_LIBRARY: BlockDefinition[] = [
 
   // Advanced
   { type: "announcement-bar", label: "Bandeau annonce", icon: "📢", category: "advanced", defaultData: { text: "🔥 Livraison gratuite dès 25 000 FCFA", bgColor: "" } },
-  { type: "whatsapp-button", label: "WhatsApp", icon: "💬", category: "advanced", defaultData: { phone: "", message: "Bonjour, je suis intéressé(e) !", label: "Nous contacter" } },
+  
   { type: "before-after", label: "Avant / Après", icon: "🔄", category: "advanced", defaultData: { title: "Résultats", beforeImage: "", afterImage: "", beforeLabel: "Avant", afterLabel: "Après" } },
   { type: "footer", label: "Pied de page", icon: "🔚", category: "essential", defaultData: { storeName: "Ma Boutique", description: "Votre boutique en ligne de confiance.", links: [{ label: "Mentions légales", href: "#" }, { label: "Politique de confidentialité", href: "#" }], phone: "", email: "", socials: { instagram: "", facebook: "", tiktok: "" } } },
 ];
@@ -656,10 +656,6 @@ export const LANDING_TEMPLATES: LandingTemplate[] = [
             { q: "Le menu change-t-il chaque jour ?", a: "Oui, notre chef compose un menu frais chaque matin avec les meilleurs ingrédients du marché." },
           ],
         },
-      },
-      {
-        id: uid(), type: "whatsapp-button", visible: true,
-        data: { phone: "", message: "Bonjour ! Je souhaite commander.", label: "Commander sur WhatsApp" },
       },
       {
         id: uid(), type: "cta", visible: true,

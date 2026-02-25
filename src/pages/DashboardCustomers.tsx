@@ -267,12 +267,8 @@ export default function DashboardCustomers() {
                 {/* Actions */}
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                   <Button variant="outline" size="sm" className="text-xs" asChild>
-                    <a
-                      href={`https://wa.me/${customer.phone.replace(/\s/g, "")}?text=Bonjour ${customer.first_name} !`}
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      📱 WhatsApp
+                    <a href={`tel:${customer.phone.replace(/\s/g, "")}`}>
+                      📞 Appeler
                     </a>
                   </Button>
                   <Button
