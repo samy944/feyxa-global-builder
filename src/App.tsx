@@ -61,6 +61,7 @@ import ClientOrders from "./pages/ClientOrders";
 import ClientProfile from "./pages/ClientProfile";
 import ClientWishlist from "./pages/ClientWishlist";
 import ClientOverview from "./pages/ClientOverview";
+import BecomeVendor from "./pages/BecomeVendor";
 import DashboardStores from "./pages/DashboardStores";
 import NewStore from "./pages/NewStore";
 import AcceptInvite from "./pages/AcceptInvite";
@@ -193,6 +194,7 @@ const App = () => (
               <Route path="orders" element={<ClientOrders />} />
               <Route path="wishlist" element={<ClientWishlist />} />
               <Route path="profile" element={<ClientProfile />} />
+              <Route path="become-vendor" element={<BecomeVendor />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
