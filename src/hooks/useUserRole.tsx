@@ -9,8 +9,10 @@ export function useUserRole() {
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const userId = user?.id;
+
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setRoles([]);
       setLoading(false);
       return;
@@ -22,7 +24,7 @@ export function useUserRole() {
       const { data } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .in("role", ["client", "vendor"]);
 
       if (data && data.length > 0) {
@@ -32,13 +34,13 @@ export function useUserRole() {
         const { data: store } = await supabase
           .from("stores")
           .select("id")
-          .eq("owner_id", user.id)
+          .eq("owner_id", userId)
           .limit(1)
           .maybeSingle();
 
         if (store) {
           await supabase.from("user_roles").insert({
-            user_id: user.id,
+            user_id: userId,
             role: "vendor" as any,
           });
           setRoles(["vendor"]);
@@ -51,7 +53,7 @@ export function useUserRole() {
     };
 
     fetchRoles();
-  }, [user]);
+  }, [userId]);
 
   const isVendor = roles.includes("vendor");
   const isClient = roles.includes("client");

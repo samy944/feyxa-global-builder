@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, useRef, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -17,15 +17,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      const newUserId = newSession?.user?.id ?? null;
+
+      // Always update session (for fresh tokens)
+      setSession(newSession);
+
+      // Only update user reference if user actually changed (prevents cascading re-renders on token refresh)
+      if (newUserId !== userIdRef.current) {
+        userIdRef.current = newUserId;
+        setUser(newSession?.user ?? null);
+      }
+
       setLoading(false);
 
       // Auto-accept pending invite after login
-      if (session?.user && _event === 'SIGNED_IN') {
+      if (newSession?.user && _event === 'SIGNED_IN') {
         const pendingToken = localStorage.getItem('feyxa_pending_invite');
         if (pendingToken) {
           localStorage.removeItem('feyxa_pending_invite');
@@ -49,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const tokenHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
             supabase.rpc('accept_admin_invitation', {
               _token_hash: tokenHash,
-              _user_id: session.user.id,
+              _user_id: newSession.user.id,
             }).then(() => {
               window.location.href = '/admin';
             });
@@ -58,9 +68,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      const uid = s?.user?.id ?? null;
+      if (uid !== userIdRef.current) {
+        userIdRef.current = uid;
+        setUser(s?.user ?? null);
+      }
       setLoading(false);
     });
 
