@@ -568,6 +568,131 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          provider_id: string | null
+          provider_message_id: string | null
+          recipient: string
+          status: string
+          subject: string
+          template_slug: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          provider_id?: string | null
+          provider_message_id?: string | null
+          recipient: string
+          status?: string
+          subject: string
+          template_slug?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          provider_id?: string | null
+          provider_message_id?: string | null
+          recipient?: string
+          status?: string
+          subject?: string
+          template_slug?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "email_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_providers: {
+        Row: {
+          config: Json
+          created_at: string
+          from_email: string
+          from_name: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          provider_type: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          from_email?: string
+          from_name?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          provider_type?: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          from_email?: string
+          from_name?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          provider_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          category: string
+          created_at: string
+          html_body: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          subject: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          html_body: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          subject: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          html_body?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          subject?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       escrow_records: {
         Row: {
           amount: number
@@ -1411,6 +1536,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_branding: {
+        Row: {
+          button_color: string
+          button_text_color: string
+          custom_css: string | null
+          default_image_url: string | null
+          favicon_url: string | null
+          font_family: string
+          font_heading: string
+          footer_links: Json | null
+          footer_text: string | null
+          id: string
+          logo_dark_url: string | null
+          logo_url: string | null
+          meta_description: string | null
+          platform_name: string
+          primary_color: string
+          secondary_color: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          button_color?: string
+          button_text_color?: string
+          custom_css?: string | null
+          default_image_url?: string | null
+          favicon_url?: string | null
+          font_family?: string
+          font_heading?: string
+          footer_links?: Json | null
+          footer_text?: string | null
+          id?: string
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          meta_description?: string | null
+          platform_name?: string
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          button_color?: string
+          button_text_color?: string
+          custom_css?: string | null
+          default_image_url?: string | null
+          favicon_url?: string | null
+          font_family?: string
+          font_heading?: string
+          footer_links?: Json | null
+          footer_text?: string | null
+          id?: string
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          meta_description?: string | null
+          platform_name?: string
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       platform_payment_providers: {
         Row: {
