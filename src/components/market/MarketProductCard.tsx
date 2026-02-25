@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
-import { Store, MapPin } from "lucide-react";
+import { Store, MapPin, ShoppingCart, Sparkles, TrendingUp } from "lucide-react";
+import { motion } from "framer-motion";
+import { useCart } from "@/hooks/useCart";
 
 interface MarketProductCardProps {
   id: string;
@@ -15,9 +17,11 @@ interface MarketProductCardProps {
   avg_rating?: number | null;
   review_count?: number | null;
   index?: number;
+  badge?: "promo" | "new" | "top" | null;
 }
 
 export function MarketProductCard({
+  id,
   name,
   slug,
   price,
@@ -27,91 +31,131 @@ export function MarketProductCard({
   store_slug,
   store_city,
   currency,
+  index = 0,
+  badge,
 }: MarketProductCardProps) {
-  const imageUrl =
-    Array.isArray(images) && images.length > 0 ? images[0] : null;
+  const imageUrl = Array.isArray(images) && images.length > 0 ? images[0] : null;
+  const { addItem } = useCart();
 
   const formatPrice = (p: number) => {
     if (currency === "XOF") return `${p.toLocaleString("fr-FR")} FCFA`;
     return `€${p.toFixed(2)}`;
   };
 
+  const discount = compare_at_price && compare_at_price > price
+    ? Math.round(((compare_at_price - price) / compare_at_price) * 100)
+    : null;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem({
+      productId: id,
+      name,
+      price,
+      image: imageUrl,
+      storeSlug: store_slug,
+      storeName: store_name,
+      storeId: "",
+      slug,
+      currency,
+      maxStock: 99,
+    });
+  };
+
+  const badgeConfig = {
+    promo: { label: "Promo", icon: Sparkles, bg: "rgba(239,68,68,0.9)" },
+    new: { label: "Nouveau", icon: Sparkles, bg: "rgba(59,130,246,0.9)" },
+    top: { label: "Top", icon: TrendingUp, bg: "rgba(234,179,8,0.9)" },
+  };
+
   return (
-    <Link
-      to={`/market/product/${slug}`}
-      className="group block overflow-hidden transition-opacity duration-200 hover:opacity-90"
-      style={{ borderRadius: "0.75rem" }}
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.04, 0.3), duration: 0.4 }}
     >
-      {/* Image */}
-      <div
-        className="aspect-square relative overflow-hidden"
-        style={{ background: "#1A1A1F", borderRadius: "0.75rem" }}
+      <Link
+        to={`/market/product/${slug}`}
+        className="group block rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.05)",
+        }}
       >
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ color: "#333" }}>
-            <Store size={36} />
+        {/* Image */}
+        <div className="aspect-square relative overflow-hidden" style={{ background: "#111318" }}>
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={name}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center" style={{ color: "#333" }}>
+              <Store size={36} />
+            </div>
+          )}
+
+          {/* Badges */}
+          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
+            {discount && (
+              <span className="text-[10px] px-2 py-0.5 font-semibold rounded-md" style={{ background: "rgba(239,68,68,0.9)", color: "#FFF" }}>
+                -{discount}%
+              </span>
+            )}
+            {badge && badgeConfig[badge] && (
+              <span className="text-[10px] px-2 py-0.5 font-semibold rounded-md flex items-center gap-1" style={{ background: badgeConfig[badge].bg, color: "#FFF" }}>
+                {badgeConfig[badge].label}
+              </span>
+            )}
           </div>
-        )}
-        {compare_at_price && compare_at_price > price && (
-          <div
-            className="absolute top-2.5 right-2.5 text-[10px] px-2 py-0.5"
+
+          {/* Quick add button */}
+          <button
+            onClick={handleAddToCart}
+            className="absolute bottom-2.5 right-2.5 h-9 w-9 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0"
             style={{
-              background: "rgba(239,68,68,0.9)",
-              color: "#FFFFFF",
-              borderRadius: "0.375rem",
-              fontWeight: 600,
+              background: "hsl(var(--primary))",
+              color: "#0E0E11",
             }}
+            title="Ajouter au panier"
           >
-            -{Math.round(((compare_at_price - price) / compare_at_price) * 100)}%
+            <ShoppingCart size={15} />
+          </button>
+        </div>
+
+        {/* Info */}
+        <div className="p-3.5 space-y-2">
+          <h3 className="text-sm leading-snug line-clamp-2 font-medium" style={{ color: "#FFFFFF" }}>
+            {name}
+          </h3>
+
+          <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "#6B7280" }}>
+            <Store size={10} />
+            <span className="truncate">{store_name}</span>
+            {store_city && (
+              <>
+                <span style={{ color: "#333" }}>·</span>
+                <MapPin size={9} />
+                <span>{store_city}</span>
+              </>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Info */}
-      <div className="pt-3.5 pb-1 space-y-1.5">
-        <h3
-          className="text-sm leading-snug line-clamp-2"
-          style={{ color: "#FFFFFF", fontWeight: 500 }}
-        >
-          {name}
-        </h3>
-
-        <div className="flex items-center gap-1.5 text-xs" style={{ color: "#6B7280" }}>
-          <Store size={11} />
-          <Link
-            to={`/market/vendor/${store_slug}`}
-            className="transition-colors duration-200 hover:opacity-70"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {store_name}
-          </Link>
-          {store_city && (
-            <>
-              <span style={{ color: "#333" }}>·</span>
-              <MapPin size={10} />
-              <span>{store_city}</span>
-            </>
-          )}
-        </div>
-
-        <div className="flex items-baseline gap-2 pt-0.5">
-          <span style={{ color: "#FFFFFF", fontWeight: 600, fontSize: "0.9375rem" }}>
-            {formatPrice(price)}
-          </span>
-          {compare_at_price && compare_at_price > price && (
-            <span className="line-through" style={{ color: "#6B7280", fontSize: "0.75rem" }}>
-              {formatPrice(compare_at_price)}
+          <div className="flex items-baseline gap-2">
+            <span className="font-bold text-[0.9375rem]" style={{ color: "#FFFFFF" }}>
+              {formatPrice(price)}
             </span>
-          )}
+            {compare_at_price && compare_at_price > price && (
+              <span className="line-through text-xs" style={{ color: "#6B7280" }}>
+                {formatPrice(compare_at_price)}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </motion.div>
   );
 }
