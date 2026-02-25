@@ -3,6 +3,7 @@ import { ShoppingCart, DollarSign, Eye, TrendingUp, TrendingDown } from "lucide-
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface KpiData {
   ordersToday: number;
@@ -15,6 +16,7 @@ interface KpiData {
 
 export default function KpiCardsWidget() {
   const { store } = useStore();
+  const { t } = useTranslation();
   const [data, setData] = useState<KpiData>({
     ordersToday: 0,
     revenueToday: 0,
@@ -85,25 +87,25 @@ export default function KpiCardsWidget() {
 
   const kpis = [
     {
-      label: "Commandes aujourd'hui",
+      label: t.dashboard.ordersToday,
       value: data.ordersToday.toString(),
       trend: data.ordersTrend,
       icon: ShoppingCart,
     },
     {
-      label: "CA du jour",
+      label: t.dashboard.revenueToday,
       value: formatCurrency(data.revenueToday),
       trend: data.revenueTrend,
       icon: DollarSign,
     },
     {
-      label: "CA de la semaine",
+      label: t.dashboard.revenueWeek,
       value: formatCurrency(data.revenueWeek),
       trend: null,
       icon: DollarSign,
     },
     {
-      label: "Visiteurs aujourd'hui",
+      label: t.dashboard.visitorsToday,
       value: data.visitorsToday.toString(),
       trend: null,
       icon: Eye,
