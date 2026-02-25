@@ -41,6 +41,18 @@ const HANDLER_MAP: Record<string, string[]> = {
     "risk.recalculate_buyer",
     "risk.recalculate_seller",
   ],
+  "order.completed": [
+    "ranking.recalculate_product",
+    "risk.recalculate_seller",
+  ],
+  "review.added": [
+    "ranking.recalculate_product",
+  ],
+  "return.processed": [
+    "ranking.recalculate_product",
+    "risk.recalculate_seller",
+    "risk.recalculate_buyer",
+  ],
 };
 
 // ── Handler implementations ──
@@ -208,14 +220,25 @@ async function runHandler(
       }
 
       case "risk.recalculate_buyer": {
-        // Recalculate buyer risk based on the order's customer
         if (!payload?.customer_user_id) return { success: true };
-        const url = Deno.env.get("SUPABASE_URL")!;
-        const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        await fetch(`${url}/functions/v1/calculate-risk-scores`, {
+        const url3 = Deno.env.get("SUPABASE_URL")!;
+        const key3 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        await fetch(`${url3}/functions/v1/calculate-risk-scores`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key3}` },
           body: JSON.stringify({ action: "calculate_one", target_type: "user", target_id: payload.customer_user_id }),
+        });
+        return { success: true };
+      }
+
+      case "ranking.recalculate_product": {
+        const productIds = payload?.product_ids || (payload?.product_id ? [payload.product_id] : [aggregateId]);
+        const url4 = Deno.env.get("SUPABASE_URL")!;
+        const key4 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        await fetch(`${url4}/functions/v1/calculate-rankings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key4}` },
+          body: JSON.stringify({ product_ids: productIds }),
         });
         return { success: true };
       }

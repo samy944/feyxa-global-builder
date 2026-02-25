@@ -1862,6 +1862,68 @@ export type Database = {
           },
         ]
       }
+      product_ranking_scores: {
+        Row: {
+          conversion_rate: number
+          created_at: string
+          id: string
+          last_calculated_at: string
+          previous_score: number
+          product_id: string
+          rating: number
+          return_rate: number
+          review_count: number
+          risk_penalty: number
+          sales_30d: number
+          sales_weight: number
+          score: number
+          seller_sla: number
+          trending_badge: boolean
+        }
+        Insert: {
+          conversion_rate?: number
+          created_at?: string
+          id?: string
+          last_calculated_at?: string
+          previous_score?: number
+          product_id: string
+          rating?: number
+          return_rate?: number
+          review_count?: number
+          risk_penalty?: number
+          sales_30d?: number
+          sales_weight?: number
+          score?: number
+          seller_sla?: number
+          trending_badge?: boolean
+        }
+        Update: {
+          conversion_rate?: number
+          created_at?: string
+          id?: string
+          last_calculated_at?: string
+          previous_score?: number
+          product_id?: string
+          rating?: number
+          return_rate?: number
+          review_count?: number
+          risk_penalty?: number
+          sales_30d?: number
+          sales_weight?: number
+          score?: number
+          seller_sla?: number
+          trending_badge?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_ranking_scores_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_variants: {
         Row: {
           created_at: string
