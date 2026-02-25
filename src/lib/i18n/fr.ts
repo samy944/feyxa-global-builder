@@ -74,9 +74,15 @@ const _fr = {
     marketplace: "Marketplace",
     login: "Se connecter",
     signup: "Créer un compte",
+    createStore: "Créer ma boutique",
     dashboard: "Dashboard",
     myAccount: "Mon compte",
+    myOrders: "Mes commandes",
+    myWishlist: "Ma liste de souhaits",
+    settings: "Paramètres",
     logout: "Se déconnecter",
+    solutions: "Solutions",
+    account: "Compte",
   },
 
   // Hero

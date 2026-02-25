@@ -73,9 +73,15 @@ export const en: TranslationKeys = {
     marketplace: "Marketplace",
     login: "Log in",
     signup: "Sign up",
+    createStore: "Create my store",
     dashboard: "Dashboard",
     myAccount: "My Account",
+    myOrders: "My orders",
+    myWishlist: "My wishlist",
+    settings: "Settings",
     logout: "Log out",
+    solutions: "Solutions",
+    account: "Account",
   },
 
   // Hero
