@@ -877,6 +877,120 @@ export type Database = {
         }
         Relationships: []
       }
+      financing_offers: {
+        Row: {
+          accepted_at: string | null
+          amount_repaid: number
+          closed_at: string | null
+          created_at: string
+          defaulted_at: string | null
+          id: string
+          missed_cycles: number
+          offered_amount: number
+          remaining_balance: number
+          repayment_percentage: number
+          status: Database["public"]["Enums"]["financing_offer_status"]
+          store_id: string
+          total_repayable: number
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          amount_repaid?: number
+          closed_at?: string | null
+          created_at?: string
+          defaulted_at?: string | null
+          id?: string
+          missed_cycles?: number
+          offered_amount: number
+          remaining_balance: number
+          repayment_percentage?: number
+          status?: Database["public"]["Enums"]["financing_offer_status"]
+          store_id: string
+          total_repayable: number
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          amount_repaid?: number
+          closed_at?: string | null
+          created_at?: string
+          defaulted_at?: string | null
+          id?: string
+          missed_cycles?: number
+          offered_amount?: number
+          remaining_balance?: number
+          repayment_percentage?: number
+          status?: Database["public"]["Enums"]["financing_offer_status"]
+          store_id?: string
+          total_repayable?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financing_offers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financing_repayments: {
+        Row: {
+          amount_deducted: number
+          created_at: string
+          id: string
+          offer_id: string
+          payout_amount: number
+          payout_id: string | null
+          remaining_after: number
+          store_id: string
+        }
+        Insert: {
+          amount_deducted: number
+          created_at?: string
+          id?: string
+          offer_id: string
+          payout_amount: number
+          payout_id?: string | null
+          remaining_after: number
+          store_id: string
+        }
+        Update: {
+          amount_deducted?: number
+          created_at?: string
+          id?: string
+          offer_id?: string
+          payout_amount?: number
+          payout_id?: string | null
+          remaining_after?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financing_repayments_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "financing_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financing_repayments_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "payout_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financing_repayments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_metrics: {
         Row: {
           avg_daily_sales: number
@@ -2411,6 +2525,62 @@ export type Database = {
           },
         ]
       }
+      seller_financing_scores: {
+        Row: {
+          created_at: string
+          eligibility_score: number
+          frozen: boolean
+          frozen_reason: string | null
+          id: string
+          is_eligible: boolean
+          last_calculated_at: string
+          max_eligible_amount: number
+          reputation_score: number
+          return_rate: number
+          risk_score: number
+          sales_90d: number
+          store_id: string
+        }
+        Insert: {
+          created_at?: string
+          eligibility_score?: number
+          frozen?: boolean
+          frozen_reason?: string | null
+          id?: string
+          is_eligible?: boolean
+          last_calculated_at?: string
+          max_eligible_amount?: number
+          reputation_score?: number
+          return_rate?: number
+          risk_score?: number
+          sales_90d?: number
+          store_id: string
+        }
+        Update: {
+          created_at?: string
+          eligibility_score?: number
+          frozen?: boolean
+          frozen_reason?: string | null
+          id?: string
+          is_eligible?: boolean
+          last_calculated_at?: string
+          max_eligible_amount?: number
+          reputation_score?: number
+          return_rate?: number
+          risk_score?: number
+          sales_90d?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_financing_scores_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seller_reputation: {
         Row: {
           avg_rating: number
@@ -3476,6 +3646,10 @@ export type Database = {
         Args: { _token_hash: string; _user_id: string }
         Returns: Json
       }
+      accept_financing_offer: {
+        Args: { _offer_id: string; _user_id: string }
+        Returns: Json
+      }
       accept_invitation: {
         Args: { _token_hash: string; _user_id: string }
         Returns: Json
@@ -3545,6 +3719,10 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      process_financing_repayment: {
+        Args: { _payout_amount: number; _store_id: string }
+        Returns: Json
+      }
       release_escrow: { Args: { _escrow_id: string }; Returns: boolean }
       release_expired_stock_locks: { Args: never; Returns: number }
       request_payout: {
@@ -3601,6 +3779,12 @@ export type Database = {
         | "vendor"
       discount_type: "percentage" | "fixed"
       escrow_status: "held" | "released" | "refunded" | "disputed"
+      financing_offer_status:
+        | "offered"
+        | "accepted"
+        | "active"
+        | "closed"
+        | "defaulted"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
       kyc_status: "not_started" | "pending" | "approved" | "rejected"
       landing_status: "draft" | "published" | "archived"
@@ -3784,6 +3968,13 @@ export const Constants = {
       ],
       discount_type: ["percentage", "fixed"],
       escrow_status: ["held", "released", "refunded", "disputed"],
+      financing_offer_status: [
+        "offered",
+        "accepted",
+        "active",
+        "closed",
+        "defaulted",
+      ],
       invitation_status: ["pending", "accepted", "expired", "revoked"],
       kyc_status: ["not_started", "pending", "approved", "rejected"],
       landing_status: ["draft", "published", "archived"],

@@ -28,6 +28,7 @@ const HANDLER_MAP: Record<string, string[]> = {
   ],
   "payout.requested": [
     "fintech.process_payout",
+    "fintech.process_financing_repayment",
     "trust.audit_log",
   ],
   "ticket.created": [
@@ -103,7 +104,16 @@ async function runHandler(
       }
 
       case "fintech.process_payout": {
-        // Payout is already handled by request_payout RPC, this logs the event
+        return { success: true };
+      }
+
+      case "fintech.process_financing_repayment": {
+        if (!storeId || !payload?.payout_amount) return { success: true };
+        const { error } = await admin.rpc("process_financing_repayment", {
+          _store_id: storeId,
+          _payout_amount: payload.payout_amount,
+        });
+        if (error) throw error;
         return { success: true };
       }
 
