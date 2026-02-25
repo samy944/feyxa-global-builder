@@ -72,7 +72,16 @@ import AdminSettings from "./pages/AdminSettings";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 5 * 60 * 1000, // 5 min
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <ThemeProvider>
