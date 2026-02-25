@@ -573,22 +573,6 @@ export function LandingSectionRenderer({ section, theme, onCtaClick, storeId, pr
         </div>
       );
 
-    // ===== WHATSAPP =====
-    case "whatsapp-button":
-      return (
-        <motion.section {...fadeUp} className="py-14 px-6 text-center">
-          <a
-            href={`https://wa.me/${(data.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(data.message || "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 px-8 py-4 text-white font-semibold text-[17px] transition-all duration-300 hover:scale-[1.03] active:scale-95 shadow-lg"
-            style={{ backgroundColor: "#25D366", borderRadius: "980px" }}
-          >
-            <MessageCircle className="w-5 h-5" />
-            {data.label || "WhatsApp"}
-          </a>
-        </motion.section>
-      );
 
     // ===== BEFORE/AFTER =====
     case "before-after":

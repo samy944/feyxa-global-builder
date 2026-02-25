@@ -72,7 +72,7 @@ export default function SettingsSeo() {
         <div>
           <label className="text-sm font-medium text-foreground mb-1.5 block">Image OG (partage réseaux sociaux)</label>
           <Input value={ogImageUrl} onChange={(e) => setOgImageUrl(e.target.value)} placeholder="https://..." />
-          <p className="text-xs text-muted-foreground mt-1">Image affichée lors du partage sur Facebook, WhatsApp, etc. Taille recommandée : 1200×630px</p>
+          <p className="text-xs text-muted-foreground mt-1">Image affichée lors du partage sur les réseaux sociaux. Taille recommandée : 1200×630px</p>
         </div>
 
         <div>

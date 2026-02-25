@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Settings, Tag, Truck, Brain,
-  ChevronLeft, Wallet, FileText, Zap, TrendingUp, Store, MessageSquare, RotateCcw, Shield,
+  LayoutGrid, Package, ShoppingCart, Users, BarChart2, Settings, Megaphone, Truck, Cpu,
+  ChevronLeft, Wallet, FileText, Lightbulb, TrendingUp, Store, MessageSquare, RotateCcw, Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -20,16 +20,16 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const { t } = useTranslation();
 
   const navItems = [
-    { icon: LayoutDashboard, label: t.dashboard.overview, path: "/dashboard" },
+    { icon: LayoutGrid, label: t.dashboard.overview, path: "/dashboard" },
     { icon: Package, label: t.dashboard.products, path: "/dashboard/products" },
     { icon: ShoppingCart, label: t.dashboard.orders, path: "/dashboard/orders" },
     { icon: Users, label: t.dashboard.customers, path: "/dashboard/customers" },
-    { icon: Tag, label: t.dashboard.marketing, path: "/dashboard/marketing" },
+    { icon: Megaphone, label: t.dashboard.marketing, path: "/dashboard/marketing" },
     { icon: Truck, label: t.dashboard.shipping, path: "/dashboard/shipping" },
-    { icon: BarChart3, label: t.dashboard.analytics, path: "/dashboard/analytics" },
-    { icon: Brain, label: t.dashboard.ai, path: "/dashboard/ai" },
+    { icon: BarChart2, label: t.dashboard.analytics, path: "/dashboard/analytics" },
+    { icon: Cpu, label: t.dashboard.ai, path: "/dashboard/ai" },
     { icon: Wallet, label: t.dashboard.wallet, path: "/dashboard/wallet" },
-    { icon: Zap, label: t.dashboard.insights, path: "/dashboard/insights" },
+    { icon: Lightbulb, label: t.dashboard.insights, path: "/dashboard/insights" },
     { icon: TrendingUp, label: t.dashboard.trends, path: "/dashboard/trends" },
     { icon: FileText, label: t.dashboard.landings, path: "/dashboard/landings" },
     { icon: MessageSquare, label: t.dashboard.tickets, path: "/dashboard/tickets" },
