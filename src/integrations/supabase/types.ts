@@ -991,6 +991,102 @@ export type Database = {
           },
         ]
       }
+      inbound_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          received_quantity: number
+          shipment_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          received_quantity?: number
+          shipment_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          received_quantity?: number
+          shipment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_items_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "inbound_shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbound_shipments: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          received_at: string | null
+          shipped_at: string | null
+          status: Database["public"]["Enums"]["shipment_status"]
+          store_id: string
+          tracking_number: string | null
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          shipped_at?: string | null
+          status?: Database["public"]["Enums"]["shipment_status"]
+          store_id: string
+          tracking_number?: string | null
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          shipped_at?: string | null
+          status?: Database["public"]["Enums"]["shipment_status"]
+          store_id?: string
+          tracking_number?: string | null
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_shipments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_shipments_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_metrics: {
         Row: {
           avg_daily_sales: number
@@ -1767,6 +1863,76 @@ export type Database = {
         }
         Relationships: []
       }
+      outbound_shipments: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          id: string
+          order_id: string
+          packed_at: string | null
+          picked_at: string | null
+          shipped_at: string | null
+          sla_deadline: string | null
+          status: Database["public"]["Enums"]["outbound_status"]
+          store_id: string
+          tracking_number: string | null
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          order_id: string
+          packed_at?: string | null
+          picked_at?: string | null
+          shipped_at?: string | null
+          sla_deadline?: string | null
+          status?: Database["public"]["Enums"]["outbound_status"]
+          store_id: string
+          tracking_number?: string | null
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          order_id?: string
+          packed_at?: string | null
+          picked_at?: string | null
+          shipped_at?: string | null
+          sla_deadline?: string | null
+          status?: Database["public"]["Enums"]["outbound_status"]
+          store_id?: string
+          tracking_number?: string | null
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_shipments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_shipments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_shipments_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payout_requests: {
         Row: {
           amount: number
@@ -1993,6 +2159,7 @@ export type Database = {
           country_id: string
           created_at: string
           currency_code: string
+          fulfillment_type: Database["public"]["Enums"]["fulfillment_type"]
           id: string
           is_available: boolean
           price: number
@@ -2005,6 +2172,7 @@ export type Database = {
           country_id: string
           created_at?: string
           currency_code?: string
+          fulfillment_type?: Database["public"]["Enums"]["fulfillment_type"]
           id?: string
           is_available?: boolean
           price?: number
@@ -2017,6 +2185,7 @@ export type Database = {
           country_id?: string
           created_at?: string
           currency_code?: string
+          fulfillment_type?: Database["public"]["Enums"]["fulfillment_type"]
           id?: string
           is_available?: boolean
           price?: number
@@ -3549,6 +3718,108 @@ export type Database = {
           },
         ]
       }
+      warehouse_inventory: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          reserved_quantity: number
+          store_id: string
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          reserved_quantity?: number
+          store_id: string
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          reserved_quantity?: number
+          store_id?: string
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_inventory_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_inventory_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouses: {
+        Row: {
+          address: string | null
+          capacity: number
+          city: string
+          country_id: string | null
+          created_at: string
+          current_occupancy: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          capacity?: number
+          city: string
+          country_id?: string | null
+          created_at?: string
+          current_occupancy?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          capacity?: number
+          city?: string
+          country_id?: string | null
+          created_at?: string
+          current_occupancy?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouses_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wishlists: {
         Row: {
           created_at: string
@@ -3654,6 +3925,7 @@ export type Database = {
         Args: { _token_hash: string; _user_id: string }
         Returns: Json
       }
+      assign_fulfillment: { Args: { _order_id: string }; Returns: Json }
       can_access_ticket: {
         Args: { _ticket_id: string; _user_id: string }
         Returns: boolean
@@ -3723,6 +3995,10 @@ export type Database = {
         Args: { _payout_amount: number; _store_id: string }
         Returns: Json
       }
+      receive_inbound_shipment: {
+        Args: { _shipment_id: string }
+        Returns: Json
+      }
       release_escrow: { Args: { _escrow_id: string }; Returns: boolean }
       release_expired_stock_locks: { Args: never; Returns: number }
       request_payout: {
@@ -3785,6 +4061,7 @@ export type Database = {
         | "active"
         | "closed"
         | "defaulted"
+      fulfillment_type: "seller" | "feyxa"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
       kyc_status: "not_started" | "pending" | "approved" | "rejected"
       landing_status: "draft" | "published" | "archived"
@@ -3803,6 +4080,13 @@ export type Database = {
         | "cancelled"
         | "refunded"
         | "dispute"
+      outbound_status:
+        | "pending"
+        | "picking"
+        | "packed"
+        | "shipped"
+        | "delivered"
+        | "cancelled"
       payment_status: "pending" | "paid" | "cod" | "failed" | "refunded"
       payout_status: "pending" | "approved" | "paid" | "rejected"
       return_status:
@@ -3812,6 +4096,7 @@ export type Database = {
         | "rejected"
         | "received"
         | "refunded"
+      shipment_status: "draft" | "in_transit" | "received" | "cancelled"
       store_role:
         | "owner"
         | "admin"
@@ -3975,6 +4260,7 @@ export const Constants = {
         "closed",
         "defaulted",
       ],
+      fulfillment_type: ["seller", "feyxa"],
       invitation_status: ["pending", "accepted", "expired", "revoked"],
       kyc_status: ["not_started", "pending", "approved", "rejected"],
       landing_status: ["draft", "published", "archived"],
@@ -3995,6 +4281,14 @@ export const Constants = {
         "refunded",
         "dispute",
       ],
+      outbound_status: [
+        "pending",
+        "picking",
+        "packed",
+        "shipped",
+        "delivered",
+        "cancelled",
+      ],
       payment_status: ["pending", "paid", "cod", "failed", "refunded"],
       payout_status: ["pending", "approved", "paid", "rejected"],
       return_status: [
@@ -4005,6 +4299,7 @@ export const Constants = {
         "received",
         "refunded",
       ],
+      shipment_status: ["draft", "in_transit", "received", "cancelled"],
       store_role: [
         "owner",
         "admin",

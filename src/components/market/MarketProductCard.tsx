@@ -18,6 +18,7 @@ interface MarketProductCardProps {
   review_count?: number | null;
   index?: number;
   badge?: "promo" | "new" | "top" | null;
+  fulfillment_type?: "seller" | "feyxa" | null;
 }
 
 export function MarketProductCard({
@@ -33,6 +34,7 @@ export function MarketProductCard({
   currency,
   index = 0,
   badge,
+  fulfillment_type,
 }: MarketProductCardProps) {
   const imageUrl = Array.isArray(images) && images.length > 0 ? images[0] : null;
   const { addItem } = useCart();
@@ -108,6 +110,11 @@ export function MarketProductCard({
             {badge && badgeConfig[badge] && (
               <span className="text-[10px] px-2 py-0.5 font-semibold rounded-md flex items-center gap-1" style={{ background: badgeConfig[badge].bg, color: "#FFF" }}>
                 {badgeConfig[badge].label}
+              </span>
+            )}
+            {fulfillment_type === "feyxa" && (
+              <span className="text-[10px] px-2 py-0.5 font-semibold rounded-md flex items-center gap-1" style={{ background: "rgba(16,185,129,0.9)", color: "#FFF" }}>
+                ⚡ Expédié par Feyxa
               </span>
             )}
           </div>
