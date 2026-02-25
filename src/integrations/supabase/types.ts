@@ -959,6 +959,60 @@ export type Database = {
           },
         ]
       }
+      marketplace_listings: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["marketplace_listing_status"]
+          store_id: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["marketplace_listing_status"]
+          store_id: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["marketplace_listing_status"]
+          store_id?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
@@ -2812,6 +2866,12 @@ export type Database = {
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
       kyc_status: "not_started" | "pending" | "approved" | "rejected"
       landing_status: "draft" | "published" | "archived"
+      marketplace_listing_status:
+        | "hidden"
+        | "submitted"
+        | "approved"
+        | "published"
+        | "rejected"
       order_status:
         | "new"
         | "confirmed"
@@ -2989,6 +3049,13 @@ export const Constants = {
       invitation_status: ["pending", "accepted", "expired", "revoked"],
       kyc_status: ["not_started", "pending", "approved", "rejected"],
       landing_status: ["draft", "published", "archived"],
+      marketplace_listing_status: [
+        "hidden",
+        "submitted",
+        "approved",
+        "published",
+        "rejected",
+      ],
       order_status: [
         "new",
         "confirmed",

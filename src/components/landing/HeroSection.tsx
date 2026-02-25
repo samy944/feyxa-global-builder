@@ -38,7 +38,7 @@ export function HeroSection() {
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="flex flex-wrap justify-center lg:justify-start gap-4">
               <Button variant="hero" size="lg" asChild>
-                <Link to="/signup">
+                <Link to="/start">
                   {t.hero.cta}
                   <ArrowRight size={16} />
                 </Link>
