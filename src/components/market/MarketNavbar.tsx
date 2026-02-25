@@ -9,6 +9,7 @@ import { GlobalSearch } from "@/components/market/GlobalSearch";
 import { useTranslation } from "@/lib/i18n";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { BrandLogo } from "@/components/landing/BrandLogo";
 
 export function MarketNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -22,7 +23,6 @@ export function MarketNavbar() {
   const { t } = useTranslation();
   const accountRef = useRef<HTMLDivElement>(null);
 
-  // Close account dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (accountRef.current && !accountRef.current.contains(e.target as Node)) setAccountOpen(false);
@@ -55,23 +55,10 @@ export function MarketNavbar() {
       }}
     >
       <div className="container flex h-16 items-center justify-between gap-4">
-        {/* ─── LEFT: Logo ─── */}
-        <Link to="/market" className="flex items-center gap-2.5 shrink-0">
-          <div
-            className="h-8 w-8 rounded-lg flex items-center justify-center"
-            style={{ background: "hsl(var(--primary))" }}
-          >
-            <span className="font-bold text-sm" style={{ color: "#0E0E11" }}>F</span>
-          </div>
-          <span
-            className="font-heading text-lg tracking-wide hidden sm:inline"
-            style={{ color: "#FFFFFF", fontWeight: 700, letterSpacing: "0.04em" }}
-          >
-            FEYXA
-          </span>
-        </Link>
+        {/* Logo — dynamique */}
+        <BrandLogo to="/market" />
 
-        {/* ─── CENTER: Navigation ─── */}
+        {/* CENTER: Navigation */}
         <nav className="hidden lg:flex items-center gap-10">
           {centerLinks.map((link) => (
             <Link
@@ -89,9 +76,8 @@ export function MarketNavbar() {
           ))}
         </nav>
 
-        {/* ─── RIGHT: Actions ─── */}
+        {/* RIGHT: Actions */}
         <div className="hidden md:flex items-center gap-2">
-          {/* Expandable search */}
           <div className="relative">
             <AnimatePresence>
               {searchExpanded ? (
@@ -118,10 +104,8 @@ export function MarketNavbar() {
             </button>
           </div>
 
-          {/* Country selector */}
           <LocationSelector />
 
-          {/* Cart */}
           <button
             onClick={() => setIsOpen(true)}
             className="relative p-2.5 rounded-lg transition-all duration-200 hover:bg-white/5"
@@ -130,15 +114,13 @@ export function MarketNavbar() {
             <ShoppingBag size={17} />
             {totalItems > 0 && (
               <span
-                className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full text-[10px] font-bold flex items-center justify-center"
-                style={{ background: "hsl(var(--primary))", color: "#0E0E11" }}
+                className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full text-[10px] font-bold flex items-center justify-center bg-primary text-primary-foreground"
               >
                 {totalItems}
               </span>
             )}
           </button>
 
-          {/* Account dropdown */}
           <div className="relative" ref={accountRef}>
             <button
               onClick={() => setAccountOpen(!accountOpen)}
@@ -156,20 +138,11 @@ export function MarketNavbar() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -6, scale: 0.96 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute top-full mt-2 right-0 w-56 z-50 overflow-hidden"
-                  style={{
-                    background: "#1A1A1F",
-                    borderRadius: "0.75rem",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
-                  }}
+                  className="absolute top-full mt-2 right-0 w-56 z-50 overflow-hidden rounded-xl border border-border bg-popover shadow-elevated"
                 >
                   {user ? (
                     <>
-                      <div
-                        className="px-4 py-3 text-xs truncate"
-                        style={{ color: "#6B7280", borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-                      >
+                      <div className="px-4 py-3 text-xs truncate text-muted-foreground border-b border-border">
                         {user.email}
                       </div>
                       <div className="py-1">
@@ -181,11 +154,10 @@ export function MarketNavbar() {
                           <DropdownLink icon={<LayoutDashboard size={14} />} label={t.navbar.dashboard} to="/dashboard" onClick={() => setAccountOpen(false)} />
                         )}
                       </div>
-                      <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                      <div className="border-t border-border">
                         <button
                           onClick={handleLogout}
-                          className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 hover:bg-white/5"
-                          style={{ color: "#EF4444" }}
+                          className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 hover:bg-accent/50 text-destructive"
                         >
                           <LogOut size={14} />
                           {t.navbar.logout}
@@ -203,49 +175,31 @@ export function MarketNavbar() {
             </AnimatePresence>
           </div>
 
-          {/* CTA */}
           <Link
             to="/start"
-            className="px-5 py-2 text-xs font-semibold tracking-wide uppercase transition-all duration-200 hover:opacity-90"
-            style={{
-              background: "hsl(var(--primary))",
-              color: "#0E0E11",
-              borderRadius: "0.5rem",
-              letterSpacing: "0.04em",
-            }}
+            className="px-5 py-2 text-xs font-semibold tracking-wide uppercase transition-all duration-200 hover:opacity-90 bg-primary text-primary-foreground rounded-lg"
           >
             {t.navbar.createStore}
           </Link>
         </div>
 
-        {/* ─── MOBILE: Minimal right actions ─── */}
+        {/* MOBILE */}
         <div className="flex items-center gap-1 md:hidden">
-          <button
-            onClick={() => setIsOpen(true)}
-            className="relative p-2"
-            style={{ color: "#FFFFFF" }}
-          >
+          <button onClick={() => setIsOpen(true)} className="relative p-2 text-foreground">
             <ShoppingBag size={18} />
             {totalItems > 0 && (
-              <span
-                className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full text-[9px] font-bold flex items-center justify-center"
-                style={{ background: "hsl(var(--primary))", color: "#0E0E11" }}
-              >
+              <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full text-[9px] font-bold flex items-center justify-center bg-primary text-primary-foreground">
                 {totalItems}
               </span>
             )}
           </button>
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="p-2"
-            style={{ color: "#FFFFFF" }}
-          >
+          <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-foreground">
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </div>
 
-      {/* ─── MOBILE DRAWER ─── */}
+      {/* MOBILE DRAWER */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -253,57 +207,30 @@ export function MarketNavbar() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden overflow-hidden"
-            style={{
-              background: "#141419",
-              borderTop: "1px solid rgba(255,255,255,0.05)",
-            }}
+            className="md:hidden overflow-hidden border-t border-border bg-popover"
           >
             <div className="container py-5 flex flex-col gap-4">
-              {/* Search */}
               <GlobalSearch />
-
-              {/* Nav links */}
               <div className="flex flex-col gap-1">
                 {centerLinks.map((link) => (
                   <Link
                     key={link.href}
                     to={link.href}
-                    className="text-sm py-2.5 px-3 rounded-lg transition-colors duration-150"
-                    style={{
-                      color: isActive(link.href) ? "#FFFFFF" : "rgba(255,255,255,0.5)",
-                      fontWeight: isActive(link.href) ? 600 : 400,
-                      background: isActive(link.href) ? "rgba(255,255,255,0.04)" : "transparent",
-                    }}
+                    className={`text-sm py-2.5 px-3 rounded-lg transition-colors duration-150 ${isActive(link.href) ? "text-foreground font-semibold bg-accent/30" : "text-muted-foreground"}`}
                     onClick={() => setMobileOpen(false)}
                   >
                     {link.label}
                   </Link>
                 ))}
               </div>
-
-              {/* Country */}
-              <div className="px-3">
-                <LocationSelector />
-              </div>
-
-              {/* Account links */}
-              <div
-                className="flex flex-col gap-1 pt-3"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
-              >
+              <div className="px-3"><LocationSelector /></div>
+              <div className="flex flex-col gap-1 pt-3 border-t border-border">
                 {user ? (
                   <>
                     <MobileLink label={t.navbar.myAccount} to="/account" onClick={() => setMobileOpen(false)} />
                     <MobileLink label={t.navbar.myOrders} to="/account/orders" onClick={() => setMobileOpen(false)} />
-                    {isVendor && (
-                      <MobileLink label={t.navbar.dashboard} to="/dashboard" onClick={() => setMobileOpen(false)} />
-                    )}
-                    <button
-                      onClick={() => { setMobileOpen(false); handleLogout(); }}
-                      className="text-sm py-2.5 px-3 text-left rounded-lg"
-                      style={{ color: "#EF4444" }}
-                    >
+                    {isVendor && <MobileLink label={t.navbar.dashboard} to="/dashboard" onClick={() => setMobileOpen(false)} />}
+                    <button onClick={() => { setMobileOpen(false); handleLogout(); }} className="text-sm py-2.5 px-3 text-left rounded-lg text-destructive">
                       {t.navbar.logout}
                     </button>
                   </>
@@ -314,15 +241,9 @@ export function MarketNavbar() {
                   </>
                 )}
               </div>
-
-              {/* CTA */}
               <Link
                 to="/start"
-                className="mx-3 text-center py-3 text-sm font-semibold rounded-lg transition-opacity duration-200 hover:opacity-90"
-                style={{
-                  background: "hsl(var(--primary))",
-                  color: "#0E0E11",
-                }}
+                className="mx-3 text-center py-3 text-sm font-semibold rounded-lg bg-primary text-primary-foreground"
                 onClick={() => setMobileOpen(false)}
               >
                 {t.navbar.createStore}
@@ -335,15 +256,12 @@ export function MarketNavbar() {
   );
 }
 
-/* ─── Helper components ─── */
-
 function DropdownLink({ icon, label, to, onClick }: { icon: React.ReactNode; label: string; to: string; onClick: () => void }) {
   return (
     <Link
       to={to}
       onClick={onClick}
-      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm transition-colors duration-150 hover:bg-white/5"
-      style={{ color: "#d1d5db" }}
+      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm transition-colors duration-150 hover:bg-accent/50 text-foreground"
     >
       {icon}
       {label}
@@ -356,8 +274,7 @@ function MobileLink({ label, to, onClick }: { label: string; to: string; onClick
     <Link
       to={to}
       onClick={onClick}
-      className="text-sm py-2.5 px-3 rounded-lg transition-colors duration-150 hover:bg-white/5"
-      style={{ color: "rgba(255,255,255,0.6)" }}
+      className="text-sm py-2.5 px-3 rounded-lg transition-colors duration-150 hover:bg-accent/30 text-muted-foreground"
     >
       {label}
     </Link>

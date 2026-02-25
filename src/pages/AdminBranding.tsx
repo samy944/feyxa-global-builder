@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Save, Loader2, Upload, Palette, Type, Image, FileText, Link2, RefreshCw
+  Save, Loader2, Upload, Palette, Type, Image, FileText, Link2
 } from "lucide-react";
 
 type Branding = {
@@ -35,20 +35,13 @@ function ColorInput({ label, value, onChange }: { label: string; value: string; 
     <div className="space-y-1.5">
       <Label className="text-xs">{label}</Label>
       <div className="flex items-center gap-2">
-        <div className="relative">
-          <input
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-10 h-10 rounded-lg border border-border cursor-pointer bg-transparent p-0.5"
-          />
-        </div>
-        <Input
+        <input
+          type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 font-mono text-xs"
-          placeholder="#000000"
+          className="w-10 h-10 rounded-lg border border-border cursor-pointer bg-transparent p-0.5"
         />
+        <Input value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 font-mono text-xs" placeholder="#000000" />
       </div>
     </div>
   );
@@ -71,31 +64,40 @@ export default function AdminBranding() {
     if (!branding) return;
     setSaving(true);
     const { id, ...payload } = branding;
-    const { error } = await supabase.from("platform_branding").update(payload).eq("id", id);
+    const { error } = await supabase.from("platform_branding").update(payload as any).eq("id", id);
     setSaving(false);
-    if (error) { toast.error("Erreur de sauvegarde"); return; }
-    toast.success("Branding mis à jour — les changements seront visibles au rechargement de la page");
+    if (error) { toast.error("Erreur de sauvegarde: " + error.message); return; }
+    toast.success("Branding mis à jour — rechargez la page pour voir les changements");
   };
 
   const uploadFile = async (field: string, file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Seules les images sont acceptées");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Fichier trop volumineux (max 5 Mo)");
+      return;
+    }
+
     setUploading(field);
-    const ext = file.name.split(".").pop();
-    const path = `branding/${field}-${Date.now()}.${ext}`;
-    
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${field}-${Date.now()}.${ext}`;
+
     const { error: uploadError } = await supabase.storage
-      .from("store-assets")
-      .upload(path, file, { upsert: true });
+      .from("branding-assets")
+      .upload(path, file, { upsert: true, contentType: file.type });
 
     if (uploadError) {
-      toast.error("Erreur d'upload");
+      toast.error("Erreur d'upload: " + uploadError.message);
       setUploading(null);
       return;
     }
 
-    const { data: { publicUrl } } = supabase.storage.from("store-assets").getPublicUrl(path);
+    const { data: { publicUrl } } = supabase.storage.from("branding-assets").getPublicUrl(path);
     setBranding({ ...branding!, [field]: publicUrl });
     setUploading(null);
-    toast.success("Fichier uploadé");
+    toast.success("Fichier uploadé avec succès");
   };
 
   const update = (key: string, val: any) => setBranding({ ...branding!, [key]: val });
@@ -123,7 +125,6 @@ export default function AdminBranding() {
           <TabsTrigger value="advanced" className="gap-1.5"><Link2 size={14} /> Avancé</TabsTrigger>
         </TabsList>
 
-        {/* Identity */}
         <TabsContent value="identity">
           <Card>
             <CardHeader>
@@ -133,7 +134,7 @@ export default function AdminBranding() {
             <CardContent className="space-y-4">
               <div><Label>Nom de la plateforme</Label><Input value={branding.platform_name} onChange={(e) => update("platform_name", e.target.value)} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>Police principale (body)</Label><Input value={branding.font_family} onChange={(e) => update("font_family", e.target.value)} placeholder="Inter" /></div>
+                <div><Label>Police principale (body)</Label><Input value={branding.font_family} onChange={(e) => update("font_family", e.target.value)} placeholder="Manrope" /></div>
                 <div><Label>Police titres (heading)</Label><Input value={branding.font_heading} onChange={(e) => update("font_heading", e.target.value)} placeholder="Clash Display" /></div>
               </div>
               <div><Label>Meta description</Label><Textarea value={branding.meta_description || ""} onChange={(e) => update("meta_description", e.target.value)} placeholder="Description SEO de la plateforme" /></div>
@@ -141,7 +142,6 @@ export default function AdminBranding() {
           </Card>
         </TabsContent>
 
-        {/* Colors */}
         <TabsContent value="colors">
           <Card>
             <CardHeader>
@@ -155,16 +155,11 @@ export default function AdminBranding() {
                 <ColorInput label="Couleur boutons" value={branding.button_color} onChange={(v) => update("button_color", v)} />
                 <ColorInput label="Texte boutons" value={branding.button_text_color} onChange={(v) => update("button_text_color", v)} />
               </div>
-
-              {/* Preview */}
               <div className="mt-6 p-6 rounded-xl border border-border" style={{ background: branding.secondary_color }}>
                 <p className="text-sm mb-3" style={{ color: branding.primary_color, fontFamily: branding.font_heading }}>
                   {branding.platform_name} — Aperçu du thème
                 </p>
-                <button
-                  className="px-6 py-2.5 rounded-lg text-sm font-semibold"
-                  style={{ background: branding.button_color, color: branding.button_text_color }}
-                >
+                <button className="px-6 py-2.5 rounded-lg text-sm font-semibold" style={{ background: branding.button_color, color: branding.button_text_color }}>
                   Bouton d'action
                 </button>
               </div>
@@ -172,18 +167,17 @@ export default function AdminBranding() {
           </Card>
         </TabsContent>
 
-        {/* Media */}
         <TabsContent value="media">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Médias & Logos</CardTitle>
-              <CardDescription>Logo, favicon et images par défaut</CardDescription>
+              <CardDescription>Logo, favicon et images par défaut — uploadés dans le stockage dédié</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {[
-                { field: "logo_url", label: "Logo principal", desc: "Utilisé dans le header et les emails" },
-                { field: "logo_dark_url", label: "Logo version sombre", desc: "Utilisé sur fond sombre" },
-                { field: "favicon_url", label: "Favicon", desc: "Icône de l'onglet navigateur" },
+                { field: "logo_url", label: "Logo principal", desc: "Utilisé dans le header, footer et les emails" },
+                { field: "logo_dark_url", label: "Logo version sombre", desc: "Utilisé sur fond sombre (optionnel)" },
+                { field: "favicon_url", label: "Favicon", desc: "Icône de l'onglet navigateur (carré, 32×32 ou 64×64)" },
                 { field: "default_image_url", label: "Image par défaut", desc: "Placeholder pour produits et bannières" },
               ].map(({ field, label, desc }) => (
                 <div key={field} className="flex items-start gap-4">
@@ -226,7 +220,6 @@ export default function AdminBranding() {
           </Card>
         </TabsContent>
 
-        {/* Footer */}
         <TabsContent value="footer">
           <Card>
             <CardHeader>
@@ -240,12 +233,8 @@ export default function AdminBranding() {
                 <Textarea
                   rows={4}
                   value={JSON.stringify(branding.footer_links || [], null, 2)}
-                  onChange={(e) => {
-                    try {
-                      update("footer_links", JSON.parse(e.target.value));
-                    } catch {}
-                  }}
-                  placeholder='[{"label": "CGU", "url": "/terms"}, {"label": "Confidentialité", "url": "/privacy"}]'
+                  onChange={(e) => { try { update("footer_links", JSON.parse(e.target.value)); } catch {} }}
+                  placeholder='[{"label": "CGU", "url": "/terms"}]'
                   className="font-mono text-xs"
                 />
               </div>
@@ -253,7 +242,6 @@ export default function AdminBranding() {
           </Card>
         </TabsContent>
 
-        {/* Advanced */}
         <TabsContent value="advanced">
           <Card>
             <CardHeader>

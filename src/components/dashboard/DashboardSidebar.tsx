@@ -8,6 +8,7 @@ import { useState } from "react";
 import { StoreSwitcher } from "./StoreSwitcher";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useTranslation } from "@/lib/i18n";
+import { useBranding } from "@/hooks/useBranding";
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -18,6 +19,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { isAdmin } = useAdmin();
   const { t } = useTranslation();
+  const branding = useBranding();
 
   const navItems = [
     { icon: LayoutGrid, label: t.dashboard.overview, path: "/dashboard" },
@@ -48,10 +50,14 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       <div className="h-12 flex items-center justify-between px-3" style={{ borderBottom: "1px solid hsla(0,0%,100%,0.06)" }}>
         {!collapsed && (
           <Link to="/" className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-semibold text-[10px]">F</span>
-            </div>
-            <span className="font-heading text-sm tracking-tight" style={{ color: "#F8FAFC" }}>Feyxa</span>
+            {branding.logo_url ? (
+              <img src={branding.logo_url} alt={branding.platform_name} className="h-6 w-6 rounded-md object-contain" />
+            ) : (
+              <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-semibold text-[10px]">{branding.platform_name.charAt(0)}</span>
+              </div>
+            )}
+            <span className="font-heading text-sm tracking-tight" style={{ color: "#F8FAFC" }}>{branding.platform_name}</span>
           </Link>
         )}
         <button onClick={() => setCollapsed(!collapsed)} className="h-7 w-7 rounded-md flex items-center justify-center transition-colors duration-200" style={{ color: "#9CA3AF" }} onMouseEnter={(e) => (e.currentTarget.style.color = "#F8FAFC")} onMouseLeave={(e) => (e.currentTarget.style.color = "#9CA3AF")}>

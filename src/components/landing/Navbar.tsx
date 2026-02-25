@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { BrandLogo } from "@/components/landing/BrandLogo";
 
 const scrollToHash = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
   if (!href.startsWith("#")) return;
@@ -31,12 +32,7 @@ export function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 glass"
     >
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">F</span>
-          </div>
-          <span className="font-heading text-xl tracking-wide text-foreground">FEYXA</span>
-        </Link>
+        <BrandLogo />
 
         <nav className="hidden md:flex items-center gap-8">
           {navLinks.map((link) =>
