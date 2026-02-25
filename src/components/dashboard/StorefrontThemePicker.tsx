@@ -186,6 +186,9 @@ const THEME_TAGS: Record<string, { label: string; color: string }[]> = {
   tech: [{ label: "Fintech", color: "indigo" }, { label: "Dark", color: "slate" }],
   fashion: [{ label: "Visuel", color: "amber" }, { label: "Masonry", color: "rose" }],
   marketplace: [{ label: "Dense", color: "yellow" }, { label: "Pro", color: "blue" }],
+  electronics: [{ label: "Apple Style", color: "gray" }, { label: "Tech", color: "slate" }],
+  neon: [{ label: "Cyber", color: "green" }, { label: "Dark", color: "slate" }],
+  artisan: [{ label: "Craft", color: "amber" }, { label: "Chaleureux", color: "orange" }],
 };
 
 export function StorefrontThemePicker({ selectedThemeId, onSelect, storeSlug }: ThemePickerProps) {
