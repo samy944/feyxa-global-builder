@@ -24,6 +24,42 @@ serve(async (req) => {
 
     logStep("Request received", { provider, amount, currency });
 
+    // Validate order_ids exist and belong to active stores
+    if (!order_ids || !Array.isArray(order_ids) || order_ids.length === 0) {
+      return new Response(JSON.stringify({ error: "order_ids required" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Verify orders exist and calculate expected total
+    const { data: orders, error: ordersErr } = await sb
+      .from("orders")
+      .select("id, total, store_id")
+      .in("id", order_ids);
+
+    if (ordersErr || !orders || orders.length !== order_ids.length) {
+      return new Response(JSON.stringify({ error: "Invalid order_ids" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    // Verify amount matches sum of order totals (prevent tampering)
+    const expectedTotal = orders.reduce((sum: number, o: any) => sum + Number(o.total), 0);
+    if (Math.abs(expectedTotal - Number(amount)) > 1) {
+      logStep("Amount mismatch", { expected: expectedTotal, received: amount });
+      return new Response(JSON.stringify({ error: "Amount mismatch" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
     const origin = req.headers.get("origin") || "https://localhost:3000";
     const finalSuccess = success_url || `${origin}/checkout?status=success`;
     const finalCancel = cancel_url || `${origin}/checkout?status=cancel`;

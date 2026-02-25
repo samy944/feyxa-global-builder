@@ -149,10 +149,12 @@ Réponds UNIQUEMENT avec le JSON, sans markdown ni explication.`,
       );
     }
 
-    // Sanitize keywords to prevent injection in ilike
+    // Sanitize keywords: whitelist alphanumeric, spaces, hyphens, accented chars only
     const sanitizedKeywords = keywords
-      .filter((kw: string) => typeof kw === "string" && kw.length > 0 && kw.length <= 100)
-      .map((kw: string) => kw.replace(/[%_\\]/g, ""));
+      .filter((kw: string) => typeof kw === "string" && kw.length > 0 && kw.length <= 50)
+      .map((kw: string) => kw.replace(/[^a-zA-Z0-9\s\u00C0-\u024F-]/g, "").trim())
+      .filter((kw: string) => kw.length >= 2)
+      .slice(0, 10); // max 10 keywords
 
     const orConditions = sanitizedKeywords
       .map((kw: string) => `name.ilike.%${kw}%,description.ilike.%${kw}%`)
