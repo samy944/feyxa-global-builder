@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,7 @@ export default function Login() {
   const [oauthLoading, setOauthLoading] = useState<"google" | "apple" | null>(null);
   const [oauthError, setOauthError] = useState<{ provider: string; message: string } | null>(null);
   const [is2faPending, setIs2faPending] = useState(false);
+  const skip2faCheckRef = useRef(false);
 
   // Handle OAuth callback routing
   useOAuthCallback();
@@ -123,17 +124,20 @@ export default function Login() {
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) { setLoading(false); navigate("/market"); return; }
 
-    // Check 2FA — sign out first to prevent session from being usable until OTP verified
-    const { data: securitySettings } = await supabase.from("user_security_settings").select("two_factor_enabled").eq("user_id", authUser.id).maybeSingle();
-    if (securitySettings?.two_factor_enabled) {
-      setIs2faPending(true);
-      // Sign out to prevent the active session from bypassing 2FA
-      await supabase.auth.signOut();
-      setPendingUser({ id: authUser.id, email: authUser.email! });
-      setShow2fa(true);
-      setLoading(false);
-      return;
+    // Skip 2FA check if we just completed OTP verification
+    if (!skip2faCheckRef.current) {
+      const { data: securitySettings } = await supabase.from("user_security_settings").select("two_factor_enabled").eq("user_id", authUser.id).maybeSingle();
+      if (securitySettings?.two_factor_enabled) {
+        setIs2faPending(true);
+        // Sign out to prevent the active session from bypassing 2FA
+        await supabase.auth.signOut();
+        setPendingUser({ id: authUser.id, email: authUser.email! });
+        setShow2fa(true);
+        setLoading(false);
+        return;
+      }
     }
+    skip2faCheckRef.current = false;
     await proceedAfterAuth();
     setLoading(false);
   };
@@ -313,10 +317,11 @@ export default function Login() {
           email={pendingUser.email}
           purpose="login_2fa"
           onVerified={async () => {
-            // Re-authenticate after successful OTP
-            const { error } = await signIn(email, password);
+            // Re-authenticate after successful OTP — skip 2FA check this time
+            skip2faCheckRef.current = true;
             setIs2faPending(false);
             setPendingUser(null);
+            const { error } = await signIn(email, password);
             if (error) {
               toast.error(translateAuthError(error.message));
               return;
