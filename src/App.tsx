@@ -9,6 +9,7 @@ import { CartProvider } from "@/hooks/useCart";
 import { CartDrawer } from "@/components/market/CartDrawer";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { LocationProvider } from "@/hooks/useLocation";
+import { BrandingProvider } from "@/hooks/useBranding";
 import { LocationPickerModal } from "@/components/market/LocationPickerModal";
 import { VendorRoute, AuthRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -69,6 +70,9 @@ import AdminTeam from "./pages/AdminTeam";
 import AcceptAdminInvite from "./pages/AcceptAdminInvite";
 import AdminKyc from "./pages/AdminKyc";
 import AdminSettings from "./pages/AdminSettings";
+import AdminEmail from "./pages/AdminEmail";
+import AdminBranding from "./pages/AdminBranding";
+import AdminEmailTemplates from "./pages/AdminEmailTemplates";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import StartStore from "./pages/StartStore";
@@ -88,6 +92,7 @@ const App = () => (
   <ThemeProvider>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <BrandingProvider>
       <LanguageProvider>
       <LocationProvider>
       <CartProvider>
@@ -157,6 +162,9 @@ const App = () => (
               <Route path="reviews" element={<AdminReviews />} />
               <Route path="kyc" element={<AdminKyc />} />
               <Route path="team" element={<AdminTeam />} />
+              <Route path="email" element={<AdminEmail />} />
+              <Route path="branding" element={<AdminBranding />} />
+              <Route path="email-templates" element={<AdminEmailTemplates />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
             <Route path="/admin/invite" element={<AcceptAdminInvite />} />
@@ -181,6 +189,7 @@ const App = () => (
       </CartProvider>
       </LocationProvider>
       </LanguageProvider>
+      </BrandingProvider>
     </AuthProvider>
   </QueryClientProvider>
   </ThemeProvider>

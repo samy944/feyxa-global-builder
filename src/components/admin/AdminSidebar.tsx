@@ -12,6 +12,9 @@ import {
   Shield,
   UserCheck,
   Settings,
+  Mail,
+  Palette,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +29,9 @@ const links = [
   { to: "/admin/reviews", icon: Star, label: "Avis" },
   { to: "/admin/team", icon: UserPlus, label: "Équipe admin" },
   { to: "/admin/kyc", icon: UserCheck, label: "KYC Vendeurs" },
+  { to: "/admin/email", icon: Mail, label: "Email" },
+  { to: "/admin/branding", icon: Palette, label: "Branding" },
+  { to: "/admin/email-templates", icon: FileText, label: "Templates email" },
   { to: "/admin/settings", icon: Settings, label: "Paramètres" },
 ];
 
