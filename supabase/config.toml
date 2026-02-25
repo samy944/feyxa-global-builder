@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.calculate-financing]
 verify_jwt = false
+
+[functions.fulfillment-engine]
+verify_jwt = false

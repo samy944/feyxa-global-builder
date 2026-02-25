@@ -25,6 +25,7 @@ interface Listing {
   currency_code: string;
   stock_qty: number;
   is_available: boolean;
+  fulfillment_type: "seller" | "feyxa";
 }
 
 export function ProductListingsEditor({ productId }: Props) {
@@ -55,6 +56,7 @@ export function ProductListingsEditor({ productId }: Props) {
         currency_code: l.currency_code,
         stock_qty: l.stock_qty,
         is_available: l.is_available,
+        fulfillment_type: l.fulfillment_type || "seller",
       };
     }
     setListings(map);
@@ -73,6 +75,7 @@ export function ProductListingsEditor({ productId }: Props) {
           currency_code: country.currency_code,
           stock_qty: 0,
           is_available: true,
+          fulfillment_type: "seller",
         };
       }
       return copy;
@@ -95,6 +98,7 @@ export function ProductListingsEditor({ productId }: Props) {
       currency_code: l.currency_code,
       stock_qty: Number(l.stock_qty),
       is_available: l.is_available,
+      fulfillment_type: l.fulfillment_type,
     }));
 
     if (upserts.length > 0) {
@@ -176,6 +180,17 @@ export function ProductListingsEditor({ productId }: Props) {
                       onChange={(e) => updateField(c.id, "stock_qty", e.target.value)}
                       className="h-8 text-sm"
                     />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs text-muted-foreground mb-1 block">Expédition</label>
+                    <select
+                      className="w-full h-8 text-sm rounded-md border border-border bg-background px-2"
+                      value={listing.fulfillment_type}
+                      onChange={(e) => updateField(c.id, "fulfillment_type", e.target.value)}
+                    >
+                      <option value="seller">Expédié par le vendeur</option>
+                      <option value="feyxa">⚡ Expédié par Feyxa</option>
+                    </select>
                   </div>
                 </div>
               )}

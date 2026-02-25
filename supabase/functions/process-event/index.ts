@@ -13,6 +13,7 @@ const HANDLER_MAP: Record<string, string[]> = {
     "commerce.decrement_stock",
     "commerce.send_confirmation_email",
     "commerce.create_notification",
+    "fulfillment.auto_assign",
   ],
   "payment.paid": [
     "fintech.update_payment_status",
@@ -267,6 +268,17 @@ async function runHandler(
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${key5}` },
           body: JSON.stringify({ product_ids: pids }),
         });
+        return { success: true };
+      }
+
+      // ── FULFILLMENT ENGINE ──
+      case "fulfillment.auto_assign": {
+        // Check if any items use feyxa fulfillment
+        if (!payload?.fulfillment_type || payload.fulfillment_type !== "feyxa") {
+          return { success: true }; // skip seller-fulfilled orders
+        }
+        const { error: ffErr } = await admin.rpc("assign_fulfillment", { _order_id: aggregateId });
+        if (ffErr) throw ffErr;
         return { success: true };
       }
 
