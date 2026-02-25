@@ -114,7 +114,7 @@ export function PricingSection() {
             aria-label="Basculer entre mensuel et annuel"
           >
             <motion.div
-              className="absolute top-1 left-1 h-6 w-6 rounded-full bg-foreground"
+              className="absolute top-1 left-1 h-6 w-6 rounded-full bg-primary-foreground"
               animate={{ x: annual ? 24 : 0 }}
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />

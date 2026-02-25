@@ -25,7 +25,7 @@ const faqs = [
   },
   {
     q: "Puis-je annuler mon abonnement à tout moment ?",
-    a: "Absolument. Aucun engagement, aucuns frais cachés. Vous pouvez passer au plan gratuit ou annuler à tout moment depuis votre tableau de bord.",
+    a: "Absolument. Aucun engagement, aucun frais caché. Vous pouvez passer au plan gratuit ou annuler à tout moment depuis votre tableau de bord.",
   },
 ];
 
