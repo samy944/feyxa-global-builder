@@ -17,6 +17,7 @@ import {
   FileText,
   Calculator,
   Activity,
+  HeartPulse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,7 @@ const links = [
   { to: "/admin/branding", icon: Palette, label: "Branding" },
   { to: "/admin/email-templates", icon: FileText, label: "Templates email" },
   { to: "/admin/risk", icon: Shield, label: "Risk & Réputation" },
+  { to: "/admin/health", icon: HeartPulse, label: "System Health" },
   { to: "/admin/infra", icon: Activity, label: "Infrastructure" },
   { to: "/admin/settings", icon: Settings, label: "Paramètres" },
 ];

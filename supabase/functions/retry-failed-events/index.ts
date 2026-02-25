@@ -17,6 +17,9 @@ Deno.serve(async (req) => {
   );
 
   try {
+    // First, timeout stale processing events
+    await admin.rpc("timeout_stale_events");
+
     // Find failed events ready for retry
     const { data: failedEvents, error: fetchErr } = await admin
       .from("events_log")

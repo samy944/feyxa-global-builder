@@ -79,6 +79,7 @@ import AdminAccounting from "./pages/AdminAccounting";
 import AdminEmailTemplates from "./pages/AdminEmailTemplates";
 import AdminInfraMonitor from "./pages/AdminInfraMonitor";
 import AdminRiskReputation from "./pages/AdminRiskReputation";
+import AdminSystemHealth from "./pages/AdminSystemHealth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import StartStore from "./pages/StartStore";
@@ -176,6 +177,7 @@ const App = () => (
               <Route path="email-templates" element={<AdminEmailTemplates />} />
               <Route path="accounting" element={<AdminAccounting />} />
               <Route path="infra" element={<AdminInfraMonitor />} />
+              <Route path="health" element={<AdminSystemHealth />} />
               <Route path="risk" element={<AdminRiskReputation />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
