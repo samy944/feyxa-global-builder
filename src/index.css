@@ -164,6 +164,10 @@ html {
   button, [role="button"], a[class*="btn"], .btn {
     font-weight: 500;
   }
+
+  input, textarea, select {
+    color: #FFFFFF;
+  }
 }
 
 @layer utilities {
