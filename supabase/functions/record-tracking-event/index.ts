@@ -58,6 +58,20 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Verify store exists and is active to prevent analytics poisoning
+    const { data: store } = await supabase
+      .from("stores")
+      .select("is_active")
+      .eq("id", store_id)
+      .maybeSingle();
+
+    if (!store?.is_active) {
+      return new Response(JSON.stringify({ error: "Invalid store" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const today = new Date().toISOString().split("T")[0];
 
     const { error } = await supabase.rpc("upsert_tracking_event", {
