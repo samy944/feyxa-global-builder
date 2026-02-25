@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import {
@@ -18,6 +19,8 @@ import {
   Truck,
   ShoppingBag,
   XCircle,
+  Mail,
+  Phone,
 } from "lucide-react";
 import DeliveryProofSection from "@/components/dashboard/DeliveryProofSection";
 
@@ -33,27 +36,52 @@ const statusConfig: Record<string, { label: string; icon: typeof Package; color:
 
 const steps = ["new", "confirmed", "packed", "shipped", "delivered"];
 
+type SearchMethod = "phone" | "email" | "token";
+
+interface SearchParams {
+  method: SearchMethod;
+  orderNumber?: string;
+  phone?: string;
+  email?: string;
+  token?: string;
+}
+
 export default function TrackOrder() {
   const { orderNumber } = useParams();
+  const [urlSearchParams] = useSearchParams();
+  const tokenFromUrl = urlSearchParams.get("token");
+
   const [searchInput, setSearchInput] = useState(orderNumber ?? "");
   const [phoneInput, setPhoneInput] = useState("");
-  const [searchParams, setSearchParams] = useState<{ orderNumber: string; phone: string } | null>(null);
+  const [emailInput, setEmailInput] = useState("");
+  const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
+  const [lookupTab, setLookupTab] = useState<"phone" | "email">("phone");
 
-  const activeSearch = searchParams;
+  // Auto-search if token is in URL
+  useEffect(() => {
+    if (tokenFromUrl && !searchParams) {
+      setSearchParams({ method: "token", token: tokenFromUrl });
+    }
+  }, [tokenFromUrl]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["track-order", activeSearch?.orderNumber, activeSearch?.phone],
+    queryKey: ["track-order", searchParams],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("track-order", {
-        body: {
-          order_number: activeSearch!.orderNumber,
-          phone: activeSearch!.phone,
-        },
-      });
+      const body: Record<string, string> = {};
+      if (searchParams!.method === "token") {
+        body.token = searchParams!.token!;
+      } else if (searchParams!.method === "email") {
+        body.order_number = searchParams!.orderNumber!;
+        body.email = searchParams!.email!;
+      } else {
+        body.order_number = searchParams!.orderNumber!;
+        body.phone = searchParams!.phone!;
+      }
+      const { data, error } = await supabase.functions.invoke("track-order", { body });
       if (error) throw error;
       return data as { order: any; escrow: any } | null;
     },
-    enabled: !!activeSearch,
+    enabled: !!searchParams,
     retry: false,
   });
 
@@ -82,8 +110,10 @@ export default function TrackOrder() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchInput.trim() && phoneInput.trim()) {
-      setSearchParams({ orderNumber: searchInput.trim(), phone: phoneInput.trim() });
+    if (lookupTab === "phone" && searchInput.trim() && phoneInput.trim()) {
+      setSearchParams({ method: "phone", orderNumber: searchInput.trim(), phone: phoneInput.trim() });
+    } else if (lookupTab === "email" && searchInput.trim() && emailInput.trim()) {
+      setSearchParams({ method: "email", orderNumber: searchInput.trim(), email: emailInput.trim() });
     }
   };
 
@@ -95,7 +125,7 @@ export default function TrackOrder() {
     escrow?.status === "held" && !confirmed && order?.status !== "delivered" && order?.status !== "cancelled";
 
   // ── Search form ──
-  if (!activeSearch) {
+  if (!searchParams) {
     return (
       <MarketLayout>
         <section className="py-20">
@@ -105,9 +135,9 @@ export default function TrackOrder() {
             </div>
             <h1 className="font-heading text-3xl tracking-wide">SUIVI DE COMMANDE</h1>
             <p className="text-muted-foreground text-sm">
-              Entrez votre numéro de commande et téléphone pour suivre votre colis.
+              Entrez votre numéro de commande pour suivre votre colis.
             </p>
-            <form onSubmit={handleSearch} className="space-y-3 text-left">
+            <form onSubmit={handleSearch} className="space-y-4 text-left">
               <div className="space-y-1.5">
                 <label className="text-sm text-muted-foreground">Numéro de commande</label>
                 <Input
@@ -116,16 +146,49 @@ export default function TrackOrder() {
                   onChange={(e) => setSearchInput(e.target.value)}
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm text-muted-foreground">Téléphone</label>
-                <Input
-                  placeholder="+229 97 00 00 00"
-                  type="tel"
-                  value={phoneInput}
-                  onChange={(e) => setPhoneInput(e.target.value)}
-                />
-              </div>
-              <Button type="submit" variant="hero" className="w-full" disabled={!searchInput.trim() || !phoneInput.trim()}>
+
+              <Tabs value={lookupTab} onValueChange={(v) => setLookupTab(v as "phone" | "email")} className="w-full">
+                <TabsList className="w-full">
+                  <TabsTrigger value="phone" className="flex-1 gap-1.5">
+                    <Phone size={14} /> Téléphone
+                  </TabsTrigger>
+                  <TabsTrigger value="email" className="flex-1 gap-1.5">
+                    <Mail size={14} /> Email
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="phone" className="mt-3">
+                  <div className="space-y-1.5">
+                    <label className="text-sm text-muted-foreground">Téléphone</label>
+                    <Input
+                      placeholder="+229 97 00 00 00"
+                      type="tel"
+                      value={phoneInput}
+                      onChange={(e) => setPhoneInput(e.target.value)}
+                    />
+                  </div>
+                </TabsContent>
+                <TabsContent value="email" className="mt-3">
+                  <div className="space-y-1.5">
+                    <label className="text-sm text-muted-foreground">Email</label>
+                    <Input
+                      placeholder="koffi@example.com"
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <Button
+                type="submit"
+                variant="hero"
+                className="w-full"
+                disabled={
+                  !searchInput.trim() ||
+                  (lookupTab === "phone" ? !phoneInput.trim() : !emailInput.trim())
+                }
+              >
                 <Search size={16} /> Rechercher
               </Button>
             </form>
@@ -158,7 +221,7 @@ export default function TrackOrder() {
             <ShoppingBag size={48} className="mx-auto text-muted-foreground/30" />
             <h1 className="font-heading text-2xl tracking-wide">COMMANDE INTROUVABLE</h1>
             <p className="text-muted-foreground text-sm">
-              Vérifiez votre numéro de commande et numéro de téléphone.
+              Vérifiez votre numéro de commande et vos identifiants.
             </p>
             <Button variant="outline" onClick={() => setSearchParams(null)}>
               Réessayer

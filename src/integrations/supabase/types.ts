@@ -1187,6 +1187,7 @@ export type Database = {
           coupon_code: string | null
           created_at: string
           currency: string
+          customer_email: string | null
           customer_id: string | null
           discount_amount: number
           id: string
@@ -1203,12 +1204,14 @@ export type Database = {
           store_id: string
           subtotal: number
           total: number
+          tracking_token: string | null
           updated_at: string
         }
         Insert: {
           coupon_code?: string | null
           created_at?: string
           currency?: string
+          customer_email?: string | null
           customer_id?: string | null
           discount_amount?: number
           id?: string
@@ -1225,12 +1228,14 @@ export type Database = {
           store_id: string
           subtotal?: number
           total?: number
+          tracking_token?: string | null
           updated_at?: string
         }
         Update: {
           coupon_code?: string | null
           created_at?: string
           currency?: string
+          customer_email?: string | null
           customer_id?: string | null
           discount_amount?: number
           id?: string
@@ -1247,6 +1252,7 @@ export type Database = {
           store_id?: string
           subtotal?: number
           total?: number
+          tracking_token?: string | null
           updated_at?: string
         }
         Relationships: [
