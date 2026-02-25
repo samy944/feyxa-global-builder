@@ -35,15 +35,16 @@ export default function Login() {
   const [oauthError, setOauthError] = useState<{ provider: string; message: string } | null>(null);
   const [is2faPending, setIs2faPending] = useState(false);
   const skip2faCheckRef = useRef(false);
+  const isSubmittingRef = useRef(false);
 
   // Handle OAuth callback routing
   useOAuthCallback();
 
   const showAppleFirst = useMemo(() => isIOS(), []);
 
-  // Redirect already-authenticated users away from login (skip if 2FA pending)
+  // Redirect already-authenticated users away from login (skip if 2FA pending or submitting)
   useEffect(() => {
-    if (authLoading || !user || is2faPending) return;
+    if (authLoading || !user || is2faPending || isSubmittingRef.current) return;
     redirectByRole(user.id);
   }, [user, authLoading, is2faPending]);
 
@@ -115,14 +116,16 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    isSubmittingRef.current = true;
     const { error } = await signIn(email, password);
     if (error) {
       setLoading(false);
+      isSubmittingRef.current = false;
       toast.error(translateAuthError(error.message));
       return;
     }
     const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) { setLoading(false); navigate("/market"); return; }
+    if (!authUser) { setLoading(false); isSubmittingRef.current = false; navigate("/market"); return; }
 
     // Skip 2FA check if we just completed OTP verification
     if (!skip2faCheckRef.current) {
@@ -134,10 +137,12 @@ export default function Login() {
         setPendingUser({ id: authUser.id, email: authUser.email! });
         setShow2fa(true);
         setLoading(false);
+        isSubmittingRef.current = false;
         return;
       }
     }
     skip2faCheckRef.current = false;
+    isSubmittingRef.current = false;
     await proceedAfterAuth();
     setLoading(false);
   };
@@ -150,7 +155,7 @@ export default function Login() {
       </div>
     );
   }
-  if (user) {
+  if (user && !is2faPending) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#0E0E11" }}>
         <Loader2 className="animate-spin text-primary" size={24} />
