@@ -36,6 +36,7 @@ import MarketProduct from "./pages/MarketProduct";
 import MarketVendor from "./pages/MarketVendor";
 import Checkout from "./pages/Checkout";
 import DashboardWallet from "./pages/DashboardWallet";
+import DashboardAccounting from "./pages/DashboardAccounting";
 import DashboardInsights from "./pages/DashboardInsights";
 import DashboardTrends from "./pages/DashboardTrends";
 import DashboardAnalytics from "./pages/DashboardAnalytics";
@@ -72,6 +73,7 @@ import AdminKyc from "./pages/AdminKyc";
 import AdminSettings from "./pages/AdminSettings";
 import AdminEmail from "./pages/AdminEmail";
 import AdminBranding from "./pages/AdminBranding";
+import AdminAccounting from "./pages/AdminAccounting";
 import AdminEmailTemplates from "./pages/AdminEmailTemplates";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -119,6 +121,7 @@ const App = () => (
               <Route path="orders/:orderId" element={<DashboardOrderDetail />} />
               <Route path="customers" element={<DashboardCustomers />} />
               <Route path="wallet" element={<DashboardWallet />} />
+              <Route path="accounting" element={<DashboardAccounting />} />
               <Route path="insights" element={<DashboardInsights />} />
               <Route path="trends" element={<DashboardTrends />} />
               <Route path="analytics" element={<DashboardAnalytics />} />
@@ -165,6 +168,7 @@ const App = () => (
               <Route path="email" element={<AdminEmail />} />
               <Route path="branding" element={<AdminBranding />} />
               <Route path="email-templates" element={<AdminEmailTemplates />} />
+              <Route path="accounting" element={<AdminAccounting />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
             <Route path="/admin/invite" element={<AcceptAdminInvite />} />
