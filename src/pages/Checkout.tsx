@@ -18,6 +18,7 @@ import { createOrderAttribution } from "@/lib/marketing-session";
 const shippingSchema = z.object({
   firstName: z.string().trim().min(1, "Prénom requis").max(100),
   lastName: z.string().trim().max(100).optional(),
+  email: z.string().trim().email("Email invalide").max(255).optional().or(z.literal("")),
   phone: z.string().trim().min(8, "Numéro de téléphone invalide").max(20),
   city: z.string().trim().min(1, "Ville requise").max(100),
   quarter: z.string().trim().max(100).optional(),
@@ -30,6 +31,7 @@ type ShippingForm = z.infer<typeof shippingSchema>;
 interface CompletedOrder {
   orderNumber: string;
   orderId: string;
+  trackingToken: string;
   storeName: string;
   storeSlug: string;
   items: CartItem[];
@@ -47,6 +49,7 @@ export default function Checkout() {
   const [form, setForm] = useState<ShippingForm>({
     firstName: "",
     lastName: "",
+    email: "",
     phone: "",
     city: "",
     quarter: "",
@@ -76,6 +79,12 @@ export default function Checkout() {
     const ts = Date.now().toString(36).toUpperCase();
     const rand = Math.random().toString(36).substring(2, 5).toUpperCase();
     return `${prefix}-${ts}-${rand}`;
+  };
+
+  const generateTrackingToken = () => {
+    const arr = new Uint8Array(32);
+    crypto.getRandomValues(arr);
+    return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
   };
 
   const buildWhatsAppMessage = (order: CompletedOrder, data: ShippingForm) => {
@@ -176,7 +185,9 @@ export default function Checkout() {
         // 3. Create order with client-generated UUID
         const orderNumber = generateOrderNumber();
         const orderId = crypto.randomUUID();
+        const trackingToken = generateTrackingToken();
         const subtotal = storeItems.reduce((s, i) => s + i.price * i.quantity, 0);
+        const customerEmail = result.data.email && result.data.email.trim() ? result.data.email.trim() : null;
 
         const { error: orderError } = await supabase
           .from("orders")
@@ -196,7 +207,9 @@ export default function Checkout() {
             payment_method: paymentMethod,
             payment_status: paymentMethod === "cod" ? "cod" : "pending",
             status: "new",
-          });
+            tracking_token: trackingToken,
+            customer_email: customerEmail,
+          } as any);
 
         if (orderError) throw orderError;
 
@@ -221,12 +234,30 @@ export default function Checkout() {
         completed.push({
           orderNumber,
           orderId,
+          trackingToken,
           storeName: storeItems[0].storeName,
           storeSlug: storeItems[0].storeSlug,
           items: storeItems,
           subtotal,
           currency: storeItems[0].currency,
         });
+
+        // Send confirmation email if email provided
+        if (customerEmail) {
+          supabase.functions.invoke("send-order-confirmation", {
+            body: {
+              order_id: orderId,
+              order_number: orderNumber,
+              tracking_token: trackingToken,
+              email: customerEmail,
+              customer_name: `${result.data.firstName} ${result.data.lastName || ""}`.trim(),
+              store_name: storeItems[0].storeName,
+              total: subtotal,
+              currency: storeItems[0].currency,
+              items: storeItems.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
+            },
+          }).catch((err) => console.error("Email send error:", err));
+        }
 
         // Create order attribution from marketing session
         createOrderAttribution(orderId, storeId).catch(() => {});
@@ -380,17 +411,24 @@ export default function Checkout() {
                 ))}
               </div>
 
+              {form.email && form.email.trim() && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center space-y-1">
+                  <p className="text-sm font-medium text-foreground">📧 Email de confirmation envoyé</p>
+                  <p className="text-xs text-muted-foreground">
+                    Un lien de suivi sécurisé a été envoyé à <strong>{form.email}</strong>
+                  </p>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground">
-                Vous recevrez une confirmation par téléphone.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Suivez vos commandes à tout moment sur la page{" "}
+                {form.email && form.email.trim()
+                  ? "Suivez vos commandes via le lien dans votre email ou sur la page"
+                  : "Suivez vos commandes à tout moment sur la page"}{" "}
                 <Link to="/track" className="text-primary underline underline-offset-2">Suivi de commande</Link>.
               </p>
               <div className="flex gap-3 justify-center flex-wrap">
                 {completedOrders.map((order) => (
                   <Button key={order.orderId} variant="outline" size="sm" asChild>
-                    <Link to={`/track/${order.orderNumber}`}>Suivre {order.orderNumber}</Link>
+                    <Link to={`/track?token=${order.trackingToken}`}>Suivre {order.orderNumber}</Link>
                   </Button>
                 ))}
               </div>
@@ -448,6 +486,11 @@ export default function Checkout() {
                     <Label htmlFor="lastName">Nom</Label>
                     <Input id="lastName" value={form.lastName} onChange={(e) => updateField("lastName", e.target.value)} placeholder="Agbossou" />
                   </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Email <span className="text-xs text-muted-foreground">(pour le suivi)</span></Label>
+                  <Input id="email" type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="koffi@example.com" />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="phone">Téléphone *</Label>
