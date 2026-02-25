@@ -3910,30 +3910,7 @@ export type Database = {
       }
     }
     Views: {
-      system_health_metrics: {
-        Row: {
-          active_orders: number | null
-          active_stores: number | null
-          avg_event_latency_ms: number | null
-          dead_letter_count: number | null
-          escrow_held_amount: number | null
-          escrow_held_count: number | null
-          escrow_total_count: number | null
-          failed_events_24h: number | null
-          gmv_current_month: number | null
-          gmv_previous_month: number | null
-          orders_delivered: number | null
-          orders_total: number | null
-          outbound_delivered: number | null
-          outbound_on_time: number | null
-          outbound_total: number | null
-          payouts_pending: number | null
-          payouts_pending_amount: number | null
-          total_events_24h: number | null
-          total_users: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       accept_admin_invitation: {
@@ -3987,6 +3964,7 @@ export type Database = {
         Args: { _store_id: string; _user_id: string }
         Returns: string
       }
+      get_system_health: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
