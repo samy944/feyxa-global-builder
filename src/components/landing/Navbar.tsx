@@ -66,7 +66,7 @@ export function Navbar() {
             <Link to="/login">{t.navbar.login}</Link>
           </Button>
           <Button variant="hero" size="sm" asChild>
-            <Link to="/signup">{t.navbar.signup}</Link>
+            <Link to="/start">{t.navbar.signup}</Link>
           </Button>
         </div>
 
@@ -108,7 +108,7 @@ export function Navbar() {
                 <Link to="/login" onClick={() => setOpen(false)}>{t.navbar.login}</Link>
               </Button>
               <Button variant="hero" size="sm" asChild className="justify-start">
-                <Link to="/signup" onClick={() => setOpen(false)}>{t.navbar.signup}</Link>
+                <Link to="/start" onClick={() => setOpen(false)}>{t.navbar.signup}</Link>
               </Button>
             </div>
           </div>

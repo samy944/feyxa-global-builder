@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { lovable } from "@/integrations/lovable/index";
@@ -29,7 +29,10 @@ export default function Signup() {
   // Handle OAuth callback routing
   useOAuthCallback();
 
-  const [accountType, setAccountType] = useState<"client" | "vendor">("client");
+  const [searchParams] = useSearchParams();
+  const intentVendor = searchParams.get("intent") === "vendor";
+
+  const [accountType, setAccountType] = useState<"client" | "vendor">(intentVendor ? "vendor" : "client");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,7 +74,13 @@ export default function Signup() {
     setLoading(false);
     if (error) { toast.error(translateAuthError(error.message)); } else {
       toast.success(t.auth.accountCreated);
-      navigate(accountType === "vendor" ? "/dashboard" : "/account");
+      const postRedirect = localStorage.getItem("post_auth_redirect");
+      if (postRedirect) {
+        localStorage.removeItem("post_auth_redirect");
+        navigate(postRedirect);
+      } else {
+        navigate(accountType === "vendor" ? "/dashboard" : "/account");
+      }
     }
   };
 

@@ -38,7 +38,7 @@ export function CtaSection() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <Button variant="hero" size="lg" className="text-base px-8 h-13" asChild>
-              <Link to="/signup">
+              <Link to="/start">
                 Créer ma boutique gratuitement
                 <ArrowRight size={18} />
               </Link>

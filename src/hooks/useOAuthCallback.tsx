@@ -62,6 +62,21 @@ export function useOAuthCallback() {
           return;
         }
 
+        // Check for stored post-auth redirect intent
+        const postAuthRedirect = localStorage.getItem("post_auth_redirect");
+        if (postAuthRedirect) {
+          localStorage.removeItem("post_auth_redirect");
+          // If redirecting to onboarding, ensure user has vendor role
+          if (postAuthRedirect === "/onboarding") {
+            const hasVendorRole = roles.some((r) => r.role === "vendor");
+            if (!hasVendorRole) {
+              await supabase.from("user_roles").insert({ user_id: user.id, role: "vendor" });
+            }
+          }
+          navigate(postAuthRedirect);
+          return;
+        }
+
         const isVendor = roles.some((r) => r.role === "vendor");
 
         if (isVendor) {

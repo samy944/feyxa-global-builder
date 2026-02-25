@@ -89,16 +89,14 @@ export default function MarketHome() {
       .limit(6);
 
     if (data) {
-      // Get product counts for each store
+      // Get product counts for each store (only products with published marketplace listings)
       const storesWithCounts = await Promise.all(
         data.map(async (store) => {
           const { count } = await supabase
-            .from("products")
+            .from("marketplace_listings")
             .select("id", { count: "exact", head: true })
             .eq("store_id", store.id)
-            .eq("is_published", true)
-            .eq("is_marketplace_published", true)
-            .gt("stock_quantity", 0);
+            .eq("status", "published");
           return { ...store, productCount: count || 0 };
         })
       );
@@ -107,11 +105,20 @@ export default function MarketHome() {
   };
 
   const fetchTrendingProducts = async () => {
+    // Fetch products that have a published marketplace listing
+    const { data: listings } = await supabase
+      .from("marketplace_listings")
+      .select("product_id")
+      .eq("status", "published");
+
+    if (!listings || listings.length === 0) { setTrendingProducts([]); return; }
+
+    const productIds = listings.map((l) => l.product_id);
     const { data } = await supabase
       .from("products")
       .select("id, name, slug, price, compare_at_price, images, stock_quantity, stores!inner(name, slug, city, currency)")
+      .in("id", productIds)
       .eq("is_published", true)
-      .eq("is_marketplace_published", true)
       .gt("stock_quantity", 0)
       .eq("stores.is_active", true)
       .eq("stores.is_banned", false)
@@ -127,12 +134,11 @@ export default function MarketHome() {
     if (country) {
       let q = supabase
         .from("product_listings")
-        .select("id, price, currency_code, stock_qty, product_id, products!inner(id, name, slug, images, compare_at_price, is_published, is_marketplace_published, stores!inner(name, slug, city, currency, is_active, is_banned))")
+        .select("id, price, currency_code, stock_qty, product_id, products!inner(id, name, slug, images, compare_at_price, is_published, stores!inner(name, slug, city, currency, is_active, is_banned))")
         .eq("country_id", country.id)
         .eq("is_available", true)
         .gt("stock_qty", 0)
         .eq("products.is_published", true)
-        .eq("products.is_marketplace_published", true)
         .eq("products.stores.is_active", true)
         .eq("products.stores.is_banned", false)
         .order("created_at", { ascending: false })
@@ -141,31 +147,57 @@ export default function MarketHome() {
       if (query) q = q.ilike("products.name", `%${query}%`);
 
       const { data } = await q;
-      const newProducts = ((data || []) as any[]).map((l: any) => ({
-        id: l.products.id,
-        name: l.products.name,
-        slug: l.products.slug,
-        price: l.price,
-        compare_at_price: l.products.compare_at_price,
-        images: l.products.images,
-        stock_quantity: l.stock_qty,
-        stores: {
-          name: l.products.stores.name,
-          slug: l.products.stores.slug,
-          city: l.products.stores.city,
-          currency: l.currency_code,
-        },
-      }));
+
+      // Filter to only products with published marketplace listings
+      const publishedListings = await supabase
+        .from("marketplace_listings")
+        .select("product_id")
+        .eq("status", "published");
+      const publishedIds = new Set((publishedListings.data || []).map((l) => l.product_id));
+
+      const newProducts = ((data || []) as any[])
+        .filter((l: any) => publishedIds.has(l.products.id))
+        .map((l: any) => ({
+          id: l.products.id,
+          name: l.products.name,
+          slug: l.products.slug,
+          price: l.price,
+          compare_at_price: l.products.compare_at_price,
+          images: l.products.images,
+          stock_quantity: l.stock_qty,
+          stores: {
+            name: l.products.stores.name,
+            slug: l.products.stores.slug,
+            city: l.products.stores.city,
+            currency: l.currency_code,
+          },
+        }));
 
       if (offset === 0) setProducts(newProducts);
       else setProducts((prev) => [...prev, ...newProducts]);
       setHasMore(newProducts.length === PAGE_SIZE);
     } else {
+      // Fetch published marketplace listings first
+      const { data: listings } = await supabase
+        .from("marketplace_listings")
+        .select("product_id")
+        .eq("status", "published");
+
+      const publishedIds = (listings || []).map((l) => l.product_id);
+
+      if (publishedIds.length === 0) {
+        if (offset === 0) setProducts([]);
+        setHasMore(false);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+      }
+
       let q = supabase
         .from("products")
         .select("id, name, slug, price, compare_at_price, images, stock_quantity, stores!inner(name, slug, city, currency)")
+        .in("id", publishedIds)
         .eq("is_published", true)
-        .eq("is_marketplace_published", true)
         .gt("stock_quantity", 0)
         .eq("stores.is_active", true)
         .eq("stores.is_banned", false)

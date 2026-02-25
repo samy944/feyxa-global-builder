@@ -28,7 +28,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, ImagePlus, X, GripVertical, Plus,
-  Package, DollarSign, Layers, Tag, Settings2, Globe, BarChart3, Weight, Barcode, Info
+  Package, DollarSign, Layers, Tag, Settings2, Globe, BarChart3, Weight, Barcode, Info,
+  Send, CheckCircle2, Clock, XCircle, AlertTriangle
 } from "lucide-react";
 
 // ── Schema ──────────────────────────────────────────────────────────
@@ -99,6 +100,231 @@ const MAX_IMAGES = 6;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 // newVariantRow moved to VariantEditor
+
+// ── Marketplace Submit Section ──────────────────────────────────────
+function MarketplaceSubmitSection({
+  productId, storeId, canPublish, categories,
+  showNewCategory, setShowNewCategory, newCategoryName, setNewCategoryName,
+  creatingCategory, setCreatingCategory, setCategories, watch, setValue,
+}: {
+  productId: string;
+  storeId: string;
+  canPublish: boolean;
+  categories: MarketCategory[];
+  showNewCategory: boolean;
+  setShowNewCategory: (v: boolean) => void;
+  newCategoryName: string;
+  setNewCategoryName: (v: string) => void;
+  creatingCategory: boolean;
+  setCreatingCategory: (v: boolean) => void;
+  setCategories: React.Dispatch<React.SetStateAction<MarketCategory[]>>;
+  watch: any;
+  setValue: any;
+}) {
+  const [listingStatus, setListingStatus] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
+  const [loadingListing, setLoadingListing] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchListing = async () => {
+      const { data } = await supabase
+        .from("marketplace_listings")
+        .select("status, rejection_reason")
+        .eq("product_id", productId)
+        .maybeSingle();
+      if (data) {
+        setListingStatus(data.status);
+        setRejectionReason(data.rejection_reason);
+      }
+      setLoadingListing(false);
+    };
+    fetchListing();
+  }, [productId]);
+
+  const handleSubmitToMarketplace = async () => {
+    if (!canPublish) {
+      toast.error("Complétez toutes les informations requises avant de soumettre.");
+      return;
+    }
+    const categoryId = watch("marketplace_category_id");
+    if (!categoryId) {
+      toast.error("Sélectionnez une catégorie marketplace.");
+      return;
+    }
+
+    setSubmitting(true);
+    // Update product category
+    await supabase.from("products").update({ marketplace_category_id: categoryId }).eq("id", productId);
+
+    if (listingStatus) {
+      // Update existing listing
+      const { error } = await supabase
+        .from("marketplace_listings")
+        .update({ status: "submitted", submitted_at: new Date().toISOString(), rejection_reason: null })
+        .eq("product_id", productId);
+      if (error) { toast.error("Erreur lors de la soumission"); setSubmitting(false); return; }
+    } else {
+      // Create new listing
+      const { error } = await supabase
+        .from("marketplace_listings")
+        .insert({ product_id: productId, store_id: storeId, status: "submitted", submitted_at: new Date().toISOString() });
+      if (error) { toast.error("Erreur lors de la soumission"); setSubmitting(false); return; }
+    }
+
+    setListingStatus("submitted");
+    setRejectionReason(null);
+    setSubmitting(false);
+    toast.success("Produit soumis à la marketplace !");
+  };
+
+  const handleWithdraw = async () => {
+    setSubmitting(true);
+    await supabase
+      .from("marketplace_listings")
+      .update({ status: "hidden" })
+      .eq("product_id", productId);
+    setListingStatus("hidden");
+    setSubmitting(false);
+    toast.success("Produit retiré de la marketplace.");
+  };
+
+  if (loadingListing) {
+    return (
+      <div className="rounded-xl border border-border p-4 flex items-center justify-center py-6">
+        <Loader2 size={16} className="animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const statusConfig: Record<string, { icon: React.ReactNode; label: string; color: string; bg: string }> = {
+    submitted: { icon: <Clock size={14} />, label: "En attente de modération", color: "text-yellow-500", bg: "bg-yellow-500/10" },
+    approved: { icon: <CheckCircle2 size={14} />, label: "Approuvé", color: "text-blue-500", bg: "bg-blue-500/10" },
+    published: { icon: <CheckCircle2 size={14} />, label: "Publié sur la marketplace", color: "text-green-500", bg: "bg-green-500/10" },
+    rejected: { icon: <XCircle size={14} />, label: "Rejeté", color: "text-red-500", bg: "bg-red-500/10" },
+    hidden: { icon: <Globe size={14} />, label: "Non soumis", color: "text-muted-foreground", bg: "bg-secondary" },
+  };
+
+  const currentStatus = statusConfig[listingStatus || "hidden"] || statusConfig.hidden;
+
+  return (
+    <div className="rounded-xl border border-border p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <Globe size={14} /> Marketplace Feyxa
+          </p>
+          <p className="text-xs text-muted-foreground">Soumettez votre produit pour modération avant publication</p>
+        </div>
+        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${currentStatus.color} ${currentStatus.bg}`}>
+          {currentStatus.icon}
+          {currentStatus.label}
+        </div>
+      </div>
+
+      {/* Rejection reason */}
+      {listingStatus === "rejected" && rejectionReason && (
+        <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 space-y-1">
+          <p className="text-xs font-semibold text-red-400 flex items-center gap-1">
+            <AlertTriangle size={12} /> Motif de rejet
+          </p>
+          <p className="text-xs text-muted-foreground">{rejectionReason}</p>
+        </div>
+      )}
+
+      {/* Category selector — always show if not yet published */}
+      {listingStatus !== "published" && (
+        <div className="space-y-2 pt-1 border-t border-border">
+          <Label className="text-sm">Catégorie marketplace *</Label>
+          {!showNewCategory ? (
+            <Select
+              value={watch("marketplace_category_id") || ""}
+              onValueChange={(v) => {
+                if (v === "__other__") setShowNewCategory(true);
+                else setValue("marketplace_category_id", v);
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Choisir une catégorie..." /></SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+                <SelectItem value="__other__">+ Autre (créer une catégorie)</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nom de la nouvelle catégorie"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  type="button" size="sm"
+                  disabled={!newCategoryName.trim() || creatingCategory}
+                  onClick={async () => {
+                    if (!newCategoryName.trim()) return;
+                    setCreatingCategory(true);
+                    const slug = newCategoryName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+                    const { data: inserted, error } = await supabase.from("marketplace_categories").insert({
+                      name: newCategoryName.trim(), slug: slug || `cat-${Date.now()}`,
+                    }).select("id, name").single();
+                    setCreatingCategory(false);
+                    if (error) { toast.error("Erreur lors de la création"); return; }
+                    if (inserted) {
+                      setCategories((prev) => [...prev, inserted]);
+                      setValue("marketplace_category_id", inserted.id);
+                      setNewCategoryName(""); setShowNewCategory(false);
+                      toast.success("Catégorie créée !");
+                    }
+                  }}
+                >
+                  {creatingCategory ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                </Button>
+              </div>
+              <button type="button" className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => { setShowNewCategory(false); setNewCategoryName(""); }}>
+                ← Retour aux catégories existantes
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 pt-1">
+        {(!listingStatus || listingStatus === "hidden" || listingStatus === "rejected") && (
+          <Button
+            type="button" size="sm" variant="hero"
+            disabled={submitting || !canPublish}
+            onClick={handleSubmitToMarketplace}
+            className="gap-1.5"
+          >
+            {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+            {listingStatus === "rejected" ? "Resoumettre" : "Soumettre à la marketplace"}
+          </Button>
+        )}
+        {(listingStatus === "submitted" || listingStatus === "published" || listingStatus === "approved") && (
+          <Button
+            type="button" size="sm" variant="outline"
+            disabled={submitting}
+            onClick={handleWithdraw}
+            className="gap-1.5"
+          >
+            {submitting ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
+            Retirer de la marketplace
+          </Button>
+        )}
+        {!canPublish && (
+          <p className="text-xs text-amber-500 flex items-center gap-1">
+            <AlertTriangle size={12} /> Complétez le produit pour soumettre
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function ProductFormDialog({ open, onOpenChange, onSuccess, product }: Props) {
   const { store } = useStore();
@@ -687,106 +913,35 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
                 />
               </div>
 
-              {/* Marketplace toggle */}
-              <div className="rounded-xl border border-border p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                      <Globe size={14} /> Publier sur la marketplace
-                    </p>
-                    <p className="text-xs text-muted-foreground">Vendez sur Feyxa Market pour atteindre plus de clients</p>
-                  </div>
-                  <Switch
-                    checked={isMarketplace}
-                    onCheckedChange={(v) => {
-                      if (v && !canPublish()) {
-                        toast.error("Complétez toutes les informations requises avant de publier.");
-                        return;
-                      }
-                      setValue("is_marketplace_published", v);
-                    }}
-                  />
-                </div>
+              {/* Marketplace submission — only for existing products */}
+              {isEdit && product && (
+                <MarketplaceSubmitSection
+                  productId={product.id}
+                  storeId={store?.id || ""}
+                  canPublish={canPublish()}
+                  categories={categories}
+                  showNewCategory={showNewCategory}
+                  setShowNewCategory={setShowNewCategory}
+                  newCategoryName={newCategoryName}
+                  setNewCategoryName={setNewCategoryName}
+                  creatingCategory={creatingCategory}
+                  setCreatingCategory={setCreatingCategory}
+                  setCategories={setCategories}
+                  watch={watch}
+                  setValue={setValue}
+                />
+              )}
 
-                {isMarketplace && (
-                  <div className="space-y-2 pt-1 border-t border-border">
-                    <Label className="text-sm">Catégorie marketplace *</Label>
-                    {!showNewCategory ? (
-                      <>
-                        <Select
-                          value={watch("marketplace_category_id") || ""}
-                          onValueChange={(v) => {
-                            if (v === "__other__") {
-                              setShowNewCategory(true);
-                            } else {
-                              setValue("marketplace_category_id", v);
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choisir une catégorie..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                            ))}
-                            <SelectItem value="__other__">+ Autre (créer une catégorie)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Nom de la nouvelle catégorie"
-                            value={newCategoryName}
-                            onChange={(e) => setNewCategoryName(e.target.value)}
-                            className="flex-1"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            disabled={!newCategoryName.trim() || creatingCategory}
-                            onClick={async () => {
-                              if (!newCategoryName.trim()) return;
-                              setCreatingCategory(true);
-                              const slug = newCategoryName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-                              const { data: inserted, error } = await supabase.from("marketplace_categories").insert({
-                                name: newCategoryName.trim(),
-                                slug: slug || `cat-${Date.now()}`,
-                              }).select("id, name").single();
-                              setCreatingCategory(false);
-                              if (error) {
-                                toast.error("Erreur lors de la création de la catégorie");
-                                return;
-                              }
-                              if (inserted) {
-                                setCategories((prev) => [...prev, inserted]);
-                                setValue("marketplace_category_id", inserted.id);
-                                setNewCategoryName("");
-                                setShowNewCategory(false);
-                                toast.success("Catégorie créée !");
-                              }
-                            }}
-                          >
-                            {creatingCategory ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                          </Button>
-                        </div>
-                        <button
-                          type="button"
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          onClick={() => { setShowNewCategory(false); setNewCategoryName(""); }}
-                        >
-                          ← Retour aux catégories existantes
-                        </button>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Info size={10} /> Choisissez la catégorie la plus pertinente pour la visibilité
-                    </p>
-                  </div>
-                )}
-              </div>
+              {!isEdit && (
+                <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Globe size={14} /> Marketplace
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Vous pourrez soumettre votre produit à la marketplace après l'avoir créé et enregistré.
+                  </p>
+                </div>
+              )}
 
               {/* Summary card */}
               <div className="rounded-xl bg-secondary/30 border border-border p-4 space-y-3">
@@ -798,7 +953,7 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Marketplace</p>
-                    <p className="font-medium">{isMarketplace ? "✅ Publié" : "❌ Non publié"}</p>
+                    <p className="font-medium">{isEdit ? "Voir onglet Publication" : "Après création"}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Images</p>

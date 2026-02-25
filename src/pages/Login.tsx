@@ -51,6 +51,15 @@ export default function Login() {
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) { navigate("/market"); return; }
     await logLoginActivity(authUser.id, true);
+
+    // Check for post-auth redirect intent
+    const postAuthRedirect = localStorage.getItem("post_auth_redirect");
+    if (postAuthRedirect) {
+      localStorage.removeItem("post_auth_redirect");
+      navigate(postAuthRedirect);
+      return;
+    }
+
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", authUser.id).in("role", ["client", "vendor"]);
     const isVendor = roles?.some((r) => r.role === "vendor");
     if (isVendor) {
