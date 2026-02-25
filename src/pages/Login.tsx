@@ -6,6 +6,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { OtpVerifyDialog } from "@/components/security/OtpVerifyDialog";
+import { translateAuthError } from "@/lib/translate-auth-error";
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -68,7 +69,7 @@ export default function Login() {
     const { error } = await signIn(email, password);
     if (error) {
       setLoading(false);
-      toast.error(error.message);
+      toast.error(translateAuthError(error.message));
       return;
     }
 
@@ -198,7 +199,10 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block mb-2 text-xs" style={{ color: "#9CA3AF", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>Mot de passe</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs" style={{ color: "#9CA3AF", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>Mot de passe</label>
+                <Link to="/forgot-password" className="text-xs transition-opacity hover:opacity-80" style={{ color: "hsl(var(--primary))", fontWeight: 500 }}>Mot de passe oublié ?</Link>
+              </div>
               <div className="relative">
                 <input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="w-full h-12 px-4 pr-11 text-sm transition-colors duration-200 focus:outline-none" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.625rem", color: "#FFFFFF", fontWeight: 400 }} onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; }} onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }} />
                 <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-opacity duration-200 hover:opacity-70" style={{ color: "#6B7280" }}>
