@@ -49,8 +49,9 @@ const sections = [
   { id: "tracking", label: "Marketing & Pixels", icon: BarChart3, group: "Marketing" },
   { id: "seo", label: "SEO", icon: Search, group: "Marketing" },
 
+  { id: "team", label: "Équipe & Rôles", icon: Users, group: "Système" },
   { id: "notifications", label: "Notifications", icon: Bell, group: "Système" },
-  { id: "security", label: "Sécurité & Rôles", icon: Shield, group: "Système" },
+  { id: "security", label: "Sécurité", icon: Shield, group: "Système" },
   { id: "legal", label: "Légal & Conformité", icon: FileText, group: "Système" },
   { id: "marketplace", label: "Marketplace", icon: ShoppingBag, group: "Système" },
 ];
@@ -132,6 +133,7 @@ export default function DashboardSettings() {
             {activeSection === "customers" && <SettingsCustomers />}
             {activeSection === "tracking" && <TrackingPixelsSection />}
             {activeSection === "seo" && <SettingsSeo />}
+            {activeSection === "team" && <SettingsTeam />}
             {activeSection === "notifications" && <SettingsNotifications />}
             {activeSection === "security" && <SettingsSecurity />}
             {activeSection === "legal" && <SettingsLegal />}
