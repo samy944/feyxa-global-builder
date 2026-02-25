@@ -877,6 +877,72 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_metrics: {
+        Row: {
+          avg_daily_sales: number
+          country_id: string | null
+          created_at: string
+          days_until_stockout: number
+          forecast_next_30d: number
+          growth_rate: number
+          high_demand: boolean
+          id: string
+          last_calculated_at: string
+          product_id: string
+          recommended_stock_level: number
+          sales_30d: number
+          sales_7d: number
+          stock_status: string
+        }
+        Insert: {
+          avg_daily_sales?: number
+          country_id?: string | null
+          created_at?: string
+          days_until_stockout?: number
+          forecast_next_30d?: number
+          growth_rate?: number
+          high_demand?: boolean
+          id?: string
+          last_calculated_at?: string
+          product_id: string
+          recommended_stock_level?: number
+          sales_30d?: number
+          sales_7d?: number
+          stock_status?: string
+        }
+        Update: {
+          avg_daily_sales?: number
+          country_id?: string | null
+          created_at?: string
+          days_until_stockout?: number
+          forecast_next_30d?: number
+          growth_rate?: number
+          high_demand?: boolean
+          id?: string
+          last_calculated_at?: string
+          product_id?: string
+          recommended_stock_level?: number
+          sales_30d?: number
+          sales_7d?: number
+          stock_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_metrics_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_metrics_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landing_ab_variants: {
         Row: {
           add_to_carts: number
@@ -2475,6 +2541,54 @@ export type Database = {
           },
         ]
       }
+      stock_locks: {
+        Row: {
+          expires_at: string
+          id: string
+          locked_at: string
+          product_id: string
+          quantity: number
+          released: boolean
+          session_id: string
+          variant_id: string | null
+        }
+        Insert: {
+          expires_at?: string
+          id?: string
+          locked_at?: string
+          product_id: string
+          quantity?: number
+          released?: boolean
+          session_id: string
+          variant_id?: string | null
+        }
+        Update: {
+          expires_at?: string
+          id?: string
+          locked_at?: string
+          product_id?: string
+          quantity?: number
+          released?: boolean
+          session_id?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_locks_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_locks_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_invitations: {
         Row: {
           accepted_by: string | null
@@ -3432,6 +3546,7 @@ export type Database = {
         Returns: boolean
       }
       release_escrow: { Args: { _escrow_id: string }; Returns: boolean }
+      release_expired_stock_locks: { Args: never; Returns: number }
       request_payout: {
         Args: {
           _amount: number

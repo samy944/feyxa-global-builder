@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.calculate-rankings]
 verify_jwt = false
+
+[functions.calculate-inventory]
+verify_jwt = false
