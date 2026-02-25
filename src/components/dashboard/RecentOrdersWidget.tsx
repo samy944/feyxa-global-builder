@@ -21,7 +21,7 @@ interface RecentOrder {
 
 export default function RecentOrdersWidget() {
   const { store } = useStore();
-  const { t, language } = useTranslation();
+  const { t, lang } = useTranslation();
   const [orders, setOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -86,7 +86,7 @@ export default function RecentOrdersWidget() {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {customerName} · {formatDistanceToNow(new Date(order.created_at), { addSuffix: true, locale: language === "fr" ? frLocale : enUS })}
+                      {customerName} · {formatDistanceToNow(new Date(order.created_at), { addSuffix: true, locale: lang === "fr" ? frLocale : enUS })}
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-foreground whitespace-nowrap ml-3">
