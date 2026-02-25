@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.check-subscription]
 verify_jwt = false
+
+[functions.calculate-risk-scores]
+verify_jwt = false

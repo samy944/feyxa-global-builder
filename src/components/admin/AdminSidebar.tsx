@@ -35,6 +35,7 @@ const links = [
   { to: "/admin/email", icon: Mail, label: "Email" },
   { to: "/admin/branding", icon: Palette, label: "Branding" },
   { to: "/admin/email-templates", icon: FileText, label: "Templates email" },
+  { to: "/admin/risk", icon: Shield, label: "Risk & Réputation" },
   { to: "/admin/infra", icon: Activity, label: "Infrastructure" },
   { to: "/admin/settings", icon: Settings, label: "Paramètres" },
 ];
