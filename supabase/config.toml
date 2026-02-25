@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.calculate-risk-scores]
 verify_jwt = false
+
+[functions.calculate-rankings]
+verify_jwt = false

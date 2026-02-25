@@ -165,6 +165,13 @@ export default function MarketHome() {
     if (offset === 0) setLoading(true);
     else setLoadingMore(true);
 
+    // Fetch ranking scores to join client-side
+    const { data: rankings } = await supabase
+      .from("product_ranking_scores")
+      .select("product_id, score, trending_badge");
+
+    const rankMap = new Map((rankings || []).map(r => [r.product_id, r]));
+
     let q = supabase
       .from("products")
       .select("id, name, slug, price, compare_at_price, images, stock_quantity, avg_rating, review_count, stores!inner(name, slug, city, currency)")
@@ -173,12 +180,30 @@ export default function MarketHome() {
       .eq("stores.is_active", true)
       .eq("stores.is_banned", false)
       .order("created_at", { ascending: false })
-      .range(offset, offset + PAGE_SIZE - 1);
+      .range(offset, offset + PAGE_SIZE * 3 - 1); // fetch more to sort client-side
 
     if (query) q = q.ilike("name", `%${query}%`);
 
     const { data } = await q;
-    const np = (data || []) as unknown as MarketProduct[];
+    let np = (data || []) as unknown as MarketProduct[];
+
+    // Sort by ranking score DESC (fallback to created_at already applied)
+    if (!query) {
+      np.sort((a, b) => {
+        const sa = rankMap.get(a.id)?.score || 0;
+        const sb = rankMap.get(b.id)?.score || 0;
+        return sb - sa;
+      });
+    }
+
+    // Apply trending badge
+    np = np.map(p => ({
+      ...p,
+      _trending: rankMap.get(p.id)?.trending_badge || false,
+    }));
+
+    // Paginate after sort
+    np = np.slice(0, offset === 0 ? PAGE_SIZE : PAGE_SIZE);
 
     if (offset === 0) setProducts(np);
     else setProducts((prev) => [...prev, ...np]);
@@ -188,7 +213,7 @@ export default function MarketHome() {
     setLoadingMore(false);
   };
 
-  const renderProductCard = (p: MarketProduct, i: number, badge?: "promo" | "new" | "top" | null) => (
+  const renderProductCard = (p: MarketProduct & { _trending?: boolean }, i: number, badge?: "promo" | "new" | "top" | null) => (
     <MarketProductCard
       key={p.id}
       id={p.id}
@@ -202,7 +227,7 @@ export default function MarketHome() {
       store_city={p.stores.city}
       currency={p.stores.currency}
       index={i}
-      badge={badge}
+      badge={p._trending ? "top" : badge}
     />
   );
 
