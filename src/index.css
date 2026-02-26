@@ -166,7 +166,7 @@ html {
   }
 
   input, textarea, select {
-    color: #FFFFFF;
+    color: hsl(var(--foreground));
   }
 }
 
