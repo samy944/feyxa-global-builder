@@ -28,8 +28,6 @@ import {
 } from "@/components/ui/accordion";
 import {
   Check,
-  ChevronDown,
-  ChevronUp,
   ChevronLeft,
   Eye,
   EyeOff,
@@ -47,6 +45,23 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Props {
   store: StoreData;
@@ -106,6 +121,76 @@ function hexToHsl(hex: string): string {
   return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+/* ── Sortable Section Item ── */
+function SortableSectionItem({
+  section,
+  idx,
+  isEditing,
+  templateDef,
+  onEdit,
+  onToggle,
+}: {
+  section: SFSectionConfig;
+  idx: number;
+  isEditing: boolean;
+  templateDef: { label: string; required?: boolean } | undefined;
+  onEdit: () => void;
+  onToggle: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `${section.type}-${idx}`, disabled: !!templateDef?.required });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      onClick={onEdit}
+      className={cn(
+        "flex items-center gap-1.5 p-2 rounded-lg border transition-all cursor-pointer",
+        isEditing
+          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+          : section.visible
+            ? "bg-card border-border hover:border-primary/30"
+            : "bg-muted/40 border-transparent opacity-50"
+      )}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className={cn(
+          "touch-none cursor-grab active:cursor-grabbing",
+          templateDef?.required && "opacity-20 cursor-not-allowed"
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical size={11} className="text-muted-foreground shrink-0" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <span className="text-[11px] font-medium text-foreground">{templateDef?.label || section.type}</span>
+        {templateDef?.required && <span className="text-[8px] text-muted-foreground ml-1">(requis)</span>}
+      </div>
+      <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onToggle} disabled={templateDef?.required} className="h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20">
+          {section.visible ? <Eye size={10} /> : <EyeOff size={10} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function StorefrontCustomizer({
   store,
   products,
@@ -155,21 +240,6 @@ export function StorefrontCustomizer({
     setSections((prev) =>
       prev.map((sec, i) => (i === idx ? { ...sec, visible: !sec.visible } : sec))
     );
-  };
-
-  const moveSection = (idx: number, dir: -1 | 1) => {
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= sections.length) return;
-    const s = template.sections.find((ts) => ts.type === sections[idx].type);
-    const t = template.sections.find((ts) => ts.type === sections[newIdx].type);
-    if (s?.required || t?.required) return;
-    setSections((prev) => {
-      const arr = [...prev];
-      [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
-      return arr;
-    });
-    if (editingSection === idx) setEditingSection(newIdx);
-    else if (editingSection === newIdx) setEditingSection(idx);
   };
 
   const handleColorChange = (key: keyof StorefrontTheme["colors"], hex: string) => {
@@ -223,6 +293,33 @@ export function StorefrontCustomizer({
   const editingSchema = editingSec ? SECTION_SETTINGS_SCHEMA[editingSec.type] : null;
   const editingDef = editingSec ? template.sections.find((ts) => ts.type === editingSec.type) : null;
 
+  /* ── DnD setup ── */
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const sectionIds = sections.map((sec, idx) => `${sec.type}-${idx}`);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sectionIds.indexOf(active.id as string);
+    const newIndex = sectionIds.indexOf(over.id as string);
+
+    // Don't move required sections
+    const oldDef = template.sections.find((ts) => ts.type === sections[oldIndex].type);
+    const newDef = template.sections.find((ts) => ts.type === sections[newIndex].type);
+    if (oldDef?.required || newDef?.required) return;
+
+    setSections((prev) => arrayMove(prev, oldIndex, newIndex));
+
+    // Update editing index
+    if (editingSection === oldIndex) setEditingSection(newIndex);
+    else if (editingSection === newIndex) setEditingSection(oldIndex);
+  };
+
   return (
     <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
       {/* ── Panel 1: Section List / Global Settings ── */}
@@ -262,43 +359,27 @@ export function StorefrontCustomizer({
 
         <div className="flex-1 overflow-y-auto px-2.5 py-2">
           {sidebarTab === "sections" && (
-            <div className="space-y-1">
-              {sections.map((sec, idx) => {
-                const def = template.sections.find((ts) => ts.type === sec.type);
-                const isEditing = editingSection === idx;
-                return (
-                  <div
-                    key={`${sec.type}-${idx}`}
-                    onClick={() => setEditingSection(isEditing ? null : idx)}
-                    className={cn(
-                      "flex items-center gap-1.5 p-2 rounded-lg border transition-all cursor-pointer",
-                      isEditing
-                        ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                        : sec.visible
-                          ? "bg-card border-border hover:border-primary/30"
-                          : "bg-muted/40 border-transparent opacity-50"
-                    )}
-                  >
-                    <GripVertical size={11} className="text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[11px] font-medium text-foreground">{def?.label || sec.type}</span>
-                      {def?.required && <span className="text-[8px] text-muted-foreground ml-1">(requis)</span>}
-                    </div>
-                    <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => moveSection(idx, -1)} disabled={idx === 0 || def?.required} className="h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20">
-                        <ChevronUp size={10} />
-                      </button>
-                      <button onClick={() => moveSection(idx, 1)} disabled={idx === sections.length - 1 || def?.required} className="h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20">
-                        <ChevronDown size={10} />
-                      </button>
-                      <button onClick={() => toggleSection(idx)} disabled={def?.required} className="h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20">
-                        {sec.visible ? <Eye size={10} /> : <EyeOff size={10} />}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
+                <div className="space-y-1">
+                  {sections.map((sec, idx) => {
+                    const def = template.sections.find((ts) => ts.type === sec.type);
+                    const isEditing = editingSection === idx;
+                    return (
+                      <SortableSectionItem
+                        key={`${sec.type}-${idx}`}
+                        section={sec}
+                        idx={idx}
+                        isEditing={isEditing}
+                        templateDef={def}
+                        onEdit={() => setEditingSection(isEditing ? null : idx)}
+                        onToggle={() => toggleSection(idx)}
+                      />
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
 
           {sidebarTab === "global" && (
@@ -373,7 +454,7 @@ export function StorefrontCustomizer({
         </div>
       </aside>
 
-      {/* ── Panel 2: Section Settings Editor (appears when a section is selected) ── */}
+      {/* ── Panel 2: Section Settings Editor ── */}
       <AnimatePresence>
         {editingSection !== null && editingSchema && (
           <motion.aside

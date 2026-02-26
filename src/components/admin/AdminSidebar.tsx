@@ -22,26 +22,61 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const links = [
-  { to: "/admin", icon: LayoutDashboard, label: "Vue d'ensemble", end: true },
-  { to: "/admin/stores", icon: Store, label: "Boutiques" },
-  { to: "/admin/products", icon: Package, label: "Modération produits" },
-  { to: "/admin/users", icon: Users, label: "Utilisateurs" },
-  { to: "/admin/orders", icon: ShoppingCart, label: "Commandes" },
-  { to: "/admin/payouts", icon: Wallet, label: "Retraits" },
-  { to: "/admin/accounting", icon: Calculator, label: "Comptabilité" },
-  { to: "/admin/tickets", icon: MessageSquare, label: "Tickets" },
-  { to: "/admin/returns", icon: RotateCcw, label: "Retours" },
-  { to: "/admin/reviews", icon: Star, label: "Avis" },
-  { to: "/admin/team", icon: UserPlus, label: "Équipe admin" },
-  { to: "/admin/kyc", icon: UserCheck, label: "KYC Vendeurs" },
-  { to: "/admin/email", icon: Mail, label: "Email" },
-  { to: "/admin/branding", icon: Palette, label: "Branding" },
-  { to: "/admin/email-templates", icon: FileText, label: "Templates email" },
-  { to: "/admin/risk", icon: Shield, label: "Risk & Réputation" },
-  { to: "/admin/health", icon: HeartPulse, label: "System Health" },
-  { to: "/admin/infra", icon: Activity, label: "Infrastructure" },
-  { to: "/admin/settings", icon: Settings, label: "Paramètres" },
+interface NavGroup {
+  label: string;
+  items: { to: string; icon: any; label: string; end?: boolean }[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: "Tableau de bord",
+    items: [
+      { to: "/admin", icon: LayoutDashboard, label: "Vue d'ensemble", end: true },
+      { to: "/admin/health", icon: HeartPulse, label: "System Health" },
+      { to: "/admin/infra", icon: Activity, label: "Infrastructure" },
+    ],
+  },
+  {
+    label: "Commerce",
+    items: [
+      { to: "/admin/stores", icon: Store, label: "Boutiques" },
+      { to: "/admin/products", icon: Package, label: "Modération produits" },
+      { to: "/admin/orders", icon: ShoppingCart, label: "Commandes" },
+      { to: "/admin/reviews", icon: Star, label: "Avis" },
+    ],
+  },
+  {
+    label: "Utilisateurs",
+    items: [
+      { to: "/admin/users", icon: Users, label: "Utilisateurs" },
+      { to: "/admin/kyc", icon: UserCheck, label: "KYC Vendeurs" },
+      { to: "/admin/team", icon: UserPlus, label: "Équipe admin" },
+    ],
+  },
+  {
+    label: "Finances",
+    items: [
+      { to: "/admin/payouts", icon: Wallet, label: "Retraits" },
+      { to: "/admin/accounting", icon: Calculator, label: "Comptabilité" },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { to: "/admin/tickets", icon: MessageSquare, label: "Tickets" },
+      { to: "/admin/returns", icon: RotateCcw, label: "Retours" },
+    ],
+  },
+  {
+    label: "Configuration",
+    items: [
+      { to: "/admin/branding", icon: Palette, label: "Branding" },
+      { to: "/admin/email", icon: Mail, label: "Email" },
+      { to: "/admin/email-templates", icon: FileText, label: "Templates email" },
+      { to: "/admin/risk", icon: Shield, label: "Risk & Réputation" },
+      { to: "/admin/settings", icon: Settings, label: "Paramètres" },
+    ],
+  },
 ];
 
 interface Props {
@@ -62,29 +97,38 @@ export function AdminSidebar({ onNavigate }: Props) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-        {links.map((link) => {
-          const isActive = link.end
-            ? location.pathname === link.to
-            : location.pathname.startsWith(link.to);
-          return (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.end}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              )}
-            >
-              <link.icon size={18} />
-              <span>{link.label}</span>
-            </NavLink>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto py-2 px-3">
+        {navGroups.map((group) => (
+          <div key={group.label} className="mb-2">
+            <p className="px-3 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+              {group.label}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map((link) => {
+                const isActive = link.end
+                  ? location.pathname === link.to
+                  : location.pathname.startsWith(link.to);
+                return (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    end={link.end}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    )}
+                  >
+                    <link.icon size={18} />
+                    <span>{link.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Footer */}
