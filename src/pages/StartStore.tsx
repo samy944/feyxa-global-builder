@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { lovable } from "@/integrations/lovable/index";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useOAuthCallback } from "@/hooks/useOAuthCallback";
 import { motion } from "framer-motion";
@@ -67,7 +67,10 @@ export default function StartStore() {
     setOauthLoading(provider);
     setOauthError(null);
     try {
-      const { error } = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin },
+      });
       if (error) {
         const errType = parseOAuthError(error);
         const errMessages: Record<string, string> = {
