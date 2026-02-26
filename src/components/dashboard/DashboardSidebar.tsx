@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutGrid, Package, ShoppingCart, Users, BarChart2, Settings, Megaphone, Truck, Cpu,
   ChevronLeft, Wallet, FileText, Lightbulb, TrendingUp, Store, MessageSquare, MessageCircle, RotateCcw, Shield, Calculator, Landmark, Warehouse, Paintbrush,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -73,6 +74,21 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     },
   ];
 
+  // Track which groups are open
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    navGroups.forEach((g) => {
+      // Open groups that contain the active route
+      const hasActive = g.items.some((item) => location.pathname === item.path);
+      initial[g.label] = hasActive || g.label === "Principal";
+    });
+    return initial;
+  });
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
   return (
     <aside
       className={cn(
@@ -104,33 +120,61 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       </div>
 
       <nav className="flex-1 px-2 py-2 overflow-y-auto">
-        {navGroups.map((group) => (
-          <div key={group.label} className="mb-2">
-            {!collapsed && (
-              <p className="px-3 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-widest" style={{ color: "#4B5563" }}>
-                {group.label}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link key={item.path} to={item.path} onClick={onNavigate}
-                    className={cn("relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200", collapsed && "justify-center px-0")}
-                    style={{ color: isActive ? "#F8FAFC" : "#9CA3AF", background: isActive ? "hsla(0,0%,100%,0.06)" : "transparent" }}
-                    onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.color = "#F8FAFC"; e.currentTarget.style.background = "hsla(0,0%,100%,0.04)"; } }}
-                    onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.color = "#9CA3AF"; e.currentTarget.style.background = "transparent"; } }}
-                    title={collapsed ? item.label : undefined}
+        {navGroups.map((group) => {
+          const isOpen = openGroups[group.label] ?? true;
+          const hasActive = group.items.some((item) => location.pathname === item.path);
+
+          return (
+            <div key={group.label} className="mb-1">
+              {!collapsed ? (
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className="w-full flex items-center justify-between px-3 pt-2 pb-1 group"
+                >
+                  <p
+                    className="text-[9px] font-semibold uppercase tracking-widest transition-colors"
+                    style={{ color: hasActive ? "#9CA3AF" : "#4B5563" }}
                   >
-                    {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full" style={{ height: "60%", background: "hsl(106 75% 47%)" }} />}
-                    <item.icon size={17} style={{ color: isActive ? "#F8FAFC" : "#6B7280", flexShrink: 0 }} />
-                    {!collapsed && <span>{item.label}</span>}
-                  </Link>
-                );
-              })}
+                    {group.label}
+                  </p>
+                  <ChevronDown
+                    size={10}
+                    className={cn(
+                      "transition-transform duration-200",
+                      !isOpen && "-rotate-90"
+                    )}
+                    style={{ color: "#4B5563" }}
+                  />
+                </button>
+              ) : (
+                <div className="h-2" />
+              )}
+              <div
+                className={cn(
+                  "overflow-hidden transition-all duration-200 ease-out space-y-0.5",
+                  !collapsed && !isOpen ? "max-h-0 opacity-0" : "max-h-[500px] opacity-100"
+                )}
+              >
+                {group.items.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link key={item.path} to={item.path} onClick={onNavigate}
+                      className={cn("relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200", collapsed && "justify-center px-0")}
+                      style={{ color: isActive ? "#F8FAFC" : "#9CA3AF", background: isActive ? "hsla(0,0%,100%,0.06)" : "transparent" }}
+                      onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.color = "#F8FAFC"; e.currentTarget.style.background = "hsla(0,0%,100%,0.04)"; } }}
+                      onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.color = "#9CA3AF"; e.currentTarget.style.background = "transparent"; } }}
+                      title={collapsed ? item.label : undefined}
+                    >
+                      {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full" style={{ height: "60%", background: "hsl(106 75% 47%)" }} />}
+                      <item.icon size={17} style={{ color: isActive ? "#F8FAFC" : "#6B7280", flexShrink: 0 }} />
+                      {!collapsed && <span>{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="px-2 py-1 space-y-0.5" style={{ borderTop: "1px solid hsla(0,0%,100%,0.06)" }}>

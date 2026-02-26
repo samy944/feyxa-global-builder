@@ -15,6 +15,8 @@ import {
 import { SECTION_SETTINGS_SCHEMA, getDefaultSettings } from "@/lib/storefront-section-settings";
 import { StorefrontRenderer } from "@/components/storefront/StorefrontRenderer";
 import type { StoreData, ProductData } from "@/components/storefront/types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -41,6 +43,7 @@ import {
   Smartphone,
   Sparkles,
   Undo2,
+  Wand2,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -208,6 +211,58 @@ export function StorefrontCustomizer({
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [editingSection, setEditingSection] = useState<number | null>(null);
   const [sidebarTab, setSidebarTab] = useState<"sections" | "global">("sections");
+  const [aiGenerating, setAiGenerating] = useState(false);
+
+  const handleAiGenerate = async () => {
+    setAiGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-storefront", {
+        body: {
+          storeName: store.name,
+          storeDescription: store.description,
+          storeCategory: "",
+          products: products.slice(0, 10).map((p) => ({ name: p.name, price: p.price })),
+          language: "Français",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) { toast.error(data.error); return; }
+
+      // Apply AI results
+      if (data.template) {
+        const tpl = STOREFRONT_TEMPLATES.find((t) => t.id === data.template);
+        if (tpl) {
+          setTemplateId(data.template);
+          setSections(getDefaultSectionsConfig(tpl));
+        }
+      }
+      if (data.theme?.id) {
+        const th = STOREFRONT_THEMES.find((t) => t.id === data.theme.id);
+        if (th) setThemeId(data.theme.id);
+      }
+      if (data.theme?.colorOverrides) {
+        setColorOverrides(data.theme.colorOverrides);
+      }
+      // Apply section content settings
+      if (data.sections) {
+        setSections((prev) =>
+          prev.map((sec) => {
+            const aiContent = data.sections[sec.type];
+            if (aiContent) {
+              return { ...sec, settings: { ...(sec.settings || {}), ...aiContent } };
+            }
+            return sec;
+          })
+        );
+      }
+      toast.success("Vitrine IA générée ! Ajustez et sauvegardez.");
+    } catch (e) {
+      console.error(e);
+      toast.error("Erreur lors de la génération IA");
+    } finally {
+      setAiGenerating(false);
+    }
+  };
 
   const template = useMemo(() => getTemplateById(templateId), [templateId]);
   const baseTheme = useMemo(() => getThemeById(themeId), [themeId]);
@@ -331,6 +386,10 @@ export function StorefrontCustomizer({
             <span className="text-xs font-semibold text-foreground">Éditeur de vitrine</span>
           </div>
           <div className="flex gap-1">
+            <Button size="sm" variant="outline" onClick={handleAiGenerate} disabled={aiGenerating} className="h-6 text-[10px] px-2 gap-1">
+              {aiGenerating ? <Loader2 size={10} className="animate-spin" /> : <Wand2 size={10} />}
+              IA
+            </Button>
             <Button size="sm" variant="ghost" disabled={!isDirty} onClick={() => {
               setTemplateId(initialTemplateId);
               setThemeId(initialThemeId);
