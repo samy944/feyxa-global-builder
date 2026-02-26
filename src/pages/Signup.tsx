@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 import { useOAuthCallback } from "@/hooks/useOAuthCallback";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowRight, ShoppingBag, Store, Loader2, RefreshCw } from "lucide-react";
@@ -53,7 +53,10 @@ export default function Signup() {
     setOauthLoading(provider);
     setOauthError(null);
     try {
-      const { error } = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin },
+      });
       if (error) {
         const errType = parseOAuthError(error);
         const errMessages: Record<string, string> = {
