@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -20,8 +21,10 @@ import {
   Truck,
   Zap,
   BookmarkPlus,
-  ChevronDown,
   Check,
+  Package,
+  Clock,
+  Store,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -60,6 +63,8 @@ interface DeliveryZone {
   is_active: boolean;
 }
 
+export type DeliveryMethod = "home" | "relay" | "collect";
+
 export interface DeliveryData {
   countryId: string;
   countryName: string;
@@ -72,6 +77,9 @@ export interface DeliveryData {
   longitude: number | null;
   shippingMode: "standard" | "express";
   shippingFee: number;
+  deliveryMethod: DeliveryMethod;
+  relayPointId?: string;
+  relayPointName?: string;
 }
 
 interface Props {
@@ -83,14 +91,24 @@ interface Props {
 
 const EXPRESS_MULTIPLIER = 1.5;
 
+/* Fake relay points placeholder */
+const RELAY_POINTS = [
+  { id: "rp1", name: "Relais Express — Cotonou Centre", address: "123 Blvd St-Michel, Cotonou", hours: "Lun–Sam 8h–20h" },
+  { id: "rp2", name: "Point Relais Ganhi", address: "45 Rue du Commerce, Ganhi", hours: "Lun–Ven 9h–18h" },
+  { id: "rp3", name: "Relais Dantokpa Market", address: "Marché Dantokpa, Stand B12", hours: "Tous les jours 7h–19h" },
+  { id: "rp4", name: "Relais Akpakpa", address: "Carrefour Akpakpa, Cotonou", hours: "Lun–Sam 8h–19h" },
+];
+
 export default function DeliverySection({ storeIds, userId, onDeliveryChange, totalWeight = 0 }: Props) {
   const { countries: locCountries, country: locCountry } = useLocation();
+
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("home");
+  const [selectedRelay, setSelectedRelay] = useState("");
 
   const [mode, setMode] = useState<"manual" | "gps">("manual");
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
 
-  // Address fields
   const [countries, setCountries] = useState<Country[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [selectedCountryId, setSelectedCountryId] = useState("");
@@ -101,19 +119,16 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
 
-  // Delivery mode
   const [shippingMode, setShippingMode] = useState<"standard" | "express">("standard");
 
-  // Fees
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [baseFee, setBaseFee] = useState(0);
   const [computedFee, setComputedFee] = useState(0);
 
-  // Saved addresses
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [savingAddress, setSavingAddress] = useState(false);
 
-  // Load countries from location context
+  // Load countries
   useEffect(() => {
     if (locCountries.length > 0) {
       setCountries(locCountries);
@@ -123,7 +138,7 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
     }
   }, [locCountries, locCountry]);
 
-  // Load cities when country changes
+  // Load cities
   useEffect(() => {
     if (!selectedCountryId) return;
     supabase
@@ -138,7 +153,7 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
       });
   }, [selectedCountryId]);
 
-  // Load delivery zones for all stores in cart
+  // Load delivery zones
   useEffect(() => {
     if (storeIds.length === 0) return;
     supabase
@@ -149,7 +164,7 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
       .then(({ data }) => setZones((data || []) as DeliveryZone[]));
   }, [storeIds]);
 
-  // Load saved addresses for logged-in user
+  // Saved addresses
   useEffect(() => {
     if (!userId) return;
     supabase
@@ -160,8 +175,20 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
       .then(({ data }) => setSavedAddresses((data || []) as SavedAddress[]));
   }, [userId]);
 
-  // Calculate fees when city/mode changes
+  // Calculate fees
   useEffect(() => {
+    if (deliveryMethod === "collect") {
+      setBaseFee(0);
+      setComputedFee(0);
+      return;
+    }
+    if (deliveryMethod === "relay") {
+      // Flat relay fee
+      setBaseFee(1500);
+      setComputedFee(shippingMode === "express" ? Math.round(1500 * EXPRESS_MULTIPLIER) : 1500);
+      return;
+    }
+
     const cityName = cities.find((c) => c.id === selectedCityId)?.name || "";
     if (!cityName || zones.length === 0) {
       setBaseFee(0);
@@ -169,12 +196,10 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
       return;
     }
 
-    // Find matching zone per store, sum fees
     let totalFee = 0;
     const storeSet = new Set(storeIds);
     for (const sid of storeSet) {
       const storeZones = zones.filter((z) => z.store_id === sid);
-      // Match by city name (case-insensitive)
       const match =
         storeZones.find((z) =>
           z.cities?.some((c) => c.toLowerCase() === cityName.toLowerCase())
@@ -185,13 +210,11 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
       if (match) {
         totalFee += match.fee;
       } else if (storeZones.length > 0) {
-        // Fallback to cheapest zone
         const cheapest = storeZones.reduce((a, b) => (a.fee < b.fee ? a : b));
         totalFee += cheapest.fee;
       }
     }
 
-    // Weight surcharge: +500 per kg above 5kg
     const weightKg = totalWeight / 1000;
     if (weightKg > 5) {
       totalFee += Math.ceil(weightKg - 5) * 500;
@@ -200,26 +223,30 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
     setBaseFee(totalFee);
     const finalFee = shippingMode === "express" ? Math.round(totalFee * EXPRESS_MULTIPLIER) : totalFee;
     setComputedFee(finalFee);
-  }, [selectedCityId, cities, zones, storeIds, quarter, shippingMode, totalWeight]);
+  }, [selectedCityId, cities, zones, storeIds, quarter, shippingMode, totalWeight, deliveryMethod]);
 
   // Notify parent
   useEffect(() => {
     const countryObj = countries.find((c) => c.id === selectedCountryId);
     const cityObj = cities.find((c) => c.id === selectedCityId);
+    const relay = RELAY_POINTS.find((r) => r.id === selectedRelay);
     onDeliveryChange({
       countryId: selectedCountryId,
       countryName: countryObj?.name || "",
       cityId: selectedCityId,
-      cityName: cityObj?.name || "",
+      cityName: deliveryMethod === "collect" ? "Click & Collect" : deliveryMethod === "relay" ? (relay?.name || "") : (cityObj?.name || ""),
       quarter,
-      address,
+      address: deliveryMethod === "relay" ? (relay?.address || "") : address,
       notes,
       latitude,
       longitude,
       shippingMode,
       shippingFee: computedFee,
+      deliveryMethod,
+      relayPointId: selectedRelay || undefined,
+      relayPointName: relay?.name || undefined,
     });
-  }, [selectedCountryId, selectedCityId, quarter, address, notes, latitude, longitude, shippingMode, computedFee, countries, cities]);
+  }, [selectedCountryId, selectedCityId, quarter, address, notes, latitude, longitude, shippingMode, computedFee, countries, cities, deliveryMethod, selectedRelay]);
 
   // GPS
   const handleGPS = useCallback(() => {
@@ -233,7 +260,6 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
       async (pos) => {
         setLatitude(pos.coords.latitude);
         setLongitude(pos.coords.longitude);
-        // Reverse geocode
         try {
           const resp = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=fr`,
@@ -242,16 +268,13 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
           if (resp.ok) {
             const geo = await resp.json();
             const addr = geo.address || {};
-            // Try to match country
             const countryCode = addr.country_code?.toUpperCase();
             if (countryCode) {
               const match = countries.find((c) => c.code === countryCode);
               if (match) setSelectedCountryId(match.id);
             }
-            // Set city name and try to match
             const cityName = addr.city || addr.town || addr.village || addr.county || "";
             if (cityName) {
-              // Wait a tick for cities to load
               setTimeout(() => {
                 setCities((prev) => {
                   const cityMatch = prev.find((c) => c.name.toLowerCase() === cityName.toLowerCase());
@@ -264,10 +287,10 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
             setAddress(geo.display_name?.split(",").slice(0, 3).join(",") || "");
           }
         } catch {
-          // silently fail reverse geocode
+          // silently fail
         }
         setGpsLoading(false);
-        setMode("manual"); // Switch to manual to show filled fields
+        setMode("manual");
       },
       (err) => {
         setGpsLoading(false);
@@ -281,7 +304,6 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
     );
   }, [countries]);
 
-  // Apply saved address
   const applySavedAddress = (addr: SavedAddress) => {
     if (addr.country_id) setSelectedCountryId(addr.country_id);
     if (addr.city_id) {
@@ -294,7 +316,6 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
     setLongitude(addr.longitude);
   };
 
-  // Save current address
   const handleSaveAddress = async () => {
     if (!userId) return;
     setSavingAddress(true);
@@ -313,7 +334,6 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
         longitude,
         is_default: savedAddresses.length === 0,
       });
-      // Refresh
       const { data } = await supabase
         .from("saved_addresses")
         .select("*")
@@ -327,7 +347,6 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
   };
 
   const selectedCountry = countries.find((c) => c.id === selectedCountryId);
-  const selectedCity = cities.find((c) => c.id === selectedCityId);
   const formatFee = (f: number) =>
     selectedCountry?.currency_code === "XOF" || !selectedCountry
       ? `${f.toLocaleString("fr-FR")} FCFA`
@@ -335,153 +354,206 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
 
   return (
     <div className="space-y-5">
-      <h2 className="font-heading text-lg tracking-wide text-foreground">ADRESSE DE LIVRAISON</h2>
+      <h2 className="font-heading text-lg tracking-wide text-foreground">LIVRAISON</h2>
 
-      {/* Location mode toggle */}
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant={mode === "gps" ? "default" : "outline"}
-          size="sm"
-          className="flex-1"
-          onClick={handleGPS}
-          disabled={gpsLoading}
-        >
-          {gpsLoading ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
-          {gpsLoading ? "Détection…" : "📍 Ma position GPS"}
-        </Button>
-        <Button
-          type="button"
-          variant={mode === "manual" ? "default" : "outline"}
-          size="sm"
-          className="flex-1"
-          onClick={() => setMode("manual")}
-        >
-          <MapPin size={14} />
-          Saisie manuelle
-        </Button>
-      </div>
-      {gpsError && <p className="text-xs text-destructive">{gpsError}</p>}
-      {latitude && longitude && (
-        <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <Check size={12} className="text-primary" />
-          Position GPS enregistrée ({latitude.toFixed(4)}, {longitude.toFixed(4)})
-        </p>
-      )}
+      {/* ── Delivery method tabs ── */}
+      <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
+        <TabsList className="w-full grid grid-cols-3 h-auto p-1">
+          <TabsTrigger value="home" className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm">
+            <Truck size={14} />
+            <span className="hidden sm:inline">Livraison</span> à domicile
+          </TabsTrigger>
+          <TabsTrigger value="relay" className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm">
+            <Package size={14} />
+            Point Relais
+          </TabsTrigger>
+          <TabsTrigger value="collect" className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm">
+            <Store size={14} />
+            Click & Collect
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Saved addresses */}
-      {savedAddresses.length > 0 && (
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Adresses sauvegardées</Label>
-          <div className="flex gap-2 flex-wrap">
-            {savedAddresses.map((sa) => (
-              <Button
-                key={sa.id}
-                type="button"
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={() => applySavedAddress(sa)}
-              >
-                <MapPin size={12} />
-                {sa.label}
-                {sa.is_default && <span className="text-primary ml-1">★</span>}
-              </Button>
-            ))}
+        {/* ── HOME DELIVERY ── */}
+        <TabsContent value="home" className="space-y-5 pt-4">
+          {/* Location mode toggle */}
+          <div className="flex gap-2">
+            <Button type="button" variant={mode === "gps" ? "default" : "outline"} size="sm" className="flex-1" onClick={handleGPS} disabled={gpsLoading}>
+              {gpsLoading ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
+              {gpsLoading ? "Détection…" : "📍 Ma position GPS"}
+            </Button>
+            <Button type="button" variant={mode === "manual" ? "default" : "outline"} size="sm" className="flex-1" onClick={() => setMode("manual")}>
+              <MapPin size={14} />
+              Saisie manuelle
+            </Button>
           </div>
-        </div>
-      )}
+          {gpsError && <p className="text-xs text-destructive">{gpsError}</p>}
+          {latitude && longitude && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Check size={12} className="text-primary" />
+              Position GPS enregistrée ({latitude.toFixed(4)}, {longitude.toFixed(4)})
+            </p>
+          )}
 
-      {/* Country */}
-      <div className="space-y-1.5">
-        <Label>Pays *</Label>
-        <Select value={selectedCountryId} onValueChange={setSelectedCountryId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionner un pays" />
-          </SelectTrigger>
-          <SelectContent>
-            {countries.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.flag_emoji} {c.name}
-              </SelectItem>
+          {/* Saved addresses */}
+          {savedAddresses.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">Adresses sauvegardées</Label>
+              <div className="flex gap-2 flex-wrap">
+                {savedAddresses.map((sa) => (
+                  <Button key={sa.id} type="button" variant="outline" size="sm" className="text-xs" onClick={() => applySavedAddress(sa)}>
+                    <MapPin size={12} />
+                    {sa.label}
+                    {sa.is_default && <span className="text-primary ml-1">★</span>}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Country */}
+          <div className="space-y-1.5">
+            <Label>Pays *</Label>
+            <Select value={selectedCountryId} onValueChange={setSelectedCountryId}>
+              <SelectTrigger><SelectValue placeholder="Sélectionner un pays" /></SelectTrigger>
+              <SelectContent>
+                {countries.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.flag_emoji} {c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* City */}
+          <div className="space-y-1.5">
+            <Label>Ville *</Label>
+            <Select value={selectedCityId} onValueChange={setSelectedCityId} disabled={cities.length === 0}>
+              <SelectTrigger><SelectValue placeholder={cities.length === 0 ? "Sélectionnez d'abord un pays" : "Sélectionner une ville"} /></SelectTrigger>
+              <SelectContent>
+                {cities.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Quarter + Address */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Quartier</Label>
+              <Input value={quarter} onChange={(e) => setQuarter(e.target.value)} placeholder="Ganhi, Zogbo…" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Adresse / Repère</Label>
+              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Près du marché…" />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <Label>Instructions de livraison</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Étage, code porte, horaires préférés…" rows={2} />
+          </div>
+
+          {/* Save address */}
+          {userId && selectedCityId && (
+            <Button type="button" variant="ghost" size="sm" className="text-xs" onClick={handleSaveAddress} disabled={savingAddress}>
+              {savingAddress ? <Loader2 size={12} className="animate-spin" /> : <BookmarkPlus size={12} />}
+              Sauvegarder cette adresse
+            </Button>
+          )}
+
+          {/* Delivery speed */}
+          <div className="space-y-3 pt-2">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Mode de livraison</Label>
+            <RadioGroup value={shippingMode} onValueChange={(v) => setShippingMode(v as "standard" | "express")} className="grid grid-cols-2 gap-3">
+              <label className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${shippingMode === "standard" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                <RadioGroupItem value="standard" className="sr-only" />
+                <Truck size={20} className={shippingMode === "standard" ? "text-primary" : "text-muted-foreground"} />
+                <span className="text-sm font-medium text-foreground">Standard</span>
+                <span className="text-xs text-muted-foreground">2-5 jours</span>
+                {baseFee > 0 && <span className="text-xs font-semibold text-foreground">{formatFee(baseFee)}</span>}
+              </label>
+              <label className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${shippingMode === "express" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                <RadioGroupItem value="express" className="sr-only" />
+                <Zap size={20} className={shippingMode === "express" ? "text-primary" : "text-muted-foreground"} />
+                <span className="text-sm font-medium text-foreground">Express</span>
+                <span className="text-xs text-muted-foreground">24-48h</span>
+                {baseFee > 0 && (
+                  <span className="text-xs font-semibold text-foreground">{formatFee(Math.round(baseFee * EXPRESS_MULTIPLIER))}</span>
+                )}
+              </label>
+            </RadioGroup>
+          </div>
+        </TabsContent>
+
+        {/* ── RELAY POINT ── */}
+        <TabsContent value="relay" className="space-y-4 pt-4">
+          <p className="text-sm text-muted-foreground">Choisissez un point relais près de chez vous pour récupérer votre commande.</p>
+
+          <RadioGroup value={selectedRelay} onValueChange={setSelectedRelay} className="space-y-2">
+            {RELAY_POINTS.map((rp) => (
+              <label
+                key={rp.id}
+                className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${selectedRelay === rp.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}
+              >
+                <RadioGroupItem value={rp.id} className="mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">{rp.name}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <MapPin size={10} /> {rp.address}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Clock size={10} /> {rp.hours}
+                  </p>
+                </div>
+              </label>
             ))}
-          </SelectContent>
-        </Select>
-      </div>
+          </RadioGroup>
 
-      {/* City */}
-      <div className="space-y-1.5">
-        <Label>Ville *</Label>
-        <Select value={selectedCityId} onValueChange={setSelectedCityId} disabled={cities.length === 0}>
-          <SelectTrigger>
-            <SelectValue placeholder={cities.length === 0 ? "Sélectionnez d'abord un pays" : "Sélectionner une ville"} />
-          </SelectTrigger>
-          <SelectContent>
-            {cities.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          {/* Delivery speed for relay */}
+          <div className="space-y-3 pt-2">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Vitesse de livraison</Label>
+            <RadioGroup value={shippingMode} onValueChange={(v) => setShippingMode(v as "standard" | "express")} className="grid grid-cols-2 gap-3">
+              <label className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${shippingMode === "standard" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                <RadioGroupItem value="standard" className="sr-only" />
+                <Truck size={20} className={shippingMode === "standard" ? "text-primary" : "text-muted-foreground"} />
+                <span className="text-sm font-medium text-foreground">Standard</span>
+                <span className="text-xs text-muted-foreground">3-5 jours</span>
+                <span className="text-xs font-semibold text-foreground">{formatFee(1500)}</span>
+              </label>
+              <label className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${shippingMode === "express" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                <RadioGroupItem value="express" className="sr-only" />
+                <Zap size={20} className={shippingMode === "express" ? "text-primary" : "text-muted-foreground"} />
+                <span className="text-sm font-medium text-foreground">Express</span>
+                <span className="text-xs text-muted-foreground">24-48h</span>
+                <span className="text-xs font-semibold text-foreground">{formatFee(Math.round(1500 * EXPRESS_MULTIPLIER))}</span>
+              </label>
+            </RadioGroup>
+          </div>
+        </TabsContent>
 
-      {/* Quarter + Address */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label>Quartier</Label>
-          <Input value={quarter} onChange={(e) => setQuarter(e.target.value)} placeholder="Ganhi, Zogbo…" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Adresse / Repère</Label>
-          <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Près du marché…" />
-        </div>
-      </div>
+        {/* ── CLICK & COLLECT ── */}
+        <TabsContent value="collect" className="space-y-4 pt-4">
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Store size={18} className="text-primary" />
+              <p className="text-sm font-medium text-foreground">Retrait en boutique</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Récupérez votre commande directement auprès du vendeur. Vous serez contacté(e) par téléphone dès que votre commande sera prête.
+            </p>
+            <div className="flex items-center gap-2 text-xs text-primary font-medium">
+              <Check size={14} />
+              Retrait gratuit — 0 frais de livraison
+            </div>
+          </div>
 
-      {/* Notes */}
-      <div className="space-y-1.5">
-        <Label>Instructions de livraison</Label>
-        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Étage, code porte, horaires préférés…" rows={2} />
-      </div>
-
-      {/* Save address */}
-      {userId && selectedCityId && (
-        <Button type="button" variant="ghost" size="sm" className="text-xs" onClick={handleSaveAddress} disabled={savingAddress}>
-          {savingAddress ? <Loader2 size={12} className="animate-spin" /> : <BookmarkPlus size={12} />}
-          Sauvegarder cette adresse
-        </Button>
-      )}
-
-      {/* Delivery mode */}
-      <div className="space-y-3 pt-2">
-        <Label className="text-xs text-muted-foreground uppercase tracking-wider">Mode de livraison</Label>
-        <RadioGroup value={shippingMode} onValueChange={(v) => setShippingMode(v as "standard" | "express")} className="grid grid-cols-2 gap-3">
-          <label
-            className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${
-              shippingMode === "standard" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-            }`}
-          >
-            <RadioGroupItem value="standard" className="sr-only" />
-            <Truck size={20} className={shippingMode === "standard" ? "text-primary" : "text-muted-foreground"} />
-            <span className="text-sm font-medium text-foreground">Standard</span>
-            <span className="text-xs text-muted-foreground">2-5 jours</span>
-            {baseFee > 0 && <span className="text-xs font-semibold text-foreground">{formatFee(baseFee)}</span>}
-          </label>
-          <label
-            className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${
-              shippingMode === "express" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-            }`}
-          >
-            <RadioGroupItem value="express" className="sr-only" />
-            <Zap size={20} className={shippingMode === "express" ? "text-primary" : "text-muted-foreground"} />
-            <span className="text-sm font-medium text-foreground">Express</span>
-            <span className="text-xs text-muted-foreground">24-48h</span>
-            {baseFee > 0 && (
-              <span className="text-xs font-semibold text-foreground">{formatFee(Math.round(baseFee * EXPRESS_MULTIPLIER))}</span>
-            )}
-          </label>
-        </RadioGroup>
-      </div>
+          <div className="space-y-1.5">
+            <Label>Instructions (optionnel)</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Horaires de passage préférés…" rows={2} />
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Fee preview */}
       {computedFee > 0 && (
@@ -491,6 +563,15 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
             Frais de livraison
           </div>
           <span className="font-semibold text-foreground">{formatFee(computedFee)}</span>
+        </div>
+      )}
+      {deliveryMethod === "collect" && (
+        <div className="flex items-center justify-between bg-secondary rounded-xl p-4">
+          <div className="flex items-center gap-2 text-sm text-foreground">
+            <Store size={16} className="text-primary" />
+            Retrait en boutique
+          </div>
+          <span className="font-semibold text-primary">Gratuit</span>
         </div>
       )}
     </div>

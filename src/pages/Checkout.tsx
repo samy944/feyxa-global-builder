@@ -8,12 +8,13 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, PackageCheck } from "lucide-react";
+import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, PackageCheck, CreditCard, Wallet, Banknote, CalendarClock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import { trackInitiateCheckout, trackPurchase } from "@/lib/tracking";
 import { createOrderAttribution } from "@/lib/marketing-session";
 import DeliverySection, { DeliveryData } from "@/components/checkout/DeliverySection";
+import ExpressCheckout from "@/components/checkout/ExpressCheckout";
 
 const customerSchema = z.object({
   firstName: z.string().trim().min(1, "Prénom requis").max(100),
@@ -71,6 +72,7 @@ export default function Checkout() {
     longitude: null,
     shippingMode: "standard",
     shippingFee: 0,
+    deliveryMethod: "home",
   });
 
   const mainCurrency = items[0]?.currency ?? "XOF";
@@ -79,9 +81,7 @@ export default function Checkout() {
     return c === "XOF" ? `${p.toLocaleString("fr-FR")} FCFA` : `€${p.toFixed(2)}`;
   };
 
-  // Total weight from cart items (if weight_grams stored — for now 0)
   const totalWeight = 0;
-
   const grandTotal = totalPrice + delivery.shippingFee;
 
   const updateField = (field: keyof CustomerForm, value: string) => {
@@ -102,7 +102,6 @@ export default function Checkout() {
     return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
   };
 
-
   const handleConfirmReceipt = async (order: CompletedOrder) => {
     setConfirmingOrder(order.orderId);
     try {
@@ -120,7 +119,6 @@ export default function Checkout() {
   };
 
   const handleSubmit = async () => {
-    // Validate customer info
     const result = customerSchema.safeParse(form);
     if (!result.success) {
       const fieldErrors: typeof errors = {};
@@ -132,9 +130,12 @@ export default function Checkout() {
       return;
     }
 
-    // Validate delivery
-    if (!delivery.cityName) {
+    if (delivery.deliveryMethod === "home" && !delivery.cityName) {
       toast({ title: "Ville requise", description: "Veuillez sélectionner une ville de livraison.", variant: "destructive" });
+      return;
+    }
+    if (delivery.deliveryMethod === "relay" && !delivery.relayPointId) {
+      toast({ title: "Point relais requis", description: "Veuillez sélectionner un point relais.", variant: "destructive" });
       return;
     }
 
@@ -148,7 +149,6 @@ export default function Checkout() {
       const feePerStore = storeEntries.length > 1 ? Math.round(delivery.shippingFee / storeEntries.length) : delivery.shippingFee;
 
       for (const [storeId, storeItems] of storeEntries) {
-        // 1. Decrement stock
         for (const item of storeItems) {
           const { data: stockOk, error: stockErr } = await supabase.rpc("decrement_stock", {
             _product_id: item.productId,
@@ -166,7 +166,6 @@ export default function Checkout() {
           }
         }
 
-        // 2. Upsert customer
         const { data: customerId, error: custErr } = await supabase.rpc("upsert_checkout_customer", {
           _store_id: storeId,
           _first_name: result.data.firstName,
@@ -179,7 +178,6 @@ export default function Checkout() {
         });
         if (custErr) throw custErr;
 
-        // 3. Create order
         const orderNumber = generateOrderNumber();
         const orderId = crypto.randomUUID();
         const trackingToken = generateTrackingToken();
@@ -214,7 +212,6 @@ export default function Checkout() {
 
         if (orderError) throw orderError;
 
-        // 4. Order items
         const orderItems = storeItems.map((item) => ({
           order_id: orderId,
           product_id: item.productId,
@@ -239,7 +236,6 @@ export default function Checkout() {
           currency: storeItems[0].currency,
         });
 
-        // 5. Emit event to Infrastructure Engine — handles escrow, email, stock, notification
         supabase.functions.invoke("process-event", {
           body: {
             event_type: "order.created",
@@ -451,6 +447,8 @@ export default function Checkout() {
     );
   }
 
+  const installmentAmount = Math.ceil(grandTotal / 3);
+
   // ── Checkout form ──
   return (
     <MarketLayout>
@@ -502,9 +500,14 @@ export default function Checkout() {
               {/* Payment */}
               <div className="space-y-4">
                 <h2 className="font-heading text-lg tracking-wide text-foreground">PAIEMENT</h2>
+
+                {/* Express Checkout */}
+                <ExpressCheckout />
+
                 <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-2">
                   <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "cod" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
                     <RadioGroupItem value="cod" id="cod" />
+                    <Banknote size={18} className="text-muted-foreground shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-foreground">Paiement à la livraison</p>
                       <p className="text-xs text-muted-foreground">Payez en espèces à la réception</p>
@@ -512,6 +515,7 @@ export default function Checkout() {
                   </label>
                   <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "stripe" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
                     <RadioGroupItem value="stripe" id="stripe" />
+                    <CreditCard size={18} className="text-muted-foreground shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-foreground">Carte bancaire (Stripe)</p>
                       <p className="text-xs text-muted-foreground">Visa, Mastercard, paiement sécurisé</p>
@@ -519,6 +523,7 @@ export default function Checkout() {
                   </label>
                   <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "fedapay" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
                     <RadioGroupItem value="fedapay" id="fedapay" />
+                    <Wallet size={18} className="text-muted-foreground shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-foreground">Mobile Money (FedaPay)</p>
                       <p className="text-xs text-muted-foreground">MTN MoMo, Moov Money, paiement local</p>
@@ -526,9 +531,28 @@ export default function Checkout() {
                   </label>
                   <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "mobile_money" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
                     <RadioGroupItem value="mobile_money" id="mobile_money" />
+                    <Wallet size={18} className="text-muted-foreground shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-foreground">Mobile Money (manuel)</p>
                       <p className="text-xs text-muted-foreground">Transfert direct, confirmation par le vendeur</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "paypal" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                    <RadioGroupItem value="paypal" id="paypal" />
+                    <Wallet size={18} className="text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">PayPal</p>
+                      <p className="text-xs text-muted-foreground">Paiement sécurisé via votre compte PayPal</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === "installment" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                    <RadioGroupItem value="installment" id="installment" />
+                    <CalendarClock size={18} className="text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Paiement en 3x sans frais</p>
+                      <p className="text-xs text-muted-foreground">
+                        3 × {formatPrice(installmentAmount)} — via Alma/Klarna
+                      </p>
                     </div>
                   </label>
                 </RadioGroup>
@@ -566,10 +590,22 @@ export default function Checkout() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground flex items-center gap-1">
-                      🚚 Livraison {delivery.shippingMode === "express" && <span className="text-xs text-primary">(Express)</span>}
+                      {delivery.deliveryMethod === "collect" ? "🏬 Retrait" : "🚚 Livraison"}{" "}
+                      {delivery.shippingMode === "express" && delivery.deliveryMethod !== "collect" && (
+                        <span className="text-xs text-primary">(Express)</span>
+                      )}
+                      {delivery.deliveryMethod === "relay" && (
+                        <span className="text-xs text-primary">(Relais)</span>
+                      )}
                     </span>
                     <span className="font-medium text-foreground">
-                      {delivery.shippingFee > 0 ? formatPrice(delivery.shippingFee) : delivery.cityName ? "Gratuit" : "—"}
+                      {delivery.deliveryMethod === "collect"
+                        ? "Gratuit"
+                        : delivery.shippingFee > 0
+                        ? formatPrice(delivery.shippingFee)
+                        : delivery.cityName
+                        ? "Gratuit"
+                        : "—"}
                     </span>
                   </div>
                 </div>
@@ -578,6 +614,14 @@ export default function Checkout() {
                   <span className="font-heading text-foreground tracking-wide">TOTAL</span>
                   <span className="text-xl font-bold text-foreground">{formatPrice(grandTotal)}</span>
                 </div>
+
+                {paymentMethod === "installment" && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-center">
+                    <p className="text-xs font-medium text-foreground">
+                      ou 3 × {formatPrice(installmentAmount)} sans frais
+                    </p>
+                  </div>
+                )}
 
                 {Object.keys(itemsByStore).length > 1 && (
                   <p className="text-xs text-muted-foreground bg-secondary rounded-lg p-3">
