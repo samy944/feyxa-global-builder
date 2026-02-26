@@ -6,6 +6,7 @@ import { SFProductGrid } from "./sections/SFProductGrid";
 import { SFTestimonials } from "./sections/SFTestimonials";
 import { SFNewsletter } from "./sections/SFNewsletter";
 import { SFFooter } from "./sections/SFFooter";
+import { SFCartDrawer } from "./shared/SFCartDrawer";
 import type { SFSectionProps } from "./types";
 import type { SFSectionConfig, SFSectionType } from "@/lib/storefront-templates";
 
@@ -34,6 +35,13 @@ export function StorefrontRenderer({ sectionsConfig, ...props }: Props) {
 
   return (
     <>
+      {/* Branded cart drawer for this store */}
+      <SFCartDrawer
+        theme={props.theme}
+        storeName={props.store.name}
+        storeSlug={props.store.slug}
+        currency={props.store.currency}
+      />
       {sectionsConfig
         .filter((s) => s.visible)
         .map((s) => renderSection(s.type))}
