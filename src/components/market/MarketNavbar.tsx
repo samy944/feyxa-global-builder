@@ -113,11 +113,15 @@ export function MarketNavbar() {
           >
             <ShoppingBag size={17} />
             {totalItems > 0 && (
-              <span
+              <motion.span
+                key={totalItems}
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: [1.4, 0.9, 1], opacity: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
                 className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full text-[10px] font-bold flex items-center justify-center bg-primary text-primary-foreground"
               >
                 {totalItems}
-              </span>
+              </motion.span>
             )}
           </button>
 

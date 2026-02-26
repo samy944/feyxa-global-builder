@@ -73,13 +73,14 @@ export function MarketProductCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.04, 0.3), duration: 0.4 }}
+      transition={{ delay: Math.min(index * 0.06, 0.4), duration: 0.45, ease: "easeOut" }}
+      whileHover={{ y: -5, transition: { duration: 0.25, ease: "easeOut" } }}
     >
       <Link
         to={`/market/product/${slug}`}
-        className="group block rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg"
+        className="group block rounded-xl overflow-hidden transition-shadow duration-300 hover:shadow-[0_16px_48px_-12px_hsla(0,0%,0%,0.35)]"
         style={{
           background: "rgba(255,255,255,0.02)",
           border: "1px solid rgba(255,255,255,0.05)",
@@ -88,11 +89,13 @@ export function MarketProductCard({
         {/* Image */}
         <div className="aspect-square relative overflow-hidden" style={{ background: "#111318" }}>
           {imageUrl ? (
-            <img
+            <motion.img
               src={imageUrl}
               alt={name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="w-full h-full object-cover"
               loading="lazy"
+              whileHover={{ scale: 1.06 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={{ color: "#333" }}>
