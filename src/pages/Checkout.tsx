@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, PackageCheck, CreditCard, Wallet, Banknote, CalendarClock } from "lucide-react";
+import { Store, ShoppingBag, Loader2, CheckCircle2, ArrowLeft, PackageCheck, CreditCard, Wallet, Banknote, CalendarClock, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import { trackInitiateCheckout, trackPurchase } from "@/lib/tracking";
@@ -41,9 +42,29 @@ interface CompletedOrder {
 export default function Checkout() {
   const { items, itemsByStore, totalPrice, clearStore } = useCart();
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUser(data.user ? { id: data.user.id } : null));
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (data.user) {
+        setCurrentUser({ id: data.user.id });
+        // Fetch order count for mock loyalty points
+        const { data: customers } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("user_id", data.user.id);
+        if (customers?.length) {
+          const { count } = await supabase
+            .from("orders")
+            .select("id", { count: "exact", head: true })
+            .in("customer_id", customers.map((c) => c.id));
+          setLoyaltyPoints((count || 0) * 150);
+        }
+      } else {
+        setCurrentUser(null);
+      }
+    });
   }, []);
 
   const [form, setForm] = useState<CustomerForm>({
@@ -81,8 +102,17 @@ export default function Checkout() {
     return c === "XOF" ? `${p.toLocaleString("fr-FR")} FCFA` : `€${p.toFixed(2)}`;
   };
 
+  // Loyalty discount
+  const LOYALTY_POINTS_THRESHOLD = 500;
+  const LOYALTY_DISCOUNT_XOF = 2500; // 2500 FCFA
+  const LOYALTY_DISCOUNT_EUR = 5;
+  const loyaltyDiscount = useLoyaltyPoints && loyaltyPoints >= LOYALTY_POINTS_THRESHOLD
+    ? (mainCurrency === "XOF" ? LOYALTY_DISCOUNT_XOF : LOYALTY_DISCOUNT_EUR)
+    : 0;
+  const canUseLoyalty = currentUser && loyaltyPoints >= LOYALTY_POINTS_THRESHOLD;
+
   const totalWeight = 0;
-  const grandTotal = totalPrice + delivery.shippingFee;
+  const grandTotal = Math.max(0, totalPrice + delivery.shippingFee - loyaltyDiscount);
   const abandonedCartIdsRef = useRef<string[]>([]);
 
   // ── Capture abandoned cart when page loads with items ──
@@ -672,7 +702,33 @@ export default function Checkout() {
                         : "—"}
                     </span>
                   </div>
+                  {loyaltyDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-primary">
+                      <span className="flex items-center gap-1"><Sparkles size={12} /> Fidélité</span>
+                      <span className="font-medium">-{formatPrice(loyaltyDiscount)}</span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Loyalty Points */}
+                {canUseLoyalty && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={16} className="text-primary" />
+                        <span className="text-sm font-medium text-foreground">Points de fidélité</span>
+                      </div>
+                      <Switch
+                        checked={useLoyaltyPoints}
+                        onCheckedChange={setUseLoyaltyPoints}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Utiliser {LOYALTY_POINTS_THRESHOLD} points pour réduire le total de {formatPrice(mainCurrency === "XOF" ? LOYALTY_DISCOUNT_XOF : LOYALTY_DISCOUNT_EUR)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Solde actuel : <strong className="text-foreground">{loyaltyPoints} 🌟</strong></p>
+                  </div>
+                )}
 
                 <div className="border-t border-border pt-4 flex justify-between">
                   <span className="font-heading text-foreground tracking-wide">TOTAL</span>
