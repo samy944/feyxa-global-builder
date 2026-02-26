@@ -14,6 +14,8 @@ import {
 } from "@/lib/storefront-themes";
 import { SECTION_SETTINGS_SCHEMA, getDefaultSettings } from "@/lib/storefront-section-settings";
 import { StorefrontRenderer } from "@/components/storefront/StorefrontRenderer";
+import { StorefrontGridEditor, StorefrontGridCanvas } from "@/components/dashboard/StorefrontGridEditor";
+import { GridPage, createRow, createWidget, type WidgetType } from "@/components/builder/GridBuilderTypes";
 import type { StoreData, ProductData } from "@/components/storefront/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -33,6 +35,7 @@ import {
   ChevronLeft,
   Eye,
   EyeOff,
+  Grid3X3,
   GripVertical,
   Layout,
   Loader2,
@@ -210,8 +213,11 @@ export function StorefrontCustomizer({
   const [colorOverrides, setColorOverrides] = useState<Partial<StorefrontTheme["colors"]> | null>(initialColorOverrides);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [editingSection, setEditingSection] = useState<number | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<"sections" | "global">("sections");
+  const [sidebarTab, setSidebarTab] = useState<"sections" | "global" | "builder">("sections");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [gridPage, setGridPage] = useState<GridPage>({ rows: [createRow("full")] });
+  const [gridSelectedWidget, setGridSelectedWidget] = useState<string | null>(null);
+  const [gridDragWidget, setGridDragWidget] = useState<WidgetType | null>(null);
 
   const handleAiGenerate = async () => {
     setAiGenerating(true);
@@ -414,6 +420,9 @@ export function StorefrontCustomizer({
           <button onClick={() => { setSidebarTab("global"); setEditingSection(null); }} className={cn("flex-1 py-2 text-[10px] font-semibold uppercase tracking-wider transition-colors", sidebarTab === "global" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}>
             <Palette size={11} className="inline mr-1" /> Apparence
           </button>
+          <button onClick={() => { setSidebarTab("builder"); setEditingSection(null); }} className={cn("flex-1 py-2 text-[10px] font-semibold uppercase tracking-wider transition-colors", sidebarTab === "builder" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}>
+            <Grid3X3 size={11} className="inline mr-1" /> Builder
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2.5 py-2">
@@ -509,6 +518,10 @@ export function StorefrontCustomizer({
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+          )}
+
+          {sidebarTab === "builder" && (
+            <StorefrontGridEditor page={gridPage} onChange={setGridPage} />
           )}
         </div>
       </aside>
@@ -650,14 +663,65 @@ export function StorefrontCustomizer({
             )}
 
             <div style={previewStyle}>
-              <StorefrontRenderer
-                templateId={templateId}
-                store={store}
-                products={products}
-                theme={mergedTheme}
-                formatPrice={formatPrice}
-                sectionsConfig={sections}
-              />
+              {sidebarTab === "builder" ? (
+                <div className="p-6">
+                  <StorefrontGridCanvas
+                    page={gridPage}
+                    selectedWidgetId={gridSelectedWidget}
+                    onSelectWidget={setGridSelectedWidget}
+                    onAddWidget={(rowId, colId, type) => {
+                      const rows = gridPage.rows.map(r => {
+                        if (r.id !== rowId) return r;
+                        return { ...r, columns: r.columns.map(c => {
+                          if (c.id !== colId) return c;
+                          return { ...c, widgets: [...c.widgets, createWidget(type)] };
+                        }) };
+                      });
+                      setGridPage({ ...gridPage, rows });
+                    }}
+                    onRemoveWidget={(rowId, colId, widgetId) => {
+                      const rows = gridPage.rows.map(r => {
+                        if (r.id !== rowId) return r;
+                        return { ...r, columns: r.columns.map(c => {
+                          if (c.id !== colId) return c;
+                          return { ...c, widgets: c.widgets.filter(w => w.id !== widgetId) };
+                        }) };
+                      });
+                      if (gridSelectedWidget === widgetId) setGridSelectedWidget(null);
+                      setGridPage({ ...gridPage, rows });
+                    }}
+                    onRemoveRow={(rowId) => setGridPage({ ...gridPage, rows: gridPage.rows.filter(r => r.id !== rowId) })}
+                    onDuplicateRow={(rowId) => {
+                      const idx = gridPage.rows.findIndex(r => r.id === rowId);
+                      if (idx === -1) return;
+                      const uid = () => Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+                      const original = gridPage.rows[idx];
+                      const clone = { ...original, id: uid(), columns: original.columns.map(c => ({ ...c, id: uid(), widgets: c.widgets.map(w => ({ ...w, id: uid() })) })) };
+                      const rows = [...gridPage.rows];
+                      rows.splice(idx + 1, 0, clone);
+                      setGridPage({ ...gridPage, rows });
+                    }}
+                    onMoveRow={(rowId, dir) => {
+                      const idx = gridPage.rows.findIndex(r => r.id === rowId);
+                      const newIdx = idx + dir;
+                      if (newIdx < 0 || newIdx >= gridPage.rows.length) return;
+                      const rows = [...gridPage.rows];
+                      [rows[idx], rows[newIdx]] = [rows[newIdx], rows[idx]];
+                      setGridPage({ ...gridPage, rows });
+                    }}
+                    dragWidget={gridDragWidget}
+                  />
+                </div>
+              ) : (
+                <StorefrontRenderer
+                  templateId={templateId}
+                  store={store}
+                  products={products}
+                  theme={mergedTheme}
+                  formatPrice={formatPrice}
+                  sectionsConfig={sections}
+                />
+              )}
             </div>
           </motion.div>
         </div>
