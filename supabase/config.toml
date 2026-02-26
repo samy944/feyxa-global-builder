@@ -86,3 +86,9 @@ verify_jwt = false
 
 [functions.fulfillment-engine]
 verify_jwt = false
+
+[functions.ai-photo-studio]
+verify_jwt = false
+
+[functions.social-commerce]
+verify_jwt = false

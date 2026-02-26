@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutGrid, Package, ShoppingCart, Users, BarChart2, Settings, Megaphone, Truck, Cpu,
   ChevronLeft, Wallet, FileText, Lightbulb, TrendingUp, Store, MessageSquare, MessageCircle, RotateCcw, Shield, Calculator, Landmark, Warehouse, Paintbrush,
-  ChevronDown,
+  ChevronDown, Share2, MousePointer2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -43,6 +43,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         { icon: Paintbrush, label: "Vitrine", path: "/dashboard/storefront" },
         { icon: FileText, label: t.dashboard.landings, path: "/dashboard/landings" },
         { icon: Megaphone, label: t.dashboard.marketing, path: "/dashboard/marketing" },
+        { icon: Share2, label: "Social Commerce", path: "/dashboard/social" },
       ],
     },
     {
@@ -67,6 +68,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       label: "Intelligence",
       items: [
         { icon: BarChart2, label: t.dashboard.analytics, path: "/dashboard/analytics" },
+        { icon: MousePointer2, label: "Heatmap", path: "/dashboard/heatmap" },
         { icon: Cpu, label: t.dashboard.ai, path: "/dashboard/ai" },
         { icon: Lightbulb, label: t.dashboard.insights, path: "/dashboard/insights" },
         { icon: TrendingUp, label: t.dashboard.trends, path: "/dashboard/trends" },
