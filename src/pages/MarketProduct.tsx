@@ -6,12 +6,14 @@ import { MarketLayout } from "@/components/market/MarketLayout";
 import { ProductReviews } from "@/components/market/ProductReviews";
 import { VariantSelector } from "@/components/market/VariantSelector";
 import { SimilarProducts } from "@/components/market/SimilarProducts";
+import { FrequentlyBoughtTogether } from "@/components/market/FrequentlyBoughtTogether";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Loader2, ChevronRight, Store, MapPin, Truck, RotateCcw, Shield,
   ShoppingBag, Star, Heart, Share2, Minus, Plus, Check, Package,
   ChevronLeft, ZoomIn, X, BadgePercent, Award, Eye, Zap, Clock,
-  Users, ThumbsUp, ArrowRight, ShoppingCart, Flame, ChevronDown
+  Users, ThumbsUp, ArrowRight, ShoppingCart, Flame, ChevronDown, Play
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,6 +52,8 @@ interface ProductDetail {
   sku: string | null;
   barcode: string | null;
   created_at: string;
+  video_url: string | null;
+  low_stock_alert_enabled: boolean;
   stores: {
     name: string;
     slug: string;
@@ -76,9 +80,27 @@ function useFakeSocialProof() {
   return { viewers, recentBuyers };
 }
 
-/* ── Image gallery with vertical thumbnails ── */
+/* ── Helper to detect video embed URLs ── */
+function getVideoEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]+)/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`;
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
+  // Direct MP4
+  if (url.match(/\.(mp4|webm)(\?|$)/i)) return url;
+  return null;
+}
+
+function isDirectVideo(url: string) {
+  return !!url.match(/\.(mp4|webm)(\?|$)/i);
+}
+
+/* ── Image gallery with vertical thumbnails + video support ── */
 function ProductGallery({
-  images, name, discountPercent, isNew, selectedImage, setSelectedImage, setShowFullscreen
+  images, name, discountPercent, isNew, selectedImage, setSelectedImage, setShowFullscreen, videoUrl
 }: {
   images: string[];
   name: string;
@@ -87,13 +109,21 @@ function ProductGallery({
   selectedImage: number;
   setSelectedImage: (i: number) => void;
   setShowFullscreen: (v: boolean) => void;
+  videoUrl: string | null;
 }) {
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  const [showVideoModal, setShowVideoModal] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
 
+  const hasVideo = !!videoUrl && !!getVideoEmbedUrl(videoUrl);
+  // Video is the last "slide"
+  const videoIndex = images.length;
+  const isVideoSelected = hasVideo && selectedImage === videoIndex;
+  const totalSlides = images.length + (hasVideo ? 1 : 0);
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!imgRef.current) return;
+    if (!imgRef.current || isVideoSelected) return;
     const rect = imgRef.current.getBoundingClientRect();
     setZoomPos({
       x: ((e.clientX - rect.left) / rect.width) * 100,
@@ -102,129 +132,188 @@ function ProductGallery({
   };
 
   return (
-    <div className="flex gap-3">
-      {/* Vertical thumbnails (desktop) */}
-      {images.length > 1 && (
-        <div className="hidden lg:flex flex-col gap-2 w-20 shrink-0">
-          {images.map((img, i) => (
-            <motion.button
-              key={i}
-              onClick={() => setSelectedImage(i)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className={`aspect-square rounded-xl border-2 overflow-hidden transition-all ${
-                i === selectedImage
-                  ? "border-primary ring-2 ring-primary/20"
-                  : "border-border hover:border-muted-foreground/40"
-              }`}
-            >
-              <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
-            </motion.button>
-          ))}
-        </div>
-      )}
-
-      {/* Main image */}
-      <div className="flex-1 space-y-3">
-        <div
-          ref={imgRef}
-          className="relative aspect-square rounded-2xl border border-border bg-secondary overflow-hidden cursor-crosshair group"
-          onMouseEnter={() => setIsZoomed(true)}
-          onMouseLeave={() => setIsZoomed(false)}
-          onMouseMove={handleMouseMove}
-          onClick={() => images.length > 0 && setShowFullscreen(true)}
-        >
-          {images.length > 0 ? (
-            <AnimatePresence mode="wait">
-              <motion.img
-                key={selectedImage}
-                src={images[selectedImage]}
-                alt={name}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="w-full h-full object-cover"
-                style={isZoomed ? {
-                  transform: "scale(2.5)",
-                  transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
-                  transition: "transform-origin 0.1s ease"
-                } : { transition: "transform 0.3s ease" }}
-              />
-            </AnimatePresence>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground/20">
-              <Package size={100} />
-            </div>
-          )}
-
-          {/* Zoom hint */}
-          <div className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            <ZoomIn size={12} /> Survolez pour zoomer
-          </div>
-
-          {/* Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-2 pointer-events-none">
-            {discountPercent > 0 && (
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", bounce: 0.5 }}>
-                <Badge className="bg-destructive text-destructive-foreground font-bold text-sm px-3 py-1.5 shadow-lg">
-                  <Flame size={14} className="mr-1" /> -{discountPercent}%
-                </Badge>
-              </motion.div>
-            )}
-            {isNew && (
-              <Badge className="bg-primary text-primary-foreground font-semibold text-xs px-3 py-1">
-                ✨ NOUVEAU
-              </Badge>
-            )}
-          </div>
-
-          {/* Navigation arrows on hover */}
-          {images.length > 1 && (
-            <>
-              <button
-                onClick={(e) => { e.stopPropagation(); setSelectedImage(Math.max(0, selectedImage - 1)); }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background disabled:opacity-0"
-                disabled={selectedImage === 0}
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setSelectedImage(Math.min(images.length - 1, selectedImage + 1)); }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background disabled:opacity-0"
-                disabled={selectedImage === images.length - 1}
-              >
-                <ChevronRight size={18} />
-              </button>
-            </>
-          )}
-
-          {/* Image counter */}
-          {images.length > 1 && (
-            <div className="absolute bottom-3 left-3 bg-background/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground font-medium pointer-events-none">
-              {selectedImage + 1} / {images.length}
-            </div>
-          )}
-        </div>
-
-        {/* Horizontal thumbnails (mobile) */}
-        {images.length > 1 && (
-          <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
+    <>
+      <div className="flex gap-3">
+        {/* Vertical thumbnails (desktop) */}
+        {totalSlides > 1 && (
+          <div className="hidden lg:flex flex-col gap-2 w-20 shrink-0">
             {images.map((img, i) => (
-              <button
+              <motion.button
                 key={i}
                 onClick={() => setSelectedImage(i)}
-                className={`h-16 w-16 rounded-xl border-2 overflow-hidden shrink-0 transition-all ${
-                  i === selectedImage ? "border-primary" : "border-border"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`aspect-square rounded-xl border-2 overflow-hidden transition-all ${
+                  i === selectedImage
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-border hover:border-muted-foreground/40"
                 }`}
               >
-                <img src={img} alt="" className="w-full h-full object-cover" />
-              </button>
+                <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+              </motion.button>
             ))}
+            {hasVideo && (
+              <motion.button
+                onClick={() => setSelectedImage(videoIndex)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`aspect-square rounded-xl border-2 overflow-hidden transition-all relative bg-secondary flex items-center justify-center ${
+                  isVideoSelected
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-border hover:border-muted-foreground/40"
+                }`}
+              >
+                <Play size={20} className="text-primary" />
+                <span className="absolute bottom-0.5 text-[8px] font-medium text-muted-foreground">Vidéo</span>
+              </motion.button>
+            )}
           </div>
         )}
+
+        {/* Main image / video */}
+        <div className="flex-1 space-y-3">
+          <div
+            ref={imgRef}
+            className="relative aspect-square rounded-2xl border border-border bg-secondary overflow-hidden cursor-crosshair group"
+            onMouseEnter={() => !isVideoSelected && setIsZoomed(true)}
+            onMouseLeave={() => setIsZoomed(false)}
+            onMouseMove={handleMouseMove}
+            onClick={() => {
+              if (isVideoSelected) setShowVideoModal(true);
+              else if (images.length > 0) setShowFullscreen(true);
+            }}
+          >
+            {isVideoSelected ? (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-background gap-3 cursor-pointer">
+                <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Play size={36} className="text-primary ml-1" />
+                </div>
+                <p className="text-sm text-muted-foreground font-medium">Cliquez pour lire la vidéo</p>
+              </div>
+            ) : images.length > 0 ? (
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={selectedImage}
+                  src={images[selectedImage]}
+                  alt={name}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full h-full object-cover"
+                  style={isZoomed ? {
+                    transform: "scale(2.5)",
+                    transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+                    transition: "transform-origin 0.1s ease"
+                  } : { transition: "transform 0.3s ease" }}
+                />
+              </AnimatePresence>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground/20">
+                <Package size={100} />
+              </div>
+            )}
+
+            {/* Zoom hint (only on images) */}
+            {!isVideoSelected && (
+              <div className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <ZoomIn size={12} /> Survolez pour zoomer
+              </div>
+            )}
+
+            {/* Badges */}
+            <div className="absolute top-3 left-3 flex flex-col gap-2 pointer-events-none">
+              {discountPercent > 0 && (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", bounce: 0.5 }}>
+                  <Badge className="bg-destructive text-destructive-foreground font-bold text-sm px-3 py-1.5 shadow-lg">
+                    <Flame size={14} className="mr-1" /> -{discountPercent}%
+                  </Badge>
+                </motion.div>
+              )}
+              {isNew && (
+                <Badge className="bg-primary text-primary-foreground font-semibold text-xs px-3 py-1">
+                  ✨ NOUVEAU
+                </Badge>
+              )}
+            </div>
+
+            {/* Navigation arrows on hover */}
+            {totalSlides > 1 && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedImage(Math.max(0, selectedImage - 1)); }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background disabled:opacity-0"
+                  disabled={selectedImage === 0}
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedImage(Math.min(totalSlides - 1, selectedImage + 1)); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background disabled:opacity-0"
+                  disabled={selectedImage === totalSlides - 1}
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </>
+            )}
+
+            {/* Image counter */}
+            {totalSlides > 1 && (
+              <div className="absolute bottom-3 left-3 bg-background/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground font-medium pointer-events-none">
+                {selectedImage + 1} / {totalSlides}
+              </div>
+            )}
+          </div>
+
+          {/* Horizontal thumbnails (mobile) */}
+          {totalSlides > 1 && (
+            <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
+              {images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedImage(i)}
+                  className={`h-16 w-16 rounded-xl border-2 overflow-hidden shrink-0 transition-all ${
+                    i === selectedImage ? "border-primary" : "border-border"
+                  }`}
+                >
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+              {hasVideo && (
+                <button
+                  onClick={() => setSelectedImage(videoIndex)}
+                  className={`h-16 w-16 rounded-xl border-2 overflow-hidden shrink-0 transition-all flex items-center justify-center bg-secondary ${
+                    isVideoSelected ? "border-primary" : "border-border"
+                  }`}
+                >
+                  <Play size={16} className="text-primary" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Video Modal */}
+      {hasVideo && (
+        <Dialog open={showVideoModal} onOpenChange={setShowVideoModal}>
+          <DialogContent className="sm:max-w-4xl p-0 overflow-hidden">
+            <div className="aspect-video w-full">
+              {isDirectVideo(videoUrl!) ? (
+                <video src={getVideoEmbedUrl(videoUrl!)!} controls autoPlay className="w-full h-full" />
+              ) : (
+                <iframe
+                  src={getVideoEmbedUrl(videoUrl!)!}
+                  className="w-full h-full"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 }
 
@@ -284,7 +373,7 @@ export default function MarketProduct() {
     setLoading(true);
     const { data } = await supabase
       .from("products")
-      .select("id, name, slug, description, price, compare_at_price, images, stock_quantity, avg_rating, review_count, tags, store_id, marketplace_category_id, weight_grams, sku, barcode, created_at, stores!inner(name, slug, city, currency, delivery_delay, return_policy, logo_url)")
+      .select("id, name, slug, description, price, compare_at_price, images, stock_quantity, avg_rating, review_count, tags, store_id, marketplace_category_id, weight_grams, sku, barcode, created_at, video_url, low_stock_alert_enabled, stores!inner(name, slug, city, currency, delivery_delay, return_policy, logo_url)")
       .eq("slug", slug!)
       .eq("is_published", true)
       .eq("is_marketplace_published", true)
@@ -499,24 +588,25 @@ export default function MarketProduct() {
                 selectedImage={selectedImage}
                 setSelectedImage={setSelectedImage}
                 setShowFullscreen={setShowFullscreen}
+                videoUrl={product.video_url}
               />
             </motion.div>
 
             {/* ═══ RIGHT: Product Info ═══ */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="lg:col-span-5 space-y-5">
               
-              {/* Social proof bar */}
+              {/* Social proof bar with pulse */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
                 className="flex items-center gap-4 text-xs text-muted-foreground"
               >
-                <span className="flex items-center gap-1">
-                  <Eye size={12} className="text-primary" />
+                <span className="flex items-center gap-1.5 bg-primary/5 border border-primary/10 rounded-full px-3 py-1.5">
+                  <Eye size={12} className="text-primary animate-pulse" />
                   <strong className="text-foreground">{viewers}</strong> personnes regardent
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1.5 bg-secondary rounded-full px-3 py-1.5">
                   <ShoppingCart size={12} className="text-primary" />
                   <strong className="text-foreground">{recentBuyers}</strong> ventes récentes
                 </span>
@@ -598,33 +688,56 @@ export default function MarketProduct() {
                 <VariantSelector variants={variants} onVariantChange={handleVariantChange} />
               )}
 
-              {/* Stock indicator with progress bar */}
+              {/* Stock indicator with scarcity alerts */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  {activeStock > 10 ? (
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
-                      <span className="text-primary font-semibold">En stock</span>
-                      <span className="text-muted-foreground">— Prêt à expédier</span>
+                {activeStock > 10 ? (
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
+                    <span className="text-primary font-semibold">En stock</span>
+                    <span className="text-muted-foreground">— Prêt à expédier</span>
+                  </div>
+                ) : activeStock > 0 && activeStock <= 5 ? (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ type: "spring", bounce: 0.4 }}
+                    className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 space-y-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                      >
+                        <Flame size={18} className="text-destructive" />
+                      </motion.div>
+                      <span className="text-sm font-bold text-destructive">
+                        🔥 Vite, plus que {activeStock} article{activeStock > 1 ? "s" : ""} en stock !
+                      </span>
                     </div>
-                  ) : activeStock > 0 ? (
+                    <Progress value={stockPercent} className="h-2.5 [&>div]:bg-destructive" />
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock size={11} /> Commandez maintenant avant rupture
+                    </p>
+                  </motion.div>
+                ) : activeStock > 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-2"
+                  >
                     <div className="flex items-center gap-1.5 text-sm">
                       <Flame size={14} className="text-destructive" />
                       <span className="text-destructive font-semibold">
                         Plus que {activeStock} en stock !
                       </span>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <div className="h-2.5 w-2.5 rounded-full bg-destructive" />
-                      <span className="text-destructive font-medium">Rupture de stock</span>
-                    </div>
-                  )}
-                </div>
-                {activeStock > 0 && activeStock <= 20 && (
-                  <div className="space-y-1">
                     <Progress value={stockPercent} className="h-2" />
                     <p className="text-xs text-muted-foreground">Stock limité — commandez maintenant</p>
+                  </motion.div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <div className="h-2.5 w-2.5 rounded-full bg-destructive" />
+                    <span className="text-destructive font-medium">Rupture de stock</span>
                   </div>
                 )}
               </div>
@@ -874,6 +987,18 @@ export default function MarketProduct() {
           </Tabs>
         </div>
       </section>
+
+      {/* Frequently bought together */}
+      <FrequentlyBoughtTogether
+        productId={product.id}
+        storeId={product.store_id}
+        categoryId={product.marketplace_category_id}
+        currentPrice={activePrice}
+        currentName={product.name}
+        currentImage={images[0] ?? null}
+        currentSlug={product.slug}
+        currency={product.stores.currency}
+      />
 
       {/* Similar products */}
       <SimilarProducts productId={product.id} storeId={product.store_id} categoryId={product.marketplace_category_id} tags={product.tags} />

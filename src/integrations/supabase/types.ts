@@ -2326,6 +2326,7 @@ export type Database = {
           images: Json | null
           is_marketplace_published: boolean
           is_published: boolean
+          low_stock_alert_enabled: boolean
           low_stock_threshold: number | null
           marketplace_category_id: string | null
           name: string
@@ -2337,6 +2338,7 @@ export type Database = {
           store_id: string
           tags: string[] | null
           updated_at: string
+          video_url: string | null
           weight_grams: number | null
         }
         Insert: {
@@ -2350,6 +2352,7 @@ export type Database = {
           images?: Json | null
           is_marketplace_published?: boolean
           is_published?: boolean
+          low_stock_alert_enabled?: boolean
           low_stock_threshold?: number | null
           marketplace_category_id?: string | null
           name: string
@@ -2361,6 +2364,7 @@ export type Database = {
           store_id: string
           tags?: string[] | null
           updated_at?: string
+          video_url?: string | null
           weight_grams?: number | null
         }
         Update: {
@@ -2374,6 +2378,7 @@ export type Database = {
           images?: Json | null
           is_marketplace_published?: boolean
           is_published?: boolean
+          low_stock_alert_enabled?: boolean
           low_stock_threshold?: number | null
           marketplace_category_id?: string | null
           name?: string
@@ -2385,6 +2390,7 @@ export type Database = {
           store_id?: string
           tags?: string[] | null
           updated_at?: string
+          video_url?: string | null
           weight_grams?: number | null
         }
         Relationships: [
