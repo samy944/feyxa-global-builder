@@ -29,8 +29,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, ImagePlus, X, GripVertical, Plus,
   Package, DollarSign, Layers, Tag, Settings2, Globe, BarChart3, Weight, Barcode, Info,
-  Send, CheckCircle2, Clock, XCircle, AlertTriangle, Video, Flame, Sparkles, Wand2
+  Send, CheckCircle2, Clock, XCircle, AlertTriangle, Video, Flame, Sparkles, Wand2, Camera
 } from "lucide-react";
+import { PhotoStudioDialog } from "./PhotoStudioDialog";
 
 // ── Schema ──────────────────────────────────────────────────────────
 const schema = z.object({
@@ -392,6 +393,7 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = !!product;
+  const [studioOpen, setStudioOpen] = useState(false);
 
   // Tags UI
   const [tagInput, setTagInput] = useState("");
@@ -780,8 +782,35 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">{images.length}/{MAX_IMAGES} images · Max 5 Mo · Glissez pour réorganiser</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">{images.length}/{MAX_IMAGES} images · Max 5 Mo · Glissez pour réorganiser</p>
+                  {images.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs"
+                      onClick={() => setStudioOpen(true)}
+                    >
+                      <Camera size={12} />
+                      Studio Photo IA
+                    </Button>
+                  )}
+                </div>
                 <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
+                {/* Photo Studio Dialog */}
+                {images.length > 0 && (
+                  <PhotoStudioDialog
+                    open={studioOpen}
+                    onOpenChange={setStudioOpen}
+                    imageUrl={images[0].preview}
+                    productName={watch("name") || "produit"}
+                    onImageReady={(url) => {
+                      setImages((prev) => [{ type: "url", preview: url }, ...prev.slice(1)]);
+                      toast.success("Image du studio appliquée !");
+                    }}
+                  />
+                )}
               </div>
 
               {/* Name */}

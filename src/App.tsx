@@ -91,6 +91,8 @@ import ResetPassword from "./pages/ResetPassword";
 import BlogIndex from "./pages/BlogIndex";
 import BlogPost from "./pages/BlogPost";
 import StartStore from "./pages/StartStore";
+import DashboardSocialCommerce from "./pages/DashboardSocialCommerce";
+import DashboardHeatmap from "./pages/DashboardHeatmap";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -143,6 +145,8 @@ function StorefrontRoutes() {
         <Route path="trends" element={<DashboardTrends />} />
         <Route path="analytics" element={<DashboardAnalytics />} />
         <Route path="marketing" element={<DashboardMarketing />} />
+        <Route path="social" element={<DashboardSocialCommerce />} />
+        <Route path="heatmap" element={<DashboardHeatmap />} />
         <Route path="landings" element={<DashboardLandings />} />
         <Route path="landings/:id/edit" element={<DashboardLandingEditor />} />
         <Route path="landings/:id/ab" element={<DashboardLandingAB />} />
