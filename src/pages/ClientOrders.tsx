@@ -4,8 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { ReviewForm } from "@/components/market/ReviewForm";
 import { CreateTicketDialog } from "@/components/tickets/CreateTicketDialog";
 import { ReturnRequestDialog } from "@/components/returns/ReturnRequestDialog";
+import { OrderChatDialog } from "@/components/messages/OrderChatDialog";
 import { motion } from "framer-motion";
-import { Loader2, Star, Package, MessageSquare, RotateCcw } from "lucide-react";
+import { Loader2, Star, Package, MessageSquare, MessageCircle, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,7 @@ export default function ClientOrders() {
   const [reviewTarget, setReviewTarget] = useState<{ productId: string; productName: string; storeId: string; orderId: string } | null>(null);
   const [ticketTarget, setTicketTarget] = useState<{ storeId: string; sellerId: string; orderId: string } | null>(null);
   const [returnTarget, setReturnTarget] = useState<{ storeId: string; sellerId: string; orderId: string } | null>(null);
+  const [chatTarget, setChatTarget] = useState<{ orderId: string; storeId: string; storeName: string; orderNumber: string } | null>(null);
 
   useEffect(() => { if (user) fetchOrders(); }, [user]);
 
@@ -137,6 +139,9 @@ export default function ClientOrders() {
                 ))}
               </div>
               <div className="px-5 py-3 border-t border-border flex items-center gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => setChatTarget({ orderId: order.id, storeId: order.stores.id, storeName: order.stores.name, orderNumber: order.order_number })}>
+                  <MessageCircle size={14} className="mr-1" /> Contacter
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => setTicketTarget({ storeId: order.stores.id, sellerId: order.stores.owner_id, orderId: order.id })}>
                   <MessageSquare size={14} className="mr-1" /> Ticket
                 </Button>
@@ -157,6 +162,7 @@ export default function ClientOrders() {
       {reviewTarget && <ReviewForm open={!!reviewTarget} onOpenChange={o => !o && setReviewTarget(null)} productId={reviewTarget.productId} productName={reviewTarget.productName} storeId={reviewTarget.storeId} orderId={reviewTarget.orderId} onSuccess={fetchOrders} />}
       {ticketTarget && <CreateTicketDialog open={!!ticketTarget} onOpenChange={o => !o && setTicketTarget(null)} storeId={ticketTarget.storeId} sellerId={ticketTarget.sellerId} orderId={ticketTarget.orderId} />}
       {returnTarget && <ReturnRequestDialog open={!!returnTarget} onOpenChange={o => !o && setReturnTarget(null)} orderId={returnTarget.orderId} storeId={returnTarget.storeId} sellerId={returnTarget.sellerId} onCreated={fetchOrders} />}
+      {chatTarget && <OrderChatDialog open={!!chatTarget} onOpenChange={o => !o && setChatTarget(null)} orderId={chatTarget.orderId} storeId={chatTarget.storeId} storeName={chatTarget.storeName} orderNumber={chatTarget.orderNumber} />}
     </>
   );
 }

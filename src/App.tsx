@@ -51,6 +51,7 @@ import MyOrders from "./pages/MyOrders";
 import DashboardCustomers from "./pages/DashboardCustomers";
 import DashboardShipping from "./pages/DashboardShipping";
 import DashboardTickets from "./pages/DashboardTickets";
+import DashboardMessages from "./pages/DashboardMessages";
 import DashboardReturns from "./pages/DashboardReturns";
 import AdminTickets from "./pages/AdminTickets";
 import AdminReturns from "./pages/AdminReturns";
@@ -140,6 +141,7 @@ const App = () => (
               <Route path="landing" element={<DashboardLandings />} />
               <Route path="shipping" element={<DashboardShipping />} />
               <Route path="ai" element={<DashboardAI />} />
+              <Route path="messages" element={<DashboardMessages />} />
               <Route path="tickets" element={<DashboardTickets />} />
               <Route path="returns" element={<DashboardReturns />} />
               <Route path="stores" element={<DashboardStores />} />
