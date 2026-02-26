@@ -4,6 +4,7 @@ import {
   getTemplateById,
   getDefaultSectionsConfig,
   type SFSectionConfig,
+  type SFSectionType,
 } from "@/lib/storefront-templates";
 import {
   STOREFRONT_THEMES,
@@ -11,25 +12,38 @@ import {
   getThemeCSSVars,
   type StorefrontTheme,
 } from "@/lib/storefront-themes";
+import { SECTION_SETTINGS_SCHEMA, getDefaultSettings } from "@/lib/storefront-section-settings";
 import { StorefrontRenderer } from "@/components/storefront/StorefrontRenderer";
 import type { StoreData, ProductData } from "@/components/storefront/types";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Check,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
   Eye,
+  EyeOff,
   GripVertical,
   Layout,
   Loader2,
   Monitor,
   Palette,
   Save,
+  Settings2,
   Smartphone,
   Sparkles,
   Undo2,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -107,17 +121,15 @@ export function StorefrontCustomizer({
   const [sections, setSections] = useState<SFSectionConfig[]>(initialSections);
   const [colorOverrides, setColorOverrides] = useState<Partial<StorefrontTheme["colors"]> | null>(initialColorOverrides);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+  const [editingSection, setEditingSection] = useState<number | null>(null);
+  const [sidebarTab, setSidebarTab] = useState<"sections" | "global">("sections");
 
   const template = useMemo(() => getTemplateById(templateId), [templateId]);
   const baseTheme = useMemo(() => getThemeById(themeId), [themeId]);
 
-  // Merged theme with color overrides
   const mergedTheme: StorefrontTheme = useMemo(() => {
     if (!colorOverrides || Object.keys(colorOverrides).length === 0) return baseTheme;
-    return {
-      ...baseTheme,
-      colors: { ...baseTheme.colors, ...colorOverrides },
-    };
+    return { ...baseTheme, colors: { ...baseTheme.colors, ...colorOverrides } };
   }, [baseTheme, colorOverrides]);
 
   const cssVars = useMemo(() => getThemeCSSVars(mergedTheme), [mergedTheme]);
@@ -134,6 +146,7 @@ export function StorefrontCustomizer({
     setSections(getDefaultSectionsConfig(t));
     setThemeId(t.defaultThemeId);
     setColorOverrides(null);
+    setEditingSection(null);
   };
 
   const toggleSection = (idx: number) => {
@@ -155,6 +168,8 @@ export function StorefrontCustomizer({
       [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
       return arr;
     });
+    if (editingSection === idx) setEditingSection(newIdx);
+    else if (editingSection === newIdx) setEditingSection(idx);
   };
 
   const handleColorChange = (key: keyof StorefrontTheme["colors"], hex: string) => {
@@ -163,6 +178,16 @@ export function StorefrontCustomizer({
   };
 
   const resetColors = () => setColorOverrides(null);
+
+  const updateSectionSetting = (idx: number, key: string, value: any) => {
+    setSections((prev) =>
+      prev.map((sec, i) =>
+        i === idx
+          ? { ...sec, settings: { ...(sec.settings || {}), [key]: value } }
+          : sec
+      )
+    );
+  };
 
   const formatPrice = useCallback(
     (price: number) =>
@@ -174,7 +199,6 @@ export function StorefrontCustomizer({
     [store.currency]
   );
 
-  // Load Google Fonts for preview
   useEffect(() => {
     const fonts = [mergedTheme.fonts.heading, mergedTheme.fonts.body].filter(
       (f, i, arr) => arr.indexOf(f) === i
@@ -185,9 +209,7 @@ export function StorefrontCustomizer({
       .map((f) => `family=${f.replace(/ /g, "+")}:wght@400;500;600;700`)
       .join("&")}&display=swap`;
     document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
+    return () => { document.head.removeChild(link); };
   }, [mergedTheme]);
 
   const previewStyle: React.CSSProperties = {
@@ -197,271 +219,267 @@ export function StorefrontCustomizer({
     fontFamily: `"${mergedTheme.fonts.body}", system-ui, sans-serif`,
   };
 
+  const editingSec = editingSection !== null ? sections[editingSection] : null;
+  const editingSchema = editingSec ? SECTION_SETTINGS_SCHEMA[editingSec.type] : null;
+  const editingDef = editingSec ? template.sections.find((ts) => ts.type === editingSec.type) : null;
+
   return (
     <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
-      {/* ── Sidebar ── */}
-      <aside className="w-[320px] shrink-0 border-r border-border bg-card overflow-y-auto">
+      {/* ── Panel 1: Section List / Global Settings ── */}
+      <aside className="w-[280px] shrink-0 border-r border-border bg-card overflow-y-auto flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-primary" />
-            <span className="text-sm font-semibold text-foreground">Éditeur de vitrine</span>
+        <div className="sticky top-0 z-10 bg-card border-b border-border px-3 py-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Sparkles size={14} className="text-primary" />
+            <span className="text-xs font-semibold text-foreground">Éditeur de vitrine</span>
           </div>
-          <div className="flex gap-1.5">
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={!isDirty}
-              onClick={() => {
-                setTemplateId(initialTemplateId);
-                setThemeId(initialThemeId);
-                setSections(initialSections);
-                setColorOverrides(initialColorOverrides);
-              }}
-              className="h-7 text-xs"
-            >
-              <Undo2 size={12} className="mr-1" /> Annuler
+          <div className="flex gap-1">
+            <Button size="sm" variant="ghost" disabled={!isDirty} onClick={() => {
+              setTemplateId(initialTemplateId);
+              setThemeId(initialThemeId);
+              setSections(initialSections);
+              setColorOverrides(initialColorOverrides);
+              setEditingSection(null);
+            }} className="h-6 text-[10px] px-2">
+              <Undo2 size={10} className="mr-0.5" /> Annuler
             </Button>
-            <Button
-              size="sm"
-              disabled={!isDirty || saving}
-              onClick={() => onSave({ templateId, themeId, sections, colorOverrides })}
-              className="h-7 text-xs"
-            >
-              {saving ? <Loader2 size={12} className="mr-1 animate-spin" /> : <Save size={12} className="mr-1" />}
-              Sauvegarder
+            <Button size="sm" disabled={!isDirty || saving} onClick={() => onSave({ templateId, themeId, sections, colorOverrides })} className="h-6 text-[10px] px-2">
+              {saving ? <Loader2 size={10} className="mr-0.5 animate-spin" /> : <Save size={10} className="mr-0.5" />}
+              Sauver
             </Button>
           </div>
         </div>
 
-        <Accordion type="multiple" defaultValue={["template", "theme", "sections"]} className="px-3 py-2">
-          {/* ─── Template ─── */}
-          <AccordionItem value="template">
-            <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline py-2">
-              <div className="flex items-center gap-1.5"><Layout size={13} /> Modèle</div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              <div className="grid grid-cols-2 gap-2">
-                {STOREFRONT_TEMPLATES.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => handleTemplateChange(t.id)}
+        {/* Tabs */}
+        <div className="flex border-b border-border">
+          <button onClick={() => { setSidebarTab("sections"); setEditingSection(null); }} className={cn("flex-1 py-2 text-[10px] font-semibold uppercase tracking-wider transition-colors", sidebarTab === "sections" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}>
+            <GripVertical size={11} className="inline mr-1" /> Sections
+          </button>
+          <button onClick={() => { setSidebarTab("global"); setEditingSection(null); }} className={cn("flex-1 py-2 text-[10px] font-semibold uppercase tracking-wider transition-colors", sidebarTab === "global" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}>
+            <Palette size={11} className="inline mr-1" /> Apparence
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-2.5 py-2">
+          {sidebarTab === "sections" && (
+            <div className="space-y-1">
+              {sections.map((sec, idx) => {
+                const def = template.sections.find((ts) => ts.type === sec.type);
+                const isEditing = editingSection === idx;
+                return (
+                  <div
+                    key={`${sec.type}-${idx}`}
+                    onClick={() => setEditingSection(isEditing ? null : idx)}
                     className={cn(
-                      "relative rounded-lg border p-2.5 text-left transition-all text-[11px]",
-                      templateId === t.id
-                        ? "border-primary ring-1 ring-primary/20 bg-primary/5"
-                        : "border-border hover:border-primary/40"
+                      "flex items-center gap-1.5 p-2 rounded-lg border transition-all cursor-pointer",
+                      isEditing
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                        : sec.visible
+                          ? "bg-card border-border hover:border-primary/30"
+                          : "bg-muted/40 border-transparent opacity-50"
                     )}
                   >
-                    {templateId === t.id && (
-                      <div className="absolute top-1.5 right-1.5 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
-                        <Check size={10} className="text-primary-foreground" />
-                      </div>
-                    )}
-                    <span className="text-sm">{t.icon}</span>
-                    <p className="font-medium text-foreground mt-0.5">{t.name}</p>
-                    <p className="text-muted-foreground line-clamp-1 mt-0.5">{t.description}</p>
-                  </button>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+                    <GripVertical size={11} className="text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[11px] font-medium text-foreground">{def?.label || sec.type}</span>
+                      {def?.required && <span className="text-[8px] text-muted-foreground ml-1">(requis)</span>}
+                    </div>
+                    <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => moveSection(idx, -1)} disabled={idx === 0 || def?.required} className="h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20">
+                        <ChevronUp size={10} />
+                      </button>
+                      <button onClick={() => moveSection(idx, 1)} disabled={idx === sections.length - 1 || def?.required} className="h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20">
+                        <ChevronDown size={10} />
+                      </button>
+                      <button onClick={() => toggleSection(idx)} disabled={def?.required} className="h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20">
+                        {sec.visible ? <Eye size={10} /> : <EyeOff size={10} />}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
-          {/* ─── Theme / Colors ─── */}
-          <AccordionItem value="theme">
-            <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline py-2">
-              <div className="flex items-center gap-1.5"><Palette size={13} /> Thème & Couleurs</div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-3 space-y-4">
-              {/* Theme presets */}
-              <div>
-                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                  Presets
-                </p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {STOREFRONT_THEMES.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => {
-                        setThemeId(t.id);
-                        setColorOverrides(null);
-                      }}
-                      className={cn(
-                        "rounded-md border p-1.5 text-center transition-all",
-                        themeId === t.id
-                          ? "border-primary ring-1 ring-primary/20"
-                          : "border-border hover:border-primary/40"
-                      )}
-                    >
-                      <div className="flex gap-0.5 justify-center mb-1">
-                        {[t.preview.bg, t.preview.accent, t.preview.text].map((c, i) => (
-                          <div
-                            key={i}
-                            className="h-3 w-3 rounded-full border border-border/50"
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-[9px] font-medium text-foreground truncate">{t.name}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          {sidebarTab === "global" && (
+            <Accordion type="multiple" defaultValue={["template", "theme"]} className="space-y-0">
+              {/* Template */}
+              <AccordionItem value="template" className="border-none">
+                <AccordionTrigger className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline py-1.5">
+                  <div className="flex items-center gap-1"><Layout size={11} /> Modèle</div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-2">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {STOREFRONT_TEMPLATES.map((t) => (
+                      <button key={t.id} onClick={() => handleTemplateChange(t.id)} className={cn(
+                        "relative rounded-md border p-2 text-left transition-all text-[10px]",
+                        templateId === t.id ? "border-primary ring-1 ring-primary/20 bg-primary/5" : "border-border hover:border-primary/40"
+                      )}>
+                        {templateId === t.id && <div className="absolute top-1 right-1 h-3.5 w-3.5 rounded-full bg-primary flex items-center justify-center"><Check size={8} className="text-primary-foreground" /></div>}
+                        <span className="text-sm">{t.icon}</span>
+                        <p className="font-medium text-foreground mt-0.5">{t.name}</p>
+                      </button>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
 
-              {/* Color overrides */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                    Personnaliser
-                  </p>
-                  {colorOverrides && Object.keys(colorOverrides).length > 0 && (
-                    <button
-                      onClick={resetColors}
-                      className="text-[10px] text-primary hover:underline"
-                    >
-                      Réinitialiser
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  {COLOR_FIELDS.map(({ key, label }) => {
-                    const currentHsl = mergedTheme.colors[key];
-                    const hex = hslToHex(currentHsl);
-                    return (
-                      <div key={key} className="flex items-center gap-2">
-                        <label className="text-[11px] text-foreground w-16 shrink-0">{label}</label>
-                        <div className="relative">
-                          <input
-                            type="color"
-                            value={hex}
-                            onChange={(e) => handleColorChange(key, e.target.value)}
-                            className="h-7 w-7 rounded-md border border-border cursor-pointer appearance-none bg-transparent p-0"
-                            style={{ colorScheme: "auto" }}
-                          />
+              {/* Theme */}
+              <AccordionItem value="theme" className="border-none">
+                <AccordionTrigger className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline py-1.5">
+                  <div className="flex items-center gap-1"><Palette size={11} /> Thème</div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-2 space-y-3">
+                  <div className="grid grid-cols-3 gap-1">
+                    {STOREFRONT_THEMES.map((t) => (
+                      <button key={t.id} onClick={() => { setThemeId(t.id); setColorOverrides(null); }} className={cn(
+                        "rounded-md border p-1 text-center transition-all",
+                        themeId === t.id ? "border-primary ring-1 ring-primary/20" : "border-border hover:border-primary/40"
+                      )}>
+                        <div className="flex gap-0.5 justify-center mb-0.5">
+                          {[t.preview.bg, t.preview.accent, t.preview.text].map((c, i) => (
+                            <div key={i} className="h-2.5 w-2.5 rounded-full border border-border/50" style={{ backgroundColor: c }} />
+                          ))}
                         </div>
-                        <span className="text-[9px] text-muted-foreground font-mono flex-1 truncate">
-                          {currentHsl}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+                        <p className="text-[8px] font-medium text-foreground truncate">{t.name}</p>
+                      </button>
+                    ))}
+                  </div>
 
-          {/* ─── Sections ─── */}
-          <AccordionItem value="sections">
-            <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline py-2">
-              <div className="flex items-center gap-1.5"><GripVertical size={13} /> Sections</div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              <div className="space-y-1">
-                {sections.map((sec, idx) => {
-                  const def = template.sections.find((ts) => ts.type === sec.type);
-                  return (
-                    <div
-                      key={sec.type}
-                      className={cn(
-                        "flex items-center gap-2 p-2 rounded-lg border transition-colors",
-                        sec.visible
-                          ? "bg-card border-border"
-                          : "bg-muted/40 border-transparent opacity-60"
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Couleurs</p>
+                      {colorOverrides && Object.keys(colorOverrides).length > 0 && (
+                        <button onClick={resetColors} className="text-[9px] text-primary hover:underline">Reset</button>
                       )}
-                    >
-                      <GripVertical
-                        size={12}
-                        className="text-muted-foreground shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[11px] font-medium text-foreground">
-                          {def?.label || sec.type}
-                        </span>
-                        {def?.required && (
-                          <span className="text-[9px] text-muted-foreground ml-1">
-                            (requis)
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          onClick={() => moveSection(idx, -1)}
-                          disabled={idx === 0 || def?.required}
-                          className="h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20"
-                        >
-                          <ChevronUp size={12} />
-                        </button>
-                        <button
-                          onClick={() => moveSection(idx, 1)}
-                          disabled={idx === sections.length - 1 || def?.required}
-                          className="h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20"
-                        >
-                          <ChevronDown size={12} />
-                        </button>
-                        <Switch
-                          checked={sec.visible}
-                          onCheckedChange={() => toggleSection(idx)}
-                          disabled={def?.required}
-                          className="scale-[0.65] ml-1"
+                    </div>
+                    <div className="space-y-1">
+                      {COLOR_FIELDS.map(({ key, label }) => {
+                        const hex = hslToHex(mergedTheme.colors[key]);
+                        return (
+                          <div key={key} className="flex items-center gap-1.5">
+                            <label className="text-[10px] text-foreground w-14 shrink-0">{label}</label>
+                            <input type="color" value={hex} onChange={(e) => handleColorChange(key, e.target.value)} className="h-6 w-6 rounded border border-border cursor-pointer appearance-none bg-transparent p-0" />
+                            <span className="text-[8px] text-muted-foreground font-mono flex-1 truncate">{mergedTheme.colors[key]}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+        </div>
+      </aside>
+
+      {/* ── Panel 2: Section Settings Editor (appears when a section is selected) ── */}
+      <AnimatePresence>
+        {editingSection !== null && editingSchema && (
+          <motion.aside
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 280, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="shrink-0 border-r border-border bg-card overflow-hidden"
+          >
+            <div className="w-[280px] h-full overflow-y-auto">
+              <div className="sticky top-0 z-10 bg-card border-b border-border px-3 py-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Settings2 size={13} className="text-primary" />
+                  <span className="text-xs font-semibold text-foreground">{editingDef?.label || editingSec?.type}</span>
+                </div>
+                <button onClick={() => setEditingSection(null)} className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground">
+                  <X size={14} />
+                </button>
+              </div>
+
+              <div className="p-3 space-y-3">
+                {editingSchema.map((field) => {
+                  const value = editingSec?.settings?.[field.key] ?? field.defaultValue ?? "";
+                  return (
+                    <div key={field.key}>
+                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1 block">{field.label}</Label>
+                      {field.type === "text" && (
+                        <Input
+                          value={value as string}
+                          onChange={(e) => updateSectionSetting(editingSection!, field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          className="h-8 text-xs"
                         />
-                      </div>
+                      )}
+                      {field.type === "textarea" && (
+                        <Textarea
+                          value={value as string}
+                          onChange={(e) => updateSectionSetting(editingSection!, field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          className="text-xs min-h-[60px]"
+                        />
+                      )}
+                      {field.type === "toggle" && (
+                        <Switch
+                          checked={value as boolean}
+                          onCheckedChange={(v) => updateSectionSetting(editingSection!, field.key, v)}
+                          className="scale-[0.8]"
+                        />
+                      )}
+                      {field.type === "select" && (
+                        <select
+                          value={value as string}
+                          onChange={(e) => updateSectionSetting(editingSection!, field.key, e.target.value)}
+                          className="w-full h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          {field.options?.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      )}
+                      {field.type === "image" && (
+                        <Input
+                          value={value as string}
+                          onChange={(e) => updateSectionSetting(editingSection!, field.key, e.target.value)}
+                          placeholder="URL de l'image"
+                          className="h-8 text-xs"
+                        />
+                      )}
                     </div>
                   );
                 })}
+                {!editingSchema.length && (
+                  <p className="text-xs text-muted-foreground text-center py-6">
+                    Aucun paramètre modifiable pour cette section.
+                  </p>
+                )}
               </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </aside>
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
-      {/* ── Preview ── */}
+      {/* ── Panel 3: Live Preview ── */}
       <div className="flex-1 flex flex-col bg-muted/30 overflow-hidden">
-        {/* Preview toolbar */}
-        <div className="h-10 shrink-0 border-b border-border bg-card flex items-center justify-between px-4">
+        <div className="h-9 shrink-0 border-b border-border bg-card flex items-center justify-between px-3">
           <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
-            <button
-              onClick={() => setPreviewMode("desktop")}
-              className={cn(
-                "flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors",
-                previewMode === "desktop"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Monitor size={12} /> Desktop
+            <button onClick={() => setPreviewMode("desktop")} className={cn("flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors", previewMode === "desktop" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground")}>
+              <Monitor size={11} /> Desktop
             </button>
-            <button
-              onClick={() => setPreviewMode("mobile")}
-              className={cn(
-                "flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors",
-                previewMode === "mobile"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Smartphone size={12} /> Mobile
+            <button onClick={() => setPreviewMode("mobile")} className={cn("flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors", previewMode === "mobile" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground")}>
+              <Smartphone size={11} /> Mobile
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground">
-              {mergedTheme.name} · {template.name}
-            </span>
+            <span className="text-[9px] text-muted-foreground">{mergedTheme.name} · {template.name}</span>
             {store.slug && (
-              <Button variant="outline" size="sm" className="h-6 text-[10px]" asChild>
-                <a
-                  href={`/store/${store.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Eye size={10} className="mr-1" /> Voir en ligne
+              <Button variant="outline" size="sm" className="h-5 text-[9px] px-2" asChild>
+                <a href={`/store/${store.slug}`} target="_blank" rel="noopener noreferrer">
+                  <Eye size={9} className="mr-0.5" /> Live
                 </a>
               </Button>
             )}
           </div>
         </div>
 
-        {/* Preview area */}
-        <div className="flex-1 overflow-y-auto flex justify-center py-6 px-4">
+        <div className="flex-1 overflow-y-auto flex justify-center py-4 px-3">
           <motion.div
             layout
             transition={{ duration: 0.3, ease: "easeInOut" }}
@@ -471,7 +489,6 @@ export function StorefrontCustomizer({
             )}
             style={{ minHeight: 600 }}
           >
-            {/* Device chrome */}
             {previewMode === "mobile" && (
               <div className="h-6 bg-black/90 flex items-center justify-center">
                 <div className="h-1.5 w-16 rounded-full bg-white/20" />
@@ -485,14 +502,13 @@ export function StorefrontCustomizer({
                 <div className="flex-1 flex justify-center">
                   <div className="h-4 w-48 rounded bg-background border border-border flex items-center justify-center">
                     <span className="text-[8px] text-muted-foreground truncate">
-                      {store.slug ? `feyxa.shop/store/${store.slug}` : "feyxa.shop/store/..."}
+                      {store.slug}.feyxa.com
                     </span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Rendered storefront */}
             <div style={previewStyle}>
               <StorefrontRenderer
                 templateId={templateId}
