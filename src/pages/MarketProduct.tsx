@@ -332,6 +332,7 @@ export default function MarketProduct() {
   const [quantity, setQuantity] = useState(1);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [showOneClick, setShowOneClick] = useState(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const { addItem } = useCart();
   const { toggle, isInWishlist } = useWishlist();
@@ -801,6 +802,17 @@ export default function MarketProduct() {
                     ACHETER MAINTENANT
                     <ArrowRight size={14} />
                   </Button>
+
+                  {/* ─── One-Click Buy ─── */}
+                  <Button
+                    size="lg"
+                    className="w-full font-bold h-12 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 transition-opacity"
+                    disabled={activeStock <= 0 || (hasVariants && !selectedVariant)}
+                    onClick={() => setShowOneClick(true)}
+                  >
+                    <Zap size={16} />
+                    ACHETER EN 1 CLIC
+                  </Button>
                 </div>
 
                 {/* Action row */}
@@ -1026,6 +1038,94 @@ export default function MarketProduct() {
         </div>
       </div>
       <div className="h-20 lg:hidden" />
+
+      {/* ═══ One-Click Checkout Dialog ═══ */}
+      <Dialog open={showOneClick} onOpenChange={setShowOneClick}>
+        <DialogContent className="sm:max-w-md bg-card border-border">
+          <div className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Zap size={20} className="text-primary" />
+              </div>
+              <div>
+                <h3 className="font-heading text-lg text-foreground">Achat en 1 clic</h3>
+                <p className="text-xs text-muted-foreground">Confirmation rapide de votre commande</p>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Product summary */}
+            <div className="flex gap-3 rounded-xl border border-border bg-secondary/30 p-3">
+              {images[0] && (
+                <img src={images[0]} alt={product.name} className="h-16 w-16 rounded-lg object-cover border border-border" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground line-clamp-2">{product.name}</p>
+                {selectedVariant && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{selectedVariant.name}</p>
+                )}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-base font-bold text-foreground">{formatPrice(activePrice * quantity)}</span>
+                  <span className="text-xs text-muted-foreground">× {quantity}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Shipping info */}
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-3 text-sm">
+                <MapPin size={15} className="text-muted-foreground shrink-0" />
+                <div>
+                  <p className="font-medium text-foreground">Adresse de livraison par défaut</p>
+                  <p className="text-xs text-muted-foreground">123 Rue du Commerce, Cotonou, Bénin</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <Shield size={15} className="text-muted-foreground shrink-0" />
+                <div>
+                  <p className="font-medium text-foreground">Paiement à la livraison</p>
+                  <p className="text-xs text-muted-foreground">Moyen de paiement par défaut</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <Truck size={15} className="text-muted-foreground shrink-0" />
+                <div>
+                  <p className="font-medium text-foreground">Livraison estimée</p>
+                  <p className="text-xs text-muted-foreground">{product.stores.delivery_delay || "2-5 jours ouvrés"}</p>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Total */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Total à payer</span>
+              <span className="text-xl font-bold text-foreground">{formatPrice(activePrice * quantity)}</span>
+            </div>
+
+            {/* CTA */}
+            <Button
+              size="lg"
+              className="w-full font-bold h-13 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 transition-opacity text-base"
+              onClick={() => {
+                handleAddToCart();
+                setShowOneClick(false);
+                navigate("/checkout");
+                toast.success("Commande express initiée !");
+              }}
+            >
+              <Zap size={18} />
+              Confirmer et Payer
+            </Button>
+
+            <p className="text-[10px] text-center text-muted-foreground">
+              En confirmant, vous acceptez nos conditions générales de vente.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MarketLayout>
   );
 }
