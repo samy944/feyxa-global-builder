@@ -14,6 +14,11 @@ interface DashboardSidebarProps {
   onNavigate?: () => void;
 }
 
+interface NavGroup {
+  label: string;
+  items: { icon: any; label: string; path: string }[];
+}
+
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -21,27 +26,51 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const { t } = useTranslation();
   const branding = useBranding();
 
-  const navItems = [
-    { icon: LayoutGrid, label: t.dashboard.overview, path: "/dashboard" },
-    { icon: Package, label: t.dashboard.products, path: "/dashboard/products" },
-    { icon: Paintbrush, label: "Vitrine", path: "/dashboard/storefront" },
-    { icon: ShoppingCart, label: t.dashboard.orders, path: "/dashboard/orders" },
-    { icon: Users, label: t.dashboard.customers, path: "/dashboard/customers" },
-    { icon: Megaphone, label: t.dashboard.marketing, path: "/dashboard/marketing" },
-    { icon: Truck, label: t.dashboard.shipping, path: "/dashboard/shipping" },
-    { icon: BarChart2, label: t.dashboard.analytics, path: "/dashboard/analytics" },
-    { icon: Cpu, label: t.dashboard.ai, path: "/dashboard/ai" },
-    { icon: Wallet, label: t.dashboard.wallet, path: "/dashboard/wallet" },
-    { icon: Landmark, label: "Feyxa Capital", path: "/dashboard/capital" },
-    { icon: Warehouse, label: "Fulfillment", path: "/dashboard/fulfillment" },
-    { icon: Calculator, label: "Comptabilité", path: "/dashboard/accounting" },
-    { icon: Lightbulb, label: t.dashboard.insights, path: "/dashboard/insights" },
-    { icon: TrendingUp, label: t.dashboard.trends, path: "/dashboard/trends" },
-    { icon: FileText, label: t.dashboard.landings, path: "/dashboard/landings" },
-    { icon: MessageCircle, label: "Messages", path: "/dashboard/messages" },
-    { icon: MessageSquare, label: t.dashboard.tickets, path: "/dashboard/tickets" },
-    { icon: RotateCcw, label: t.dashboard.returns, path: "/dashboard/returns" },
-    { icon: Settings, label: t.dashboard.settings, path: "/dashboard/settings" },
+  const navGroups: NavGroup[] = [
+    {
+      label: "Principal",
+      items: [
+        { icon: LayoutGrid, label: t.dashboard.overview, path: "/dashboard" },
+        { icon: Package, label: t.dashboard.products, path: "/dashboard/products" },
+        { icon: ShoppingCart, label: t.dashboard.orders, path: "/dashboard/orders" },
+        { icon: Users, label: t.dashboard.customers, path: "/dashboard/customers" },
+      ],
+    },
+    {
+      label: "Boutique",
+      items: [
+        { icon: Paintbrush, label: "Vitrine", path: "/dashboard/storefront" },
+        { icon: FileText, label: t.dashboard.landings, path: "/dashboard/landings" },
+        { icon: Megaphone, label: t.dashboard.marketing, path: "/dashboard/marketing" },
+      ],
+    },
+    {
+      label: "Opérations",
+      items: [
+        { icon: Truck, label: t.dashboard.shipping, path: "/dashboard/shipping" },
+        { icon: Warehouse, label: "Fulfillment", path: "/dashboard/fulfillment" },
+        { icon: RotateCcw, label: t.dashboard.returns, path: "/dashboard/returns" },
+        { icon: MessageCircle, label: "Messages", path: "/dashboard/messages" },
+        { icon: MessageSquare, label: t.dashboard.tickets, path: "/dashboard/tickets" },
+      ],
+    },
+    {
+      label: "Finances",
+      items: [
+        { icon: Wallet, label: t.dashboard.wallet, path: "/dashboard/wallet" },
+        { icon: Landmark, label: "Feyxa Capital", path: "/dashboard/capital" },
+        { icon: Calculator, label: "Comptabilité", path: "/dashboard/accounting" },
+      ],
+    },
+    {
+      label: "Intelligence",
+      items: [
+        { icon: BarChart2, label: t.dashboard.analytics, path: "/dashboard/analytics" },
+        { icon: Cpu, label: t.dashboard.ai, path: "/dashboard/ai" },
+        { icon: Lightbulb, label: t.dashboard.insights, path: "/dashboard/insights" },
+        { icon: TrendingUp, label: t.dashboard.trends, path: "/dashboard/trends" },
+      ],
+    },
   ];
 
   return (
@@ -74,26 +103,47 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         <StoreSwitcher collapsed={collapsed} />
       </div>
 
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link key={item.path} to={item.path} onClick={onNavigate}
-              className={cn("relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200", collapsed && "justify-center px-0")}
-              style={{ color: isActive ? "#F8FAFC" : "#9CA3AF", background: isActive ? "hsla(0,0%,100%,0.06)" : "transparent" }}
-              onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.color = "#F8FAFC"; e.currentTarget.style.background = "hsla(0,0%,100%,0.04)"; } }}
-              onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.color = "#9CA3AF"; e.currentTarget.style.background = "transparent"; } }}
-              title={collapsed ? item.label : undefined}
-            >
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full" style={{ height: "60%", background: "hsl(106 75% 47%)" }} />}
-              <item.icon size={17} style={{ color: isActive ? "#F8FAFC" : "#6B7280", flexShrink: 0 }} />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-2 py-2 overflow-y-auto">
+        {navGroups.map((group) => (
+          <div key={group.label} className="mb-2">
+            {!collapsed && (
+              <p className="px-3 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-widest" style={{ color: "#4B5563" }}>
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link key={item.path} to={item.path} onClick={onNavigate}
+                    className={cn("relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200", collapsed && "justify-center px-0")}
+                    style={{ color: isActive ? "#F8FAFC" : "#9CA3AF", background: isActive ? "hsla(0,0%,100%,0.06)" : "transparent" }}
+                    onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.color = "#F8FAFC"; e.currentTarget.style.background = "hsla(0,0%,100%,0.04)"; } }}
+                    onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.color = "#9CA3AF"; e.currentTarget.style.background = "transparent"; } }}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full" style={{ height: "60%", background: "hsl(106 75% 47%)" }} />}
+                    <item.icon size={17} style={{ color: isActive ? "#F8FAFC" : "#6B7280", flexShrink: 0 }} />
+                    {!collapsed && <span>{item.label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="px-2 py-1 space-y-0.5" style={{ borderTop: "1px solid hsla(0,0%,100%,0.06)" }}>
+        <Link to="/dashboard/settings" onClick={onNavigate}
+          className={cn("flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200", collapsed && "justify-center px-0")}
+          style={{ color: location.pathname === "/dashboard/settings" ? "#F8FAFC" : "#9CA3AF", background: location.pathname === "/dashboard/settings" ? "hsla(0,0%,100%,0.06)" : "transparent" }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "#F8FAFC"; }}
+          onMouseLeave={(e) => { if (location.pathname !== "/dashboard/settings") e.currentTarget.style.color = "#9CA3AF"; }}
+          title={collapsed ? t.dashboard.settings : undefined}
+        >
+          <Settings size={17} style={{ color: "#6B7280", flexShrink: 0 }} />
+          {!collapsed && <span>{t.dashboard.settings}</span>}
+        </Link>
         {isAdmin && (
           <Link to="/admin" onClick={onNavigate} className={cn("flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200", collapsed && "justify-center px-0")} style={{ color: "#F59E0B" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#FBBF24"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#F59E0B"; }} title={collapsed ? "Super Admin" : undefined}>
             <Shield size={17} style={{ flexShrink: 0 }} />
