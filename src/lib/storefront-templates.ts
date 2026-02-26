@@ -36,6 +36,7 @@ export interface StorefrontTemplate {
 export interface SFSectionConfig {
   type: SFSectionType;
   visible: boolean;
+  settings?: Record<string, any>;
 }
 
 // ─── Template Definitions ───
