@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutGrid, Package, ShoppingCart, Users, BarChart2, Settings, Megaphone, Truck, Cpu,
-  ChevronLeft, Wallet, FileText, Lightbulb, TrendingUp, Store, MessageSquare, MessageCircle, RotateCcw, Shield, Calculator, Landmark, Warehouse,
+  ChevronLeft, Wallet, FileText, Lightbulb, TrendingUp, Store, MessageSquare, MessageCircle, RotateCcw, Shield, Calculator, Landmark, Warehouse, Paintbrush,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -24,6 +24,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const navItems = [
     { icon: LayoutGrid, label: t.dashboard.overview, path: "/dashboard" },
     { icon: Package, label: t.dashboard.products, path: "/dashboard/products" },
+    { icon: Paintbrush, label: "Vitrine", path: "/dashboard/storefront" },
     { icon: ShoppingCart, label: t.dashboard.orders, path: "/dashboard/orders" },
     { icon: Users, label: t.dashboard.customers, path: "/dashboard/customers" },
     { icon: Megaphone, label: t.dashboard.marketing, path: "/dashboard/marketing" },
