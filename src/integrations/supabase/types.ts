@@ -2697,12 +2697,14 @@ export type Database = {
           city_name: string | null
           country_id: string | null
           created_at: string
+          full_name: string | null
           id: string
           is_default: boolean
           label: string
           latitude: number | null
           longitude: number | null
           notes: string | null
+          phone: string | null
           quarter: string | null
           updated_at: string
           user_id: string
@@ -2713,12 +2715,14 @@ export type Database = {
           city_name?: string | null
           country_id?: string | null
           created_at?: string
+          full_name?: string | null
           id?: string
           is_default?: boolean
           label?: string
           latitude?: number | null
           longitude?: number | null
           notes?: string | null
+          phone?: string | null
           quarter?: string | null
           updated_at?: string
           user_id: string
@@ -2729,12 +2733,14 @@ export type Database = {
           city_name?: string | null
           country_id?: string | null
           created_at?: string
+          full_name?: string | null
           id?: string
           is_default?: boolean
           label?: string
           latitude?: number | null
           longitude?: number | null
           notes?: string | null
+          phone?: string | null
           quarter?: string | null
           updated_at?: string
           user_id?: string
