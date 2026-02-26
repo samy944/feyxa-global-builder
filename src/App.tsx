@@ -93,6 +93,7 @@ import BlogPost from "./pages/BlogPost";
 import StartStore from "./pages/StartStore";
 import DashboardSocialCommerce from "./pages/DashboardSocialCommerce";
 import DashboardHeatmap from "./pages/DashboardHeatmap";
+import DashboardGridBuilder from "./pages/DashboardGridBuilder";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -156,7 +157,8 @@ function StorefrontRoutes() {
         <Route path="messages" element={<DashboardMessages />} />
         <Route path="tickets" element={<DashboardTickets />} />
         <Route path="returns" element={<DashboardReturns />} />
-        <Route path="storefront" element={<DashboardStorefront />} />
+         <Route path="storefront" element={<DashboardStorefront />} />
+              <Route path="grid-builder" element={<DashboardGridBuilder />} />
         <Route path="stores" element={<DashboardStores />} />
         <Route path="stores/new" element={<NewStore />} />
         <Route path="settings" element={<DashboardSettings />} />
