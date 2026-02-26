@@ -64,6 +64,7 @@ import ClientWishlist from "./pages/ClientWishlist";
 import ClientOverview from "./pages/ClientOverview";
 import BecomeVendor from "./pages/BecomeVendor";
 import DashboardStores from "./pages/DashboardStores";
+import DashboardStorefront from "./pages/DashboardStorefront";
 import NewStore from "./pages/NewStore";
 import AcceptInvite from "./pages/AcceptInvite";
 import AdminLayout from "./pages/AdminLayout";
@@ -146,6 +147,7 @@ const App = () => (
               <Route path="messages" element={<DashboardMessages />} />
               <Route path="tickets" element={<DashboardTickets />} />
               <Route path="returns" element={<DashboardReturns />} />
+              <Route path="storefront" element={<DashboardStorefront />} />
               <Route path="stores" element={<DashboardStores />} />
               <Route path="stores/new" element={<NewStore />} />
               <Route path="settings" element={<DashboardSettings />} />

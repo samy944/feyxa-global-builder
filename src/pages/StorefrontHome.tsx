@@ -54,8 +54,13 @@ export default function StorefrontHome() {
   const themeObj = store?.theme as Record<string, any> | null;
   const templateId = themeObj?.storefront_template_id || themeObj?.storefront_theme_id || "minimal";
   const themeId = themeObj?.storefront_theme_id || templateId;
+  const colorOverrides = themeObj?.color_overrides as Partial<StorefrontTheme["colors"]> | null;
 
-  const sfTheme: StorefrontTheme = useMemo(() => getThemeById(themeId), [themeId]);
+  const sfTheme: StorefrontTheme = useMemo(() => {
+    const base = getThemeById(themeId);
+    if (!colorOverrides || Object.keys(colorOverrides).length === 0) return base;
+    return { ...base, colors: { ...base.colors, ...colorOverrides } };
+  }, [themeId, colorOverrides]);
   const template = useMemo(() => getTemplateById(templateId), [templateId]);
   const sectionsConfig: SFSectionConfig[] = useMemo(
     () => mergeSectionsConfig(themeObj?.sections_config as SFSectionConfig[] | null, template),
