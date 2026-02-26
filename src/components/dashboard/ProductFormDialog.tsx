@@ -29,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, ImagePlus, X, GripVertical, Plus,
   Package, DollarSign, Layers, Tag, Settings2, Globe, BarChart3, Weight, Barcode, Info,
-  Send, CheckCircle2, Clock, XCircle, AlertTriangle, Video, Flame
+  Send, CheckCircle2, Clock, XCircle, AlertTriangle, Video, Flame, Sparkles, Wand2
 } from "lucide-react";
 
 // ── Schema ──────────────────────────────────────────────────────────
@@ -327,6 +327,59 @@ function MarketplaceSubmitSection({
         )}
       </div>
     </div>
+  );
+}
+
+// ── AI Description Button ──────────────────────────────────────────
+function AiDescriptionButton({
+  productName,
+  currentDescription,
+  tags,
+  storeName,
+  onResult,
+}: {
+  productName: string;
+  currentDescription: string;
+  tags: string[];
+  storeName: string;
+  onResult: (result: any) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const generate = async () => {
+    if (!productName || productName.length < 2) {
+      toast.error("Entrez d'abord un nom de produit");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-product", {
+        body: {
+          action: currentDescription ? "improve" : "description",
+          productName,
+          currentDescription,
+          tags,
+          storeName,
+          language: "Français",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) { toast.error(data.error); return; }
+      onResult(data);
+      toast.success("Description IA générée !");
+    } catch (e) {
+      console.error(e);
+      toast.error("Erreur lors de la génération IA");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button type="button" variant="outline" size="sm" onClick={generate} disabled={loading} className="gap-1.5 text-xs h-7">
+      {loading ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
+      {currentDescription ? "Améliorer avec l'IA" : "Générer avec l'IA"}
+    </Button>
   );
 }
 
@@ -738,9 +791,24 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
                 {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
               </div>
 
-              {/* Description */}
+              {/* Description + AI */}
               <div className="space-y-1.5">
-                <Label htmlFor="pf-desc" className="font-semibold">Description</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="pf-desc" className="font-semibold">Description</Label>
+                  <AiDescriptionButton
+                    productName={watch("name")}
+                    currentDescription={watch("description") || ""}
+                    tags={tagList}
+                    storeName={store?.name || ""}
+                    onResult={(result) => {
+                      if (result.description) setValue("description", result.description);
+                      if (result.suggested_tags) {
+                        const newTags = result.suggested_tags.filter((t: string) => !tagList.includes(t));
+                        setTagList((prev) => [...prev, ...newTags].slice(0, 20));
+                      }
+                    }}
+                  />
+                </div>
                 <Textarea id="pf-desc" placeholder="Décrivez votre produit en détail : matériaux, dimensions, conseils d'utilisation..." rows={5} {...register("description")} />
                 <p className="text-xs text-muted-foreground">Une bonne description augmente les conversions de 30%</p>
               </div>
