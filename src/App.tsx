@@ -84,6 +84,8 @@ import AdminRiskReputation from "./pages/AdminRiskReputation";
 import AdminSystemHealth from "./pages/AdminSystemHealth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import BlogIndex from "./pages/BlogIndex";
+import BlogPost from "./pages/BlogPost";
 import StartStore from "./pages/StartStore";
 
 const queryClient = new QueryClient({
@@ -156,6 +158,10 @@ const App = () => (
             <Route path="/market" element={<MarketHome />} />
             <Route path="/market/category/:slug" element={<MarketCategory />} />
             <Route path="/market/product/:slug" element={<MarketProduct />} />
+            <Route path="/market/vendor/:slug" element={<MarketVendor />} />
+            {/* Blog */}
+            <Route path="/blog" element={<BlogIndex />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/market/vendor/:slug" element={<MarketVendor />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/invite/accept" element={<AcceptInvite />} />
