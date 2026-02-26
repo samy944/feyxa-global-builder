@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
@@ -25,6 +26,10 @@ import {
   Package,
   Clock,
   Store,
+  Star,
+  Phone,
+  User,
+  Plus,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -43,6 +48,8 @@ interface City {
 interface SavedAddress {
   id: string;
   label: string;
+  full_name: string | null;
+  phone: string | null;
   country_id: string | null;
   city_id: string | null;
   city_name: string | null;
@@ -128,6 +135,10 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [savingAddress, setSavingAddress] = useState(false);
 
+  // Address book selection mode
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [showManualForm, setShowManualForm] = useState(false);
+
   // Load countries
   useEffect(() => {
     if (locCountries.length > 0) {
@@ -172,8 +183,29 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
       .select("*")
       .eq("user_id", userId)
       .order("is_default", { ascending: false })
-      .then(({ data }) => setSavedAddresses((data || []) as SavedAddress[]));
+      .then(({ data }) => {
+        const addrs = (data || []) as SavedAddress[];
+        setSavedAddresses(addrs);
+        // Pre-select default address
+        const defaultAddr = addrs.find((a) => a.is_default);
+        if (defaultAddr && !selectedAddressId && !showManualForm) {
+          setSelectedAddressId(defaultAddr.id);
+          applyAddressData(defaultAddr);
+        }
+      });
   }, [userId]);
+
+  const applyAddressData = (addr: SavedAddress) => {
+    if (addr.country_id) setSelectedCountryId(addr.country_id);
+    if (addr.city_id) {
+      setTimeout(() => setSelectedCityId(addr.city_id!), 300);
+    }
+    setQuarter(addr.quarter || "");
+    setAddress(addr.address || "");
+    setNotes(addr.notes || "");
+    setLatitude(addr.latitude);
+    setLongitude(addr.longitude);
+  };
 
   // Calculate fees
   useEffect(() => {
@@ -183,7 +215,6 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
       return;
     }
     if (deliveryMethod === "relay") {
-      // Flat relay fee
       setBaseFee(1500);
       setComputedFee(shippingMode === "express" ? Math.round(1500 * EXPRESS_MULTIPLIER) : 1500);
       return;
@@ -304,18 +335,6 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
     );
   }, [countries]);
 
-  const applySavedAddress = (addr: SavedAddress) => {
-    if (addr.country_id) setSelectedCountryId(addr.country_id);
-    if (addr.city_id) {
-      setTimeout(() => setSelectedCityId(addr.city_id!), 300);
-    }
-    setQuarter(addr.quarter || "");
-    setAddress(addr.address || "");
-    setNotes(addr.notes || "");
-    setLatitude(addr.latitude);
-    setLongitude(addr.longitude);
-  };
-
   const handleSaveAddress = async () => {
     if (!userId) return;
     setSavingAddress(true);
@@ -346,11 +365,131 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
     setSavingAddress(false);
   };
 
+  const handleSelectAddress = (addrId: string) => {
+    setSelectedAddressId(addrId);
+    setShowManualForm(false);
+    const addr = savedAddresses.find((a) => a.id === addrId);
+    if (addr) applyAddressData(addr);
+  };
+
+  const handleNewAddressClick = () => {
+    setSelectedAddressId(null);
+    setShowManualForm(true);
+    // Reset form fields
+    setQuarter("");
+    setAddress("");
+    setNotes("");
+    setLatitude(null);
+    setLongitude(null);
+  };
+
   const selectedCountry = countries.find((c) => c.id === selectedCountryId);
   const formatFee = (f: number) =>
     selectedCountry?.currency_code === "XOF" || !selectedCountry
       ? `${f.toLocaleString("fr-FR")} FCFA`
       : `€${f.toFixed(2)}`;
+
+  // Whether to show the address book selector (logged in user with addresses, home delivery)
+  const hasAddressBook = userId && savedAddresses.length > 0 && deliveryMethod === "home";
+
+  /* ── Manual form (extracted for reuse) ── */
+  const renderManualForm = () => (
+    <div className="space-y-5">
+      {/* Location mode toggle */}
+      <div className="flex gap-2">
+        <Button type="button" variant={mode === "gps" ? "default" : "outline"} size="sm" className="flex-1" onClick={handleGPS} disabled={gpsLoading}>
+          {gpsLoading ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
+          {gpsLoading ? "Détection…" : "📍 Ma position GPS"}
+        </Button>
+        <Button type="button" variant={mode === "manual" ? "default" : "outline"} size="sm" className="flex-1" onClick={() => setMode("manual")}>
+          <MapPin size={14} />
+          Saisie manuelle
+        </Button>
+      </div>
+      {gpsError && <p className="text-xs text-destructive">{gpsError}</p>}
+      {latitude && longitude && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1">
+          <Check size={12} className="text-primary" />
+          Position GPS enregistrée ({latitude.toFixed(4)}, {longitude.toFixed(4)})
+        </p>
+      )}
+
+      {/* Country */}
+      <div className="space-y-1.5">
+        <Label>Pays *</Label>
+        <Select value={selectedCountryId} onValueChange={setSelectedCountryId}>
+          <SelectTrigger><SelectValue placeholder="Sélectionner un pays" /></SelectTrigger>
+          <SelectContent>
+            {countries.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.flag_emoji} {c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* City */}
+      <div className="space-y-1.5">
+        <Label>Ville *</Label>
+        <Select value={selectedCityId} onValueChange={setSelectedCityId} disabled={cities.length === 0}>
+          <SelectTrigger><SelectValue placeholder={cities.length === 0 ? "Sélectionnez d'abord un pays" : "Sélectionner une ville"} /></SelectTrigger>
+          <SelectContent>
+            {cities.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Quarter + Address */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>Quartier</Label>
+          <Input value={quarter} onChange={(e) => setQuarter(e.target.value)} placeholder="Ganhi, Zogbo…" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Adresse / Repère</Label>
+          <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Près du marché…" />
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="space-y-1.5">
+        <Label>Instructions de livraison</Label>
+        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Étage, code porte, horaires préférés…" rows={2} />
+      </div>
+
+      {/* Save address */}
+      {userId && selectedCityId && (
+        <Button type="button" variant="ghost" size="sm" className="text-xs" onClick={handleSaveAddress} disabled={savingAddress}>
+          {savingAddress ? <Loader2 size={12} className="animate-spin" /> : <BookmarkPlus size={12} />}
+          Sauvegarder cette adresse
+        </Button>
+      )}
+
+      {/* Delivery speed */}
+      <div className="space-y-3 pt-2">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wider">Mode de livraison</Label>
+        <RadioGroup value={shippingMode} onValueChange={(v) => setShippingMode(v as "standard" | "express")} className="grid grid-cols-2 gap-3">
+          <label className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${shippingMode === "standard" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+            <RadioGroupItem value="standard" className="sr-only" />
+            <Truck size={20} className={shippingMode === "standard" ? "text-primary" : "text-muted-foreground"} />
+            <span className="text-sm font-medium text-foreground">Standard</span>
+            <span className="text-xs text-muted-foreground">2-5 jours</span>
+            {baseFee > 0 && <span className="text-xs font-semibold text-foreground">{formatFee(baseFee)}</span>}
+          </label>
+          <label className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${shippingMode === "express" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+            <RadioGroupItem value="express" className="sr-only" />
+            <Zap size={20} className={shippingMode === "express" ? "text-primary" : "text-muted-foreground"} />
+            <span className="text-sm font-medium text-foreground">Express</span>
+            <span className="text-xs text-muted-foreground">24-48h</span>
+            {baseFee > 0 && (
+              <span className="text-xs font-semibold text-foreground">{formatFee(Math.round(baseFee * EXPRESS_MULTIPLIER))}</span>
+            )}
+          </label>
+        </RadioGroup>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-5">
@@ -375,115 +514,114 @@ export default function DeliverySection({ storeIds, userId, onDeliveryChange, to
 
         {/* ── HOME DELIVERY ── */}
         <TabsContent value="home" className="space-y-5 pt-4">
-          {/* Location mode toggle */}
-          <div className="flex gap-2">
-            <Button type="button" variant={mode === "gps" ? "default" : "outline"} size="sm" className="flex-1" onClick={handleGPS} disabled={gpsLoading}>
-              {gpsLoading ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
-              {gpsLoading ? "Détection…" : "📍 Ma position GPS"}
-            </Button>
-            <Button type="button" variant={mode === "manual" ? "default" : "outline"} size="sm" className="flex-1" onClick={() => setMode("manual")}>
-              <MapPin size={14} />
-              Saisie manuelle
-            </Button>
-          </div>
-          {gpsError && <p className="text-xs text-destructive">{gpsError}</p>}
-          {latitude && longitude && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Check size={12} className="text-primary" />
-              Position GPS enregistrée ({latitude.toFixed(4)}, {longitude.toFixed(4)})
-            </p>
-          )}
-
-          {/* Saved addresses */}
-          {savedAddresses.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wider">Adresses sauvegardées</Label>
-              <div className="flex gap-2 flex-wrap">
+          {/* Address Book Selector */}
+          {hasAddressBook && !showManualForm ? (
+            <div className="space-y-3">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">Choisir une adresse enregistrée</Label>
+              <RadioGroup
+                value={selectedAddressId || ""}
+                onValueChange={handleSelectAddress}
+                className="space-y-2"
+              >
                 {savedAddresses.map((sa) => (
-                  <Button key={sa.id} type="button" variant="outline" size="sm" className="text-xs" onClick={() => applySavedAddress(sa)}>
-                    <MapPin size={12} />
-                    {sa.label}
-                    {sa.is_default && <span className="text-primary ml-1">★</span>}
-                  </Button>
+                  <label
+                    key={sa.id}
+                    className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      selectedAddressId === sa.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <RadioGroupItem value={sa.id} className="mt-0.5" />
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-foreground">{sa.full_name || sa.label}</p>
+                        {sa.is_default && (
+                          <Badge variant="default" className="text-[10px]">
+                            <Star size={8} className="mr-0.5" />
+                            Par défaut
+                          </Badge>
+                        )}
+                      </div>
+                      {sa.phone && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Phone size={10} /> {sa.phone}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground flex items-start gap-1">
+                        <MapPin size={10} className="mt-0.5 shrink-0" />
+                        <span>{[sa.city_name, sa.quarter, sa.address].filter(Boolean).join(", ")}</span>
+                      </p>
+                    </div>
+                    {selectedAddressId === sa.id && (
+                      <div className="absolute top-3 right-3 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                        <Check size={12} className="text-primary-foreground" />
+                      </div>
+                    )}
+                  </label>
                 ))}
-              </div>
+              </RadioGroup>
+
+              {/* New address option */}
+              <button
+                type="button"
+                onClick={handleNewAddressClick}
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all"
+              >
+                <Plus size={14} />
+                Saisir une nouvelle adresse
+              </button>
+
+              {/* Delivery speed (still needed) */}
+              {selectedAddressId && (
+                <div className="space-y-3 pt-2">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Mode de livraison</Label>
+                  <RadioGroup value={shippingMode} onValueChange={(v) => setShippingMode(v as "standard" | "express")} className="grid grid-cols-2 gap-3">
+                    <label className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${shippingMode === "standard" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                      <RadioGroupItem value="standard" className="sr-only" />
+                      <Truck size={20} className={shippingMode === "standard" ? "text-primary" : "text-muted-foreground"} />
+                      <span className="text-sm font-medium text-foreground">Standard</span>
+                      <span className="text-xs text-muted-foreground">2-5 jours</span>
+                      {baseFee > 0 && <span className="text-xs font-semibold text-foreground">{formatFee(baseFee)}</span>}
+                    </label>
+                    <label className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${shippingMode === "express" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                      <RadioGroupItem value="express" className="sr-only" />
+                      <Zap size={20} className={shippingMode === "express" ? "text-primary" : "text-muted-foreground"} />
+                      <span className="text-sm font-medium text-foreground">Express</span>
+                      <span className="text-xs text-muted-foreground">24-48h</span>
+                      {baseFee > 0 && (
+                        <span className="text-xs font-semibold text-foreground">{formatFee(Math.round(baseFee * EXPRESS_MULTIPLIER))}</span>
+                      )}
+                    </label>
+                  </RadioGroup>
+                </div>
+              )}
             </div>
+          ) : (
+            <>
+              {/* Back to address book link */}
+              {hasAddressBook && showManualForm && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs mb-2"
+                  onClick={() => {
+                    setShowManualForm(false);
+                    const def = savedAddresses.find((a) => a.is_default) || savedAddresses[0];
+                    if (def) {
+                      setSelectedAddressId(def.id);
+                      applyAddressData(def);
+                    }
+                  }}
+                >
+                  <MapPin size={12} />
+                  ← Choisir une adresse enregistrée
+                </Button>
+              )}
+              {renderManualForm()}
+            </>
           )}
-
-          {/* Country */}
-          <div className="space-y-1.5">
-            <Label>Pays *</Label>
-            <Select value={selectedCountryId} onValueChange={setSelectedCountryId}>
-              <SelectTrigger><SelectValue placeholder="Sélectionner un pays" /></SelectTrigger>
-              <SelectContent>
-                {countries.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.flag_emoji} {c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* City */}
-          <div className="space-y-1.5">
-            <Label>Ville *</Label>
-            <Select value={selectedCityId} onValueChange={setSelectedCityId} disabled={cities.length === 0}>
-              <SelectTrigger><SelectValue placeholder={cities.length === 0 ? "Sélectionnez d'abord un pays" : "Sélectionner une ville"} /></SelectTrigger>
-              <SelectContent>
-                {cities.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Quarter + Address */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Quartier</Label>
-              <Input value={quarter} onChange={(e) => setQuarter(e.target.value)} placeholder="Ganhi, Zogbo…" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Adresse / Repère</Label>
-              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Près du marché…" />
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-1.5">
-            <Label>Instructions de livraison</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Étage, code porte, horaires préférés…" rows={2} />
-          </div>
-
-          {/* Save address */}
-          {userId && selectedCityId && (
-            <Button type="button" variant="ghost" size="sm" className="text-xs" onClick={handleSaveAddress} disabled={savingAddress}>
-              {savingAddress ? <Loader2 size={12} className="animate-spin" /> : <BookmarkPlus size={12} />}
-              Sauvegarder cette adresse
-            </Button>
-          )}
-
-          {/* Delivery speed */}
-          <div className="space-y-3 pt-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Mode de livraison</Label>
-            <RadioGroup value={shippingMode} onValueChange={(v) => setShippingMode(v as "standard" | "express")} className="grid grid-cols-2 gap-3">
-              <label className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${shippingMode === "standard" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
-                <RadioGroupItem value="standard" className="sr-only" />
-                <Truck size={20} className={shippingMode === "standard" ? "text-primary" : "text-muted-foreground"} />
-                <span className="text-sm font-medium text-foreground">Standard</span>
-                <span className="text-xs text-muted-foreground">2-5 jours</span>
-                {baseFee > 0 && <span className="text-xs font-semibold text-foreground">{formatFee(baseFee)}</span>}
-              </label>
-              <label className={`flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${shippingMode === "express" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
-                <RadioGroupItem value="express" className="sr-only" />
-                <Zap size={20} className={shippingMode === "express" ? "text-primary" : "text-muted-foreground"} />
-                <span className="text-sm font-medium text-foreground">Express</span>
-                <span className="text-xs text-muted-foreground">24-48h</span>
-                {baseFee > 0 && (
-                  <span className="text-xs font-semibold text-foreground">{formatFee(Math.round(baseFee * EXPRESS_MULTIPLIER))}</span>
-                )}
-              </label>
-            </RadioGroup>
-          </div>
         </TabsContent>
 
         {/* ── RELAY POINT ── */}
