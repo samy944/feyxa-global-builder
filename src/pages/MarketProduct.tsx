@@ -380,7 +380,7 @@ export default function MarketProduct() {
       .eq("is_marketplace_published", true)
       .eq("stores.is_active", true)
       .eq("stores.is_banned", false)
-      .single();
+      .maybeSingle();
 
     if (data) {
       const p = data as unknown as ProductDetail;

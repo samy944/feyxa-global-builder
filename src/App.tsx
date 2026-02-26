@@ -85,6 +85,7 @@ import AdminEmailTemplates from "./pages/AdminEmailTemplates";
 import AdminInfraMonitor from "./pages/AdminInfraMonitor";
 import AdminRiskReputation from "./pages/AdminRiskReputation";
 import AdminSystemHealth from "./pages/AdminSystemHealth";
+import AdminProducts from "./pages/AdminProducts";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import BlogIndex from "./pages/BlogIndex";
@@ -176,6 +177,7 @@ function StorefrontRoutes() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminOverview />} />
         <Route path="stores" element={<AdminStores />} />
+        <Route path="products" element={<AdminProducts />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="payouts" element={<AdminPayouts />} />

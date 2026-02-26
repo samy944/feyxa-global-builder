@@ -4,6 +4,7 @@ import {
   Store,
   Users,
   ShoppingCart,
+  Package,
   Wallet,
   MessageSquare,
   RotateCcw,
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 const links = [
   { to: "/admin", icon: LayoutDashboard, label: "Vue d'ensemble", end: true },
   { to: "/admin/stores", icon: Store, label: "Boutiques" },
+  { to: "/admin/products", icon: Package, label: "Modération produits" },
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
   { to: "/admin/orders", icon: ShoppingCart, label: "Commandes" },
   { to: "/admin/payouts", icon: Wallet, label: "Retraits" },
