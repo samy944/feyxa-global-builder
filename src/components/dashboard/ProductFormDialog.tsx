@@ -29,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, ImagePlus, X, GripVertical, Plus,
   Package, DollarSign, Layers, Tag, Settings2, Globe, BarChart3, Weight, Barcode, Info,
-  Send, CheckCircle2, Clock, XCircle, AlertTriangle
+  Send, CheckCircle2, Clock, XCircle, AlertTriangle, Video, Flame
 } from "lucide-react";
 
 // ── Schema ──────────────────────────────────────────────────────────
@@ -47,7 +47,9 @@ const schema = z.object({
   is_published: z.boolean().default(false),
   is_marketplace_published: z.boolean().default(false),
   marketplace_category_id: z.string().optional(),
-  tags: z.string().optional(), // comma-separated
+  tags: z.string().optional(),
+  video_url: z.string().url("URL invalide").optional().or(z.literal("")),
+  low_stock_alert_enabled: z.boolean().default(false),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -70,6 +72,8 @@ export interface ProductToEdit {
   low_stock_threshold?: number | null;
   is_marketplace_published?: boolean;
   marketplace_category_id?: string | null;
+  video_url?: string | null;
+  low_stock_alert_enabled?: boolean;
 }
 
 interface Props {
@@ -363,6 +367,7 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
       description: "", sku: "", barcode: "", weight_grams: "",
       is_published: false, is_marketplace_published: false,
       marketplace_category_id: "", tags: "",
+      video_url: "", low_stock_alert_enabled: false,
     },
   });
 
@@ -394,6 +399,8 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
       setValue("is_published", product.is_published);
       setValue("is_marketplace_published", product.is_marketplace_published ?? false);
       setValue("marketplace_category_id", product.marketplace_category_id || "");
+      setValue("video_url", product.video_url || "");
+      setValue("low_stock_alert_enabled", product.low_stock_alert_enabled ?? false);
 
       setTagList(product.tags ?? []);
 
@@ -579,6 +586,8 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
       marketplace_category_id: data.marketplace_category_id || null,
       images: imageUrls,
       tags: tagList.length > 0 ? tagList : null,
+      video_url: data.video_url || null,
+      low_stock_alert_enabled: data.low_stock_alert_enabled,
     };
 
     let productId = product?.id;
@@ -766,6 +775,34 @@ export default function ProductFormDialog({ open, onOpenChange, onSuccess, produ
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">Les tags améliorent la recherche. Max 20 tags. Appuyez Entrée pour ajouter.</p>
+              </div>
+
+              {/* Video URL */}
+              <div className="space-y-1.5">
+                <Label htmlFor="pf-video" className="font-semibold flex items-center gap-1.5">
+                  <Video size={14} /> URL de la vidéo du produit
+                </Label>
+                <Input
+                  id="pf-video"
+                  placeholder="https://youtube.com/watch?v=... ou lien MP4"
+                  {...register("video_url")}
+                />
+                {errors.video_url && <p className="text-xs text-destructive">{errors.video_url.message}</p>}
+                <p className="text-xs text-muted-foreground">YouTube, Vimeo ou lien MP4 direct. La vidéo apparaîtra dans la galerie produit.</p>
+              </div>
+
+              {/* Low stock alert toggle */}
+              <div className="rounded-xl border border-border p-4 flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Flame size={14} className="text-destructive" /> Activer le mode urgence
+                  </p>
+                  <p className="text-xs text-muted-foreground">Affiche une alerte "stock faible" animée sur la page produit</p>
+                </div>
+                <Switch
+                  checked={watch("low_stock_alert_enabled")}
+                  onCheckedChange={(v) => setValue("low_stock_alert_enabled", v)}
+                />
               </div>
             </TabsContent>
 
