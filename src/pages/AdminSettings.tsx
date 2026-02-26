@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Save, Loader2, Settings, CreditCard, ToggleLeft, Package,
   Plus, Trash2, Globe, Palette, Shield, Zap, MessageSquare,
-  Search, Bot, Layers, Wallet, Eye, EyeOff
+  Search, Bot, Layers, Wallet, Eye, EyeOff, Truck, ShoppingBag,
+  MapPin, Store
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
@@ -281,7 +282,10 @@ function PaymentsTab() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-base font-semibold text-foreground">Fournisseurs de paiement</h3>
+      <div>
+        <h3 className="text-base font-semibold text-foreground">Fournisseurs de paiement</h3>
+        <p className="text-xs text-muted-foreground mt-1">Les fournisseurs activés ici seront disponibles pour tous les vendeurs. Chaque vendeur pourra ensuite activer/désactiver ceux qu'il souhaite proposer dans sa boutique.</p>
+      </div>
       <div className="space-y-3">
         {providers.map(p => (
           <Card key={p.id}>
@@ -309,6 +313,240 @@ function PaymentsTab() {
           </Card>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ─── Shipping Modes Tab ─── */
+function ShippingTab() {
+  const [config, setConfig] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    supabase.from("platform_settings").select("value").eq("key", "shipping_modes").single().then(({ data }) => {
+      if (data) setConfig(data.value as Record<string, any>);
+      setLoading(false);
+    });
+  }, []);
+
+  const ICONS: Record<string, any> = { Truck, MapPin, Store, Zap };
+
+  const toggleMode = (id: string) => {
+    const modes = (config.modes || []).map((m: any) =>
+      m.id === id ? { ...m, is_enabled: !m.is_enabled } : m
+    );
+    setConfig({ ...config, modes });
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("platform_settings").update({ value: config }).eq("key", "shipping_modes");
+    setSaving(false);
+    if (error) { toast.error("Erreur de sauvegarde"); return; }
+    toast.success("Modes de livraison mis à jour");
+  };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-base font-semibold text-foreground">Modes de livraison</h3>
+        <p className="text-xs text-muted-foreground mt-1">Les modes activés ici seront disponibles pour tous les vendeurs. Chaque vendeur pourra configurer ses zones et frais dans ce cadre.</p>
+      </div>
+
+      <div className="space-y-3">
+        {(config.modes || []).map((mode: any) => {
+          const Icon = ICONS[mode.icon] || Truck;
+          return (
+            <Card key={mode.id}>
+              <CardContent className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center">
+                    <Icon size={18} className="text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{mode.name}</p>
+                    <p className="text-xs text-muted-foreground">{mode.description}</p>
+                  </div>
+                </div>
+                <Switch checked={mode.is_enabled} onCheckedChange={() => toggleMode(mode.id)} />
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Règles globales de livraison</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Frais de livraison maximum (XOF)</Label>
+              <Input type="number" value={config.max_delivery_fee || 0} onChange={e => setConfig({ ...config, max_delivery_fee: parseInt(e.target.value) || 0 })} />
+              <p className="text-xs text-muted-foreground mt-1">0 = pas de limite</p>
+            </div>
+            <div>
+              <Label>Seuil livraison gratuite (XOF)</Label>
+              <Input type="number" value={config.free_shipping_threshold || 0} onChange={e => setConfig({ ...config, free_shipping_threshold: parseInt(e.target.value) || 0 })} />
+              <p className="text-xs text-muted-foreground mt-1">0 = désactivé</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+            <div>
+              <p className="text-sm font-medium text-foreground">Autoriser les zones personnalisées</p>
+              <p className="text-xs text-muted-foreground">Les vendeurs peuvent créer leurs propres zones de livraison</p>
+            </div>
+            <Switch checked={config.allow_vendor_custom_zones ?? true} onCheckedChange={v => setConfig({ ...config, allow_vendor_custom_zones: v })} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button onClick={save} disabled={saving}>{saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer</Button>
+    </div>
+  );
+}
+
+/* ─── Marketplace Rules Tab ─── */
+function MarketplaceRulesTab() {
+  const [rules, setRules] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    supabase.from("platform_settings").select("value").eq("key", "marketplace_rules").single().then(({ data }) => {
+      if (data) setRules(data.value as Record<string, any>);
+      setLoading(false);
+    });
+  }, []);
+
+  const updateNested = (section: string, key: string, value: any) => {
+    setRules({ ...rules, [section]: { ...rules[section], [key]: value } });
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("platform_settings").update({ value: rules }).eq("key", "marketplace_rules");
+    setSaving(false);
+    if (error) { toast.error("Erreur de sauvegarde"); return; }
+    toast.success("Règles marketplace mises à jour");
+  };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>;
+
+  const pub = rules.publication || {};
+  const ret = rules.returns || {};
+  const lim = rules.vendor_limits || {};
+  const cust = rules.customer_policies || {};
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-base font-semibold text-foreground">Règles de la Marketplace</h3>
+        <p className="text-xs text-muted-foreground mt-1">Ces règles s'appliquent à tous les vendeurs et acheteurs de la plateforme.</p>
+      </div>
+
+      {/* Publication rules */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2"><Package size={16} className="text-primary" /> Publication des produits</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+            <div>
+              <p className="text-sm font-medium text-foreground">Validation admin requise</p>
+              <p className="text-xs text-muted-foreground">Les produits doivent être approuvés avant publication</p>
+            </div>
+            <Switch checked={pub.require_admin_approval ?? true} onCheckedChange={v => updateNested("publication", "require_admin_approval", v)} />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div><Label>Images min</Label><Input type="number" min={0} value={pub.min_product_images ?? 1} onChange={e => updateNested("publication", "min_product_images", parseInt(e.target.value) || 0)} /></div>
+            <div><Label>Images max</Label><Input type="number" min={1} value={pub.max_product_images ?? 10} onChange={e => updateNested("publication", "max_product_images", parseInt(e.target.value) || 10)} /></div>
+            <div><Label>Prix min (XOF)</Label><Input type="number" min={0} value={pub.min_price ?? 100} onChange={e => updateNested("publication", "min_price", parseInt(e.target.value) || 0)} /></div>
+            <div><Label>Prix max (XOF)</Label><Input type="number" min={0} value={pub.max_price ?? 50000000} onChange={e => updateNested("publication", "max_price", parseInt(e.target.value) || 50000000)} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Titre min (car.)</Label><Input type="number" min={1} value={pub.min_title_length ?? 2} onChange={e => updateNested("publication", "min_title_length", parseInt(e.target.value) || 2)} /></div>
+            <div><Label>Description min (car.)</Label><Input type="number" min={1} value={pub.min_description_length ?? 10} onChange={e => updateNested("publication", "min_description_length", parseInt(e.target.value) || 10)} /></div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Returns */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2"><ShoppingBag size={16} className="text-primary" /> Politique de retours</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+            <div>
+              <p className="text-sm font-medium text-foreground">Retours activés</p>
+              <p className="text-xs text-muted-foreground">Permettre aux acheteurs de demander un retour</p>
+            </div>
+            <Switch checked={ret.enabled ?? true} onCheckedChange={v => updateNested("returns", "enabled", v)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Fenêtre de retour (jours)</Label><Input type="number" min={0} value={ret.return_window_days ?? 14} onChange={e => updateNested("returns", "return_window_days", parseInt(e.target.value) || 14)} /></div>
+            <div>
+              <Label>Frais de retour payés par</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={ret.who_pays_return_shipping || "buyer"}
+                onChange={e => updateNested("returns", "who_pays_return_shipping", e.target.value)}
+              >
+                <option value="buyer">Acheteur</option>
+                <option value="seller">Vendeur</option>
+                <option value="platform">Plateforme</option>
+              </select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Vendor limits */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2"><Store size={16} className="text-primary" /> Limites vendeurs</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Max boutiques par vendeur</Label><Input type="number" min={1} value={lim.max_stores_per_vendor ?? 5} onChange={e => updateNested("vendor_limits", "max_stores_per_vendor", parseInt(e.target.value) || 5)} /></div>
+            <div><Label>Retrait minimum (XOF)</Label><Input type="number" min={0} value={lim.min_payout_amount ?? 5000} onChange={e => updateNested("vendor_limits", "min_payout_amount", parseInt(e.target.value) || 5000)} /></div>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+            <div>
+              <p className="text-sm font-medium text-foreground">KYC requis pour les retraits</p>
+              <p className="text-xs text-muted-foreground">Les vendeurs doivent vérifier leur identité avant de retirer des fonds</p>
+            </div>
+            <Switch checked={lim.require_kyc_for_payout ?? true} onCheckedChange={v => updateNested("vendor_limits", "require_kyc_for_payout", v)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Customer policies */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2"><Globe size={16} className="text-primary" /> Politiques clients</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+            <div>
+              <p className="text-sm font-medium text-foreground">Checkout invité</p>
+              <p className="text-xs text-muted-foreground">Permettre les achats sans compte</p>
+            </div>
+            <Switch checked={cust.allow_guest_checkout ?? true} onCheckedChange={v => updateNested("customer_policies", "allow_guest_checkout", v)} />
+          </div>
+          <div>
+            <Label>Max articles par panier</Label>
+            <Input type="number" min={1} className="w-40" value={cust.max_cart_items ?? 50} onChange={e => updateNested("customer_policies", "max_cart_items", parseInt(e.target.value) || 50)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button onClick={save} disabled={saving}>{saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer</Button>
     </div>
   );
 }
@@ -382,12 +620,16 @@ export default function AdminSettings() {
           <TabsTrigger value="general" className="gap-1.5"><Settings size={14} /> Général</TabsTrigger>
           <TabsTrigger value="plans" className="gap-1.5"><Package size={14} /> Forfaits</TabsTrigger>
           <TabsTrigger value="payments" className="gap-1.5"><CreditCard size={14} /> Paiements</TabsTrigger>
+          <TabsTrigger value="shipping" className="gap-1.5"><Truck size={14} /> Livraison</TabsTrigger>
+          <TabsTrigger value="marketplace" className="gap-1.5"><ShoppingBag size={14} /> Règles Marketplace</TabsTrigger>
           <TabsTrigger value="features" className="gap-1.5"><ToggleLeft size={14} /> Fonctionnalités</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general"><GeneralTab /></TabsContent>
         <TabsContent value="plans"><PlansTab /></TabsContent>
         <TabsContent value="payments"><PaymentsTab /></TabsContent>
+        <TabsContent value="shipping"><ShippingTab /></TabsContent>
+        <TabsContent value="marketplace"><MarketplaceRulesTab /></TabsContent>
         <TabsContent value="features"><FeaturesTab /></TabsContent>
       </Tabs>
     </div>
