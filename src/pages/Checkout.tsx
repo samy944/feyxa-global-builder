@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCart, CartItem } from "@/hooks/useCart";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/market/MarketLayout";
@@ -83,6 +83,59 @@ export default function Checkout() {
 
   const totalWeight = 0;
   const grandTotal = totalPrice + delivery.shippingFee;
+  const abandonedCartIdsRef = useRef<string[]>([]);
+
+  // ── Capture abandoned cart when page loads with items ──
+  useEffect(() => {
+    if (items.length === 0) return;
+    const timeout = setTimeout(async () => {
+      try {
+        const storeEntries = Object.entries(itemsByStore);
+        const ids: string[] = [];
+        for (const [storeId, storeItems] of storeEntries) {
+          const cartTotal = storeItems.reduce((s, i) => s + i.price * i.quantity, 0);
+          const { data } = await supabase
+            .from("abandoned_carts")
+            .insert({
+              store_id: storeId,
+              customer_email: form.email?.trim() || null,
+              customer_phone: form.phone?.trim() || null,
+              customer_name: `${form.firstName} ${form.lastName || ""}`.trim() || null,
+              cart_items: storeItems.map(i => ({ productId: i.productId, name: i.name, price: i.price, quantity: i.quantity, image: i.image })),
+              cart_total: cartTotal,
+              currency: storeItems[0]?.currency || "XOF",
+              status: "abandoned",
+            } as any)
+            .select("id")
+            .single();
+          if (data?.id) ids.push(data.id);
+        }
+        abandonedCartIdsRef.current = ids;
+      } catch (err) {
+        console.error("Abandoned cart capture error:", err);
+      }
+    }, 2000); // Wait 2s before capturing to avoid instant bounces
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update abandoned cart with customer info when form changes
+  useEffect(() => {
+    if (abandonedCartIdsRef.current.length === 0) return;
+    const timeout = setTimeout(async () => {
+      const email = form.email?.trim() || null;
+      const phone = form.phone?.trim() || null;
+      const name = `${form.firstName} ${form.lastName || ""}`.trim() || null;
+      if (!email && !phone) return;
+      for (const id of abandonedCartIdsRef.current) {
+        await supabase
+          .from("abandoned_carts")
+          .update({ customer_email: email, customer_phone: phone, customer_name: name } as any)
+          .eq("id", id);
+      }
+    }, 1500);
+    return () => clearTimeout(timeout);
+  }, [form.email, form.phone, form.firstName, form.lastName]);
 
   const updateField = (field: keyof CustomerForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -292,6 +345,17 @@ export default function Checkout() {
             variant: "destructive",
           });
         }
+      }
+
+      // Mark abandoned carts as completed
+      if (abandonedCartIdsRef.current.length > 0) {
+        for (const id of abandonedCartIdsRef.current) {
+          await supabase
+            .from("abandoned_carts")
+            .update({ status: "completed" } as any)
+            .eq("id", id);
+        }
+        abandonedCartIdsRef.current = [];
       }
 
       setCompletedOrders(completed);
